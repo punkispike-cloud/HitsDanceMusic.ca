@@ -296,10 +296,11 @@ body.is-scrolled .site-header {
 .hero {
   position: relative;
   display: grid;
-  min-height: min(880px, 96vh);
-  align-items: center;
+  aspect-ratio: 1280 / 768;
+  max-height: 92vh;
+  align-items: end;
   overflow: hidden;
-  padding: clamp(100px, 14vh, 132px) clamp(var(--space-4), 6vw, var(--space-16)) clamp(var(--space-10), 8vh, var(--space-12));
+  padding: clamp(var(--space-8), 6vh, var(--space-12)) clamp(var(--space-4), 6vw, var(--space-16)) clamp(var(--space-10), 8vh, var(--space-12));
   color: #fff;
 }
 
@@ -315,8 +316,8 @@ body.is-scrolled .site-header {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center top;
+  object-fit: cover;
+  object-position: center;
 }
 
 .hero-layer-bottom {
