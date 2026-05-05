@@ -4098,3 +4098,176 @@ body.watch-open { overflow: hidden; }
 
 
 
+
+/* =====================================================
+   PHASE 2 — UX (drawer Now Playing + swipe + double-tap)
+   ===================================================== */
+
+/* Pochette : feedback "muet" lors du double-tap */
+.player-cover.just-muted::after {
+  content: "🔇";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.4rem;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: inherit;
+  animation: muteFlash 0.55s ease-out;
+  pointer-events: none;
+  z-index: 3;
+}
+@keyframes muteFlash {
+  0%   { opacity: 0; transform: scale(0.5); }
+  35%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+/* Mini-player : swipe down feedback (transition reset par JS) */
+.mini-player {
+  transition: transform 0.32s cubic-bezier(.22,1,.36,1),
+              opacity 0.28s ease,
+              bottom 0.28s ease;
+  touch-action: pan-y;
+}
+
+/* Now Playing drawer — plein écran sur mobile, modal sur desktop */
+.np-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+.np-drawer.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.np-drawer .np-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #0a0a0a;
+  background-size: cover;
+  background-position: center;
+  filter: blur(38px) brightness(0.45) saturate(1.2);
+  transform: scale(1.15);
+}
+.np-drawer .np-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.np-drawer .np-close:hover { transform: scale(1.08); background: rgba(0,0,0,0.7); }
+.np-drawer .np-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  transform: translateY(24px);
+  opacity: 0;
+  transition: transform 0.42s cubic-bezier(.22,1,.36,1) 0.05s, opacity 0.32s ease 0.05s;
+}
+.np-drawer.is-open .np-inner { transform: translateY(0); opacity: 1; }
+.np-drawer .np-cover {
+  width: min(72vw, 340px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 0 60px color-mix(in srgb, var(--dynamic-accent, #c8102e) 30%, transparent);
+}
+.np-drawer .np-meta { color: #fff; }
+.np-drawer .np-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--tag-color, #c8102e) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, #c8102e) 55%, transparent);
+  color: #fff;
+  margin-bottom: 12px;
+}
+.np-drawer .np-title {
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 900;
+  margin: 0 0 6px;
+  line-height: 1.15;
+}
+.np-drawer .np-host {
+  font-size: 0.95rem;
+  opacity: 0.75;
+  margin: 0;
+}
+.np-drawer .np-track {
+  margin: 14px 0 0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.np-drawer .np-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.np-drawer .btn-primary,
+.np-drawer .btn-ghost {
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.np-drawer .btn-primary {
+  background: var(--dynamic-accent, #c8102e);
+  color: #fff;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, #c8102e) 45%, transparent);
+}
+.np-drawer .btn-ghost {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+.np-drawer .btn-primary:hover,
+.np-drawer .btn-ghost:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+[data-theme="light"] .np-drawer .np-bg { background-color: #1a1a1a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .np-drawer, .np-drawer .np-inner, .player-cover.just-muted::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -3092,7 +3092,171 @@ function init() {
   void refreshLiveTrack();
   setInterval(refreshLiveTrack, 25_000);
 
+  // Phase 2 — UX
+  initPhase2UX();
+
   registerSW();
+}
+
+/* -----------------------------------------------------
+  47. PHASE 2 — UX (swipe, double-tap mute, now-playing drawer)
+   ----------------------------------------------------- */
+function initPhase2UX() {
+  // 2.1 — Swipe vers le bas pour masquer le mini-player (mobile)
+  const mini = document.getElementById("miniPlayer");
+  if (mini) {
+    let startY = 0, startX = 0, dragging = false;
+    mini.addEventListener("touchstart", (e) => {
+      if (e.target.closest("button, input")) return;
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      dragging = true;
+      mini.style.transition = "none";
+    }, { passive: true });
+    mini.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const dy = e.touches[0].clientY - startY;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      if (dy > 10 && dx < 40) {
+        mini.style.transform = `translateY(${Math.min(dy, 140)}px)`;
+        mini.style.opacity = String(Math.max(0.3, 1 - dy / 200));
+      }
+    }, { passive: true });
+    mini.addEventListener("touchend", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      mini.style.transition = "";
+      const dy = (e.changedTouches[0]?.clientY ?? 0) - startY;
+      mini.style.transform = "";
+      mini.style.opacity = "";
+      if (dy > 80) {
+        mini.classList.add("is-hidden");
+        mini.classList.remove("is-shown");
+        sessionStorage.setItem("hr.miniHidden", "1");
+        toast("Lecteur masqué — touche M pour le rappeler", "info");
+      }
+    });
+  }
+
+  // Raccourci pour rappeler le mini-player après un swipe-dismiss
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "p" && !e.target.closest("input, textarea, [contenteditable]")) {
+      const m = document.getElementById("miniPlayer");
+      if (m && m.classList.contains("is-hidden")) {
+        m.classList.remove("is-hidden");
+        m.classList.add("is-shown");
+        sessionStorage.removeItem("hr.miniHidden");
+      }
+    }
+  });
+
+  // 2.2 — Double-tap sur la pochette = mute
+  const cover = document.getElementById("playerCover") || document.querySelector(".player-cover");
+  if (cover) {
+    let lastTap = 0;
+    cover.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTap < 320) {
+        e.preventDefault();
+        toggleMute();
+        cover.classList.add("just-muted");
+        setTimeout(() => cover.classList.remove("just-muted"), 600);
+        lastTap = 0;
+        return;
+      }
+      lastTap = now;
+      // Single click (différé) = ouvrir le drawer
+      setTimeout(() => {
+        if (lastTap && Date.now() - lastTap >= 300) {
+          openNowPlayingDrawer();
+          lastTap = 0;
+        }
+      }, 320);
+    });
+    cover.style.cursor = "pointer";
+    cover.setAttribute("title", "Cliquer : agrandir — Double-clic : muet");
+  }
+}
+
+/* 2.3 — Drawer plein écran "Now Playing" */
+function ensureNowPlayingDrawer() {
+  let d = document.getElementById("nowPlayingDrawer");
+  if (d) return d;
+  d = document.createElement("div");
+  d.id = "nowPlayingDrawer";
+  d.className = "np-drawer";
+  d.hidden = true;
+  d.setAttribute("role", "dialog");
+  d.setAttribute("aria-modal", "true");
+  d.setAttribute("aria-label", "Lecture en cours");
+  d.innerHTML = `
+    <div class="np-bg" aria-hidden="true"></div>
+    <button class="np-close" type="button" aria-label="Fermer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="np-inner">
+      <img class="np-cover" id="npCover" alt="" />
+      <div class="np-meta">
+        <span class="np-tag" id="npTag">Hit Radio</span>
+        <h2 class="np-title" id="npTitle">Les Hits Dance Music</h2>
+        <p class="np-host" id="npHost"></p>
+        <p class="np-track" id="npTrack" hidden></p>
+      </div>
+      <div class="np-actions">
+        <button class="btn-primary" id="npPlay" type="button">▶ Lecture</button>
+        <button class="btn-ghost" id="npShare" type="button">Partager</button>
+        <button class="btn-ghost" id="npHist" type="button">Historique</button>
+      </div>
+    </div>`;
+  document.body.appendChild(d);
+
+  d.querySelector(".np-close").addEventListener("click", () => closeNowPlayingDrawer());
+  d.addEventListener("click", (e) => { if (e.target === d || e.target.classList.contains("np-bg")) closeNowPlayingDrawer(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !d.hidden) closeNowPlayingDrawer(); });
+
+  d.querySelector("#npPlay").addEventListener("click", () => void togglePlayback());
+  d.querySelector("#npShare").addEventListener("click", () => shareCurrent());
+  d.querySelector("#npHist").addEventListener("click", () => { closeNowPlayingDrawer(); toggleHistory(true); });
+  return d;
+}
+function openNowPlayingDrawer() {
+  const d = ensureNowPlayingDrawer();
+  // Hydrater avec données courantes
+  const cover = document.getElementById("playerCover") || document.querySelector(".player-cover img, .player-cover");
+  const coverSrc = (cover && cover.tagName === "IMG") ? cover.src : (currentCover || "");
+  const npCover = d.querySelector("#npCover");
+  const npBg = d.querySelector(".np-bg");
+  if (coverSrc) {
+    npCover.src = coverSrc;
+    npBg.style.backgroundImage = `url("${coverSrc}")`;
+  }
+  d.querySelector("#npTitle").textContent = currentSlot?.title || "Hit Radio";
+  d.querySelector("#npHost").textContent = currentSlot?.host || "";
+  const tag = SLOT_TAGS?.[currentSlot?.tag] || null;
+  const npTag = d.querySelector("#npTag");
+  if (tag) {
+    npTag.textContent = tag.label;
+    npTag.style.setProperty("--tag-color", tag.color);
+  }
+  const trackEl = d.querySelector("#npTrack");
+  if (currentTrack && currentTrack.title) {
+    trackEl.hidden = false;
+    trackEl.textContent = currentTrack.artist ? `♪ ${currentTrack.artist} — ${currentTrack.title}` : `♪ ${currentTrack.title}`;
+  } else {
+    trackEl.hidden = true;
+  }
+  const npPlay = d.querySelector("#npPlay");
+  npPlay.textContent = (audio && !audio.paused) ? "❚❚ Pause" : "▶ Lecture";
+  d.hidden = false;
+  requestAnimationFrame(() => d.classList.add("is-open"));
+  document.body.style.overflow = "hidden";
+}
+function closeNowPlayingDrawer() {
+  const d = document.getElementById("nowPlayingDrawer");
+  if (!d) return;
+  d.classList.remove("is-open");
+  document.body.style.overflow = "";
+  setTimeout(() => { d.hidden = true; }, 280);
 }
 
 if (document.readyState === "loading") {
