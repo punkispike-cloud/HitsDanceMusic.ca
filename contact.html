@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Contact studio Hit Radio — Alain Perron, téléphone et dédicaces." />
+    <meta name="theme-color" content="#0f0f12" />
+    <title>Contact | Hit Radio</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/hitradio-logo.jpg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="canonical" href="https://hitsdancemusic.ca/contact.html" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#page-main">Aller au contenu</a>
+    <header class="site-header solid" id="top">
+      <a class="brand" href="index.html" aria-label="Hit Radio — Les Hits Dance Music">
+        <img class="brand-mark brand-mark--final" src="assets/logo-final.jpg" alt="Hit Radio — Les Hits Dance Music" height="64" />
+      </a>
+      <button
+        class="nav-toggle"
+        type="button"
+        id="navToggle"
+        aria-expanded="false"
+        aria-controls="primary-nav"
+        aria-label="Ouvrir le menu"
+      >
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
+      <nav class="main-nav" id="primary-nav" aria-label="Navigation principale">
+        <a href="index.html">Accueil</a>
+        <a href="index.html#animateurs">Animateurs</a>
+        <a href="index.html#horaire">Horaire</a>
+        <a href="index.html#emissions">Émissions</a>
+        <a class="active" href="index.html#contact">Contact</a>
+        <a href="animateurs.html">Équipe</a>
+      </nav>
+    </header>
+
+    <main class="page-main" id="page-main">
+      <div class="listen-strip" role="region" aria-label="Écouter la radio en direct">
+        <a class="listen-strip-link" href="index.html?play=1#player">
+          <span class="listen-strip-dot" aria-hidden="true"></span>
+          Écouter le direct
+        </a>
+      </div>
+      <section class="page-hero compact">
+        <p class="eyebrow"><span></span> Studio</p>
+        <h1>Contact</h1>
+        <p>
+          Studio et antenne : <strong>Alain Perron</strong> — immense merci d'écouter Hit Radio.
+        </p>
+      </section>
+
+      <section class="section contact-layout">
+        <div class="contact-card">
+          <h2>Téléphone &amp; canaux directs</h2>
+          <p>
+            <a class="cta-link" href="tel:+14182612886">418&nbsp;261‑2886</a>
+          </p>
+          <div class="contact-channels">
+            <a class="channel-btn" href="tel:+14182612886">
+              <small>Appel direct</small>
+              <strong>📞 Téléphoner</strong>
+            </a>
+            <a class="channel-btn" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!">
+              <small>Message texte</small>
+              <strong>💬 SMS</strong>
+            </a>
+            <a class="channel-btn" href="https://cast5.asurahosting.com/start/hitsdanc/" target="_blank" rel="noopener noreferrer">
+              <small>Hébergeur</small>
+              <strong>🔗 Page du flux</strong>
+            </a>
+            <a class="channel-btn" href="index.html?play=1#player">
+              <small>Lecteur</small>
+              <strong>▶ Écouter live</strong>
+            </a>
+          </div>
+        </div>
+
+        <div class="contact-card">
+          <h2>Message au studio</h2>
+          <p>
+            Pour une dédicace, une demande de titre ou un partenariat. Le formulaire ouvrira ton client mail
+            avec le message pré-rempli.
+          </p>
+          <form id="contactForm" class="static-form" data-mail="studio@hit.radio" novalidate>
+            <label>
+              Nom *
+              <input name="nom" type="text" autocomplete="name" placeholder="Ton nom" required minlength="2" />
+            </label>
+            <label>
+              Email (facultatif)
+              <input name="email" type="email" autocomplete="email" placeholder="toi@exemple.com" />
+            </label>
+            <label>
+              Sujet
+              <select name="sujet">
+                <option>Dédicace</option>
+                <option>Demande de titre</option>
+                <option>Partenariat</option>
+                <option>Audition animateur</option>
+                <option>Autre</option>
+              </select>
+            </label>
+            <label class="autocomplete-wrap">
+              Demande de titre (recherche iTunes)
+              <input id="trackQuery" name="track" type="text" placeholder="Artiste — titre" autocomplete="off" />
+              <ul id="trackSuggest" class="suggest-list" hidden role="listbox"></ul>
+            </label>
+            <label>
+              Message *
+              <textarea name="message" rows="5" placeholder="Ton message" required minlength="5"></textarea>
+            </label>
+            <label class="hp-field" aria-hidden="true">
+              Ne remplis pas
+              <input id="hp_field" name="hp_field" type="text" tabindex="-1" autocomplete="off" />
+            </label>
+            <button class="button primary" type="submit">📧 Ouvrir le courriel</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="section faq-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow"><span></span> Infos</p>
+            <h2>FAQ</h2>
+          </div>
+        </div>
+        <div class="faq-grid">
+          <article>
+            <strong>Comment écouter ?</strong>
+            <p>Retourne sur l’accueil et lance le lecteur « Flux live », ou ouvre le lien direct vers le flux.</p>
+          </article>
+          <article>
+            <strong>Où est l’horaire ?</strong>
+            <p>Toute la grille 2026 est sur la page d’accueil, section Programmation — chaque jour est dépliable.</p>
+          </article>
+          <article>
+            <strong>Le site est-il lourd ?</strong>
+            <p>Non — HTML, CSS et un peu de JavaScript : chargement rapide, pensé pour le mobile.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© 2026 Hit Radio — Les Hits Dance Music</span>
+      <span>Radio en ligne live</span>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

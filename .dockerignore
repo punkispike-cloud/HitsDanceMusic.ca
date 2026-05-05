@@ -1,0 +1,7 @@
+.git
+.gitignore
+README.md
+fix-palette.ps1
+fix-palette.py
+*.md
+node_modules

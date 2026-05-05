@@ -1,0 +1,22 @@
+{
+  "name": "Hit Radio Dance Music",
+  "short_name": "Hit Radio",
+  "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+  "start_url": "./index.html?utm_source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0f0f12",
+  "lang": "fr-CA",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Écouter le direct", "url": "./index.html?play=1#player", "icons": [{ "src": "assets/favicon.svg", "sizes": "any" }] },
+    { "name": "Horaire 2026", "url": "./horaire.html" },
+    { "name": "Mes stats", "url": "./stats.html" },
+    { "name": "Contact", "url": "./contact.html" }
+  ]
+}
