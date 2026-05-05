@@ -380,7 +380,8 @@ body.is-scrolled .site-header {
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 52rem;
+  max-width: min(72rem, 80%);
+  width: 100%;
 }
 
 .eyebrow {
@@ -2134,7 +2135,8 @@ h2 {
 .player-panel--signature {
   display: flex;
   flex-direction: column;
-  width: min(100%, 52rem);
+  width: 100%;
+  max-width: 72rem;
   border: 1px solid rgba(220, 20, 48, 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
