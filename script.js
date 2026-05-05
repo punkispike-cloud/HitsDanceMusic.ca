@@ -306,6 +306,14 @@ function toggleMute() {
 function setPlayingUI(isPlaying, label) {
   for (const ui of playerUIs) ui.setState(isPlaying, label);
   document.body.classList.toggle("is-playing-radio", isPlaying);
+  // Phase 1 : expose un état lisible pour le CSS (live / buffering / offline / paused)
+  let state = "idle";
+  const l = (label || "").toLowerCase();
+  if (isPlaying) state = "live";
+  else if (l.includes("tampon") || l.includes("connexion")) state = "buffering";
+  else if (l.includes("indisponible") || l.includes("bloquée") || l.includes("bloquee")) state = "offline";
+  else if (l.includes("pause")) state = "paused";
+  document.body.dataset.playerState = state;
   const vinyl = $("#vinylDisc");
   if (vinyl) vinyl.classList.toggle("is-spinning", isPlaying);
   if (typeof syncWatch === "function") syncWatch();
@@ -412,6 +420,11 @@ function makeFullPanelUI() {
       }
       if (status && label) status.textContent = label;
       panel.classList.toggle("is-playing", isPlaying);
+      // Phase 1 : skeleton shimmer sur la pochette quand on charge
+      if (cover) {
+        const loading = !isPlaying && /tampon|connexion/i.test(label || "");
+        cover.classList.toggle("is-loading", loading);
+      }
     },
     syncSlot(slot) {
       const tag = SLOT_TAGS[slot.tag] || SLOT_TAGS.hitlist;
