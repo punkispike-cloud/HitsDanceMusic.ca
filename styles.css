@@ -297,7 +297,7 @@ body.is-scrolled .site-header {
   position: relative;
   display: grid;
   margin-top: 110px;
-  aspect-ratio: 1312 / 784;
+  aspect-ratio: 1168 / 784;
   align-items: end;
   overflow: hidden;
   padding: clamp(var(--space-8), 6vh, var(--space-12)) clamp(var(--space-4), 6vw, var(--space-16)) clamp(var(--space-10), 8vh, var(--space-12));
@@ -4351,7 +4351,7 @@ body.watch-open { overflow: hidden; }
     position: relative;
     width: 100%;
     height: auto;
-    aspect-ratio: 1312 / 784;  /* image vue en entier au-dessus du contenu */
+    aspect-ratio: 1168 / 784;  /* image vue en entier au-dessus du contenu */
     object-fit: cover;
     object-position: center;
     display: block;
