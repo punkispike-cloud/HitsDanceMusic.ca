@@ -3226,6 +3226,10 @@ function init() {
   // Phase 2 — UX
   initPhase2UX();
 
+  // Phase 5 — UX surprise : ticker, vumetre, fullscreen player,
+  //                         skeleton metas, scroll-reveal etendu, back-to-top
+  initPhase5UX();
+
   // Phase 3 — Multi-tab sync : pause les autres onglets quand un démarre
   initMultiTabSync();
 
@@ -3445,6 +3449,132 @@ function closeNowPlayingDrawer() {
     d.hidden = true;
     last?.focus?.();
   }, 280);
+}
+
+/* =====================================================
+   PHASE 5 — UX surprise (CSS-driven, zero-deps)
+   ===================================================== */
+function initPhase5UX() {
+  injectTicker();
+  injectVumeter();
+  injectBackToTop();
+  extendScrollReveal();
+  applyMetaSkeletons();
+  applyVinylCursor();
+}
+
+// 5.1 Ticker dans l'entete avec maintenant + show
+function injectTicker() {
+  if (document.getElementById("hrTicker")) return;
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  const t = document.createElement("div");
+  t.id = "hrTicker";
+  t.className = "hr-ticker";
+  t.setAttribute("aria-live", "off");
+  t.innerHTML = `<div class="hr-ticker-track" id="hrTickerTrack">
+    <span class="hr-ticker-dot" aria-hidden="true"></span>
+    <span class="hr-ticker-text">EN DIRECT — Hit Radio · Les Hits Dance Music</span>
+  </div>`;
+  header.parentElement.insertBefore(t, header.nextSibling);
+  refreshTicker();
+  setInterval(refreshTicker, 15_000);
+}
+function refreshTicker() {
+  const txt = document.querySelector("#hrTickerTrack .hr-ticker-text");
+  if (!txt) return;
+  const slot = currentSlot || (typeof getCurrentSlot === "function" ? getCurrentSlot() : null);
+  const parts = ["EN DIRECT"];
+  if (slot?.title) parts.push(slot.title);
+  if (slot?.host) parts.push(slot.host);
+  if (currentTrack) {
+    const tk = currentTrack.artist ? `${currentTrack.artist} — ${currentTrack.title}` : currentTrack.title;
+    parts.push(`Maintenant : ${tk}`);
+  }
+  // Repete pour effet defilant continu
+  const line = parts.join(" · ");
+  txt.textContent = `${line}     ★     ${line}     ★     ${line}`;
+}
+
+// 5.2 Vumetre CSS sous le bouton play (panneau plein)
+function injectVumeter() {
+  const playBtn = document.querySelector("#player #playToggle");
+  if (!playBtn || document.getElementById("hrVumeter")) return;
+  const v = document.createElement("div");
+  v.id = "hrVumeter";
+  v.className = "vumeter";
+  v.setAttribute("aria-hidden", "true");
+  v.innerHTML = Array.from({length: 9}, (_, i) => `<span style="--i:${i}"></span>`).join("");
+  // Inserer juste apres le bouton
+  playBtn.insertAdjacentElement("afterend", v);
+}
+
+// 5.3 Bouton retour en haut
+function injectBackToTop() {
+  if (document.getElementById("backToTop")) return;
+  const btn = document.createElement("button");
+  btn.id = "backToTop";
+  btn.type = "button";
+  btn.className = "back-to-top";
+  btn.setAttribute("aria-label", "Retour en haut");
+  btn.title = "Retour en haut";
+  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>`;
+  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  document.body.appendChild(btn);
+  const onScroll = () => btn.classList.toggle("is-shown", window.scrollY > 600);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+}
+
+// 5.4 Scroll-reveal etendu (toutes les cartes)
+function extendScrollReveal() {
+  const sel = ".featured-card, .partner-card, .stream-chip, .requests-card, .rail-card, .show-card, .talent-card, .quick-strip-card, .news-card";
+  const targets = document.querySelectorAll(sel);
+  if (!targets.length || !("IntersectionObserver" in window)) return;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) return; // respect a11y, deja gere par CSS
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add("hr-reveal-in");
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: "0px 0px -40px 0px" });
+  targets.forEach((el, i) => {
+    if (el.classList.contains("hr-reveal-in")) return;
+    el.classList.add("hr-reveal");
+    el.style.setProperty("--reveal-delay", `${Math.min(i * 40, 320)}ms`);
+    io.observe(el);
+  });
+}
+
+// 5.5 Skeletons pour metadonnees (titre / artiste pendant chargement)
+function applyMetaSkeletons() {
+  const targets = ["#onAirTitle", "#onAirHost", "#liveTrackText", "#miniTrack"];
+  targets.forEach((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const txt = (el.textContent || "").trim();
+    if (!txt || txt === "—" || txt === "..." || txt === "…") {
+      el.classList.add("is-skeleton");
+      el.textContent = "";
+    }
+    // Observe : retire skeleton des qu'on injecte du texte
+    const mo = new MutationObserver(() => {
+      const v = (el.textContent || "").trim();
+      if (v && v !== "—" && v !== "...") el.classList.remove("is-skeleton");
+    });
+    mo.observe(el, { childList: true, characterData: true, subtree: true });
+  });
+}
+
+// 5.6 Curseur custom (vinyle) sur boutons play
+function applyVinylCursor() {
+  const cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="%23131218" stroke="%23dc1430" stroke-width="2"/><circle cx="16" cy="16" r="9" fill="none" stroke="%23dc1430" stroke-width="0.5" opacity="0.6"/><circle cx="16" cy="16" r="6" fill="none" stroke="%23dc1430" stroke-width="0.5" opacity="0.6"/><circle cx="16" cy="16" r="3" fill="%23dc1430"/><circle cx="16" cy="16" r="1" fill="%23131218"/></svg>') 16 16, pointer`;
+  document.querySelectorAll("#playToggle, #miniPlay, .btn-play, .player-play").forEach((b) => {
+    b.style.cursor = cursor;
+  });
 }
 
 if (document.readyState === "loading") {
