@@ -851,6 +851,18 @@ function bindNav() {
       if (e.key === "Escape" && header.classList.contains("is-open")) {
         setNavOpen(false); navToggle.focus();
       }
+      // Focus trap dans le menu mobile ouvert
+      if (e.key === "Tab" && header.classList.contains("is-open")) {
+        const focusables = primaryNav.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        else if (!primaryNav.contains(document.activeElement) && document.activeElement !== navToggle) {
+          e.preventDefault(); first.focus();
+        }
+      }
     });
     window.addEventListener("resize", () => {
       if (window.innerWidth > 900 && header.classList.contains("is-open")) setNavOpen(false);

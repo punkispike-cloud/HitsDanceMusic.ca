@@ -16,13 +16,20 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://hitsdancemusic.ca/" />
     <meta property="og:locale" content="fr_CA" />
-    <meta property="og:image" content="assets/radio-studio-hero.svg" />
+    <meta property="og:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
+    <meta property="og:image:width" content="1312" />
+    <meta property="og:image:height" content="784" />
+    <meta property="og:image:alt" content="Hit Radio — Les Hits Dance Music" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Hit Radio | Les Hits Dance Music" />
+    <meta name="twitter:description" content="Écoute le direct, découvre la grille hebdo 2026 et l’équipe — dance, house et lounge au Québec." />
+    <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
     <title>Hit Radio | Les Hits Dance Music — Radio en ligne live</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/hitradio-logo.jpg" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="canonical" href="https://hitsdancemusic.ca/" />
+    <link rel="preload" as="image" href="assets/landing-bg.jpg" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -30,6 +37,30 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "RadioStation",
+      "name": "Hit Radio — Les Hits Dance Music",
+      "url": "https://hitsdancemusic.ca/",
+      "logo": "https://hitsdancemusic.ca/assets/logo-final.jpg",
+      "image": "https://hitsdancemusic.ca/assets/landing-bg.jpg",
+      "description": "Radio en ligne live, dance et house. Programmation 2026 — matins d’Alain, Hit Drive, hommage Limelight Montréal, nuits BRW.",
+      "inLanguage": "fr-CA",
+      "genre": ["Dance", "House", "Hits", "Club"],
+      "broadcastFrequency": "Online",
+      "telephone": "+1-418-261-2886"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Hit Radio",
+      "url": "https://hitsdancemusic.ca/",
+      "inLanguage": "fr-CA"
+    }
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main">Aller au contenu</a>
@@ -401,6 +432,50 @@
           <a class="partner-card" href="#" aria-label="JÜMPOFFproject">
             <span class="partner-logo">JÜMPOFF<strong>project</strong></span>
             <span class="partner-meta">Mix club &amp; production</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="section requests-band" aria-label="Demandes et dédicaces">
+        <div class="requests-card">
+          <div class="requests-text">
+            <p class="eyebrow"><span></span> Demandes &amp; dédicaces</p>
+            <h2>Envoie ta demande au studio</h2>
+            <p>Une chanson à demander ou une dédicace pour quelqu’un&nbsp;? L’équipe répond en direct — appelle, texte ou WhatsApp.</p>
+          </div>
+          <div class="requests-actions">
+            <a class="button primary" href="tel:+14182612886" aria-label="Appeler le studio">
+              <span aria-hidden="true">📞</span> Appeler 418&nbsp;261-2886
+            </a>
+            <a class="button ghost-light" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" aria-label="Envoyer un SMS au studio">
+              <span aria-hidden="true">✍️</span> SMS
+            </a>
+            <a class="button ghost-light" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener" aria-label="Écrire sur WhatsApp">
+              <span aria-hidden="true">💬</span> WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section listen-elsewhere" aria-label="Écouter ailleurs">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow"><span></span> Écouter ailleurs</p>
+            <h2>Le flux direct sur tes plateformes</h2>
+          </div>
+        </div>
+        <div class="stream-chips">
+          <a class="stream-chip" href="https://cast5.asurahosting.com/proxy/hitsdanc/stream" target="_blank" rel="noopener">
+            <span class="stream-chip-icon" aria-hidden="true">🎧</span>
+            <span class="stream-chip-text"><strong>Flux MP3 direct</strong><span>192 kbps · ouvre dans VLC, iTunes…</span></span>
+          </a>
+          <a class="stream-chip" href="https://tunein.com/search/?query=hitsdancemusic" target="_blank" rel="noopener">
+            <span class="stream-chip-icon" aria-hidden="true">📡</span>
+            <span class="stream-chip-text"><strong>TuneIn</strong><span>Recherche « hitsdancemusic »</span></span>
+          </a>
+          <a class="stream-chip" href="https://www.google.com/search?q=hit+radio+les+hits+dance+music+ecouter" target="_blank" rel="noopener">
+            <span class="stream-chip-icon" aria-hidden="true">🔍</span>
+            <span class="stream-chip-text"><strong>Google</strong><span>Trouver via Assistant</span></span>
           </a>
         </div>
       </section>
