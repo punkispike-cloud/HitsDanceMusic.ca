@@ -7,8 +7,15 @@
 const STREAM_URL = "https://cast5.asurahosting.com/proxy/hitsdanc/stream";
 const PANEL_URL = "https://cast5.asurahosting.com/start/hitsdanc/";
 const NOWPLAYING_ENDPOINTS = [
+  // CentovaCast public endpoints
+  "https://cast5.asurahosting.com/cc-common/nowplaying.php?m=hitsdanc",
+  "https://cast5.asurahosting.com/api/nowplaying/hitsdanc",
   "https://cast5.asurahosting.com/cast/api/v2.standard/account?username=hitsdanc&xml=0&f=json",
+  // SHOUTcast standard 7.html (parfois bloque par CORS, mais essai)
   "https://cast5.asurahosting.com/proxy/hitsdanc/7.html",
+  // Fallback : proxy CORS public (lit le 7.html via passerelle)
+  "https://corsproxy.io/?https://cast5.asurahosting.com/proxy/hitsdanc/7.html",
+  "https://api.allorigins.win/raw?url=https%3A%2F%2Fcast5.asurahosting.com%2Fproxy%2Fhitsdanc%2F7.html",
 ];
 const ITUNES_SEARCH = "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=";
 const TIMEZONE = "America/Toronto";
@@ -224,29 +231,50 @@ let lastTrackKey = "";
 async function fetchNowPlaying() {
   for (const url of NOWPLAYING_ENDPOINTS) {
     try {
-      const r = await fetchWithTimeout(url, { mode: "cors", cache: "no-store" }, 5000);
+      const r = await fetchWithTimeout(url, { mode: "cors", cache: "no-store" }, 6000);
       if (!r.ok) continue;
       const ct = r.headers.get("content-type") || "";
       if (ct.includes("application/json")) {
         const data = await r.json();
-        const t = data?.data?.current_track || data?.track || data?.now_playing || data;
-        const title = t?.title || t?.song || t?.now_playing_title || "";
+        const t = data?.data?.current_track || data?.track || data?.now_playing || data?.current || data;
+        const title = t?.title || t?.song || t?.now_playing_title || t?.track || "";
         const artist = t?.artist || t?.now_playing_artist || "";
-        if (title) return { artist: String(artist).trim(), title: String(title).trim() };
+        if (title) return parseTrackString(String(title), String(artist || ""));
       } else {
-        const txt = await r.text();
+        const txt = (await r.text()).trim();
+        // CentovaCast nowplaying.php : "Hits Dance Music Stream - ARTIST - TITLE"
+        if (txt && !txt.includes("<") && txt.includes(" - ")) {
+          return parseTrackString(txt);
+        }
+        // SHOUTcast 7.html : CSV "listeners,status,peak,max,unique,bitrate,SONG"
         const csv = txt.replace(/<[^>]+>/g, "").trim();
         const cols = csv.split(",");
         if (cols.length >= 7) {
           const song = cols.slice(6).join(",").trim();
-          const dash = song.indexOf(" - ");
-          if (dash > 0) return { artist: song.slice(0, dash).trim(), title: song.slice(dash + 3).trim() };
-          if (song) return { artist: "", title: song };
+          if (song) return parseTrackString(song);
         }
       }
     } catch { /* CORS / réseau */ }
   }
   return null;
+}
+
+// Parse "Stream Name - Artist - Title" ou "Artist - Title" ou juste "Title"
+function parseTrackString(s, knownArtist = "") {
+  let str = (s || "").trim();
+  if (!str) return null;
+  // Coupe le prefix "Hits Dance Music Stream - " s'il existe
+  str = str.replace(/^Hits?\s+Dance\s+Music\s+Stream\s*[-—|]\s*/i, "").trim();
+  // Coupe les caracteres d'encodage type "?" entre titres
+  str = str.replace(/\s+\?\s+/g, " - ").trim();
+  if (knownArtist && !str.includes(" - ")) {
+    return { artist: knownArtist.trim(), title: str };
+  }
+  const idx = str.indexOf(" - ");
+  if (idx > 0) {
+    return { artist: str.slice(0, idx).trim(), title: str.slice(idx + 3).trim() };
+  }
+  return { artist: knownArtist.trim(), title: str };
 }
 
 function getHistory() { return store.getJSON(STORAGE.history, []); }
