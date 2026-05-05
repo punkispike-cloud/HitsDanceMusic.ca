@@ -4271,3 +4271,47 @@ body.watch-open { overflow: hidden; }
     animation: none !important;
   }
 }
+
+/* =====================================================
+   PHASE 4 — Mobile & a11y
+   ===================================================== */
+
+/* sr-only : visible uniquement par les lecteurs d'écran */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+/* Touch targets : tous les boutons d'action du lecteur >= 44px */
+@media (max-width: 720px) {
+  .mini-player .mini-icon-btn,
+  .mini-player .mini-close,
+  .player-controls .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Pill mode pour très petits écrans : compacter le mini-player */
+  @media (max-width: 380px) {
+    .mini-player {
+      padding: 8px 10px;
+      gap: 8px;
+    }
+    .mini-player .mini-meta { font-size: 0.85rem; }
+    .mini-player .mini-show { font-size: 0.78rem; }
+    .mini-player .mini-track { font-size: 0.72rem; }
+    .mini-player #miniHistoryBtn,
+    .mini-player #miniShareBtn { display: none; }
+  }
+}
+
+/* Focus visible cohérent partout sur le lecteur */
+.np-drawer button:focus-visible,
+.mini-player button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 4px var(--dynamic-accent, #c8102e);
+}

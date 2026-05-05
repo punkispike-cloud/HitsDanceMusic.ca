@@ -194,13 +194,20 @@ function fallbackCoverDataUri(slot) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+// Phase 3 — fetch avec timeout (AbortController) pour éviter de pendre sur réseau lent
+function fetchWithTimeout(url, opts = {}, ms = 6000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 const coverCache = new Map();
 async function fetchCover(artist, title) {
   const key = `${artist}|${title}`.toLowerCase();
   if (coverCache.has(key)) return coverCache.get(key);
   try {
     const term = encodeURIComponent(`${artist} ${title}`.trim());
-    const r = await fetch(ITUNES_SEARCH + term, { mode: "cors" });
+    const r = await fetchWithTimeout(ITUNES_SEARCH + term, { mode: "cors" }, 5000);
     if (!r.ok) throw new Error("itunes http " + r.status);
     const data = await r.json();
     const hit = data?.results?.[0];
@@ -217,7 +224,7 @@ let lastTrackKey = "";
 async function fetchNowPlaying() {
   for (const url of NOWPLAYING_ENDPOINTS) {
     try {
-      const r = await fetch(url, { mode: "cors", cache: "no-store" });
+      const r = await fetchWithTimeout(url, { mode: "cors", cache: "no-store" }, 5000);
       if (!r.ok) continue;
       const ct = r.headers.get("content-type") || "";
       if (ct.includes("application/json")) {
@@ -598,6 +605,29 @@ async function refreshLiveTrack() {
   for (const ui of playerUIs) ui.syncTrack(np, coverUrl);
   pushHistory(np, coverUrl);
   updateMediaSession();
+  // Phase 4 — a11y : annonce du nouveau morceau via région live
+  announceTrack(np);
+}
+
+// Phase 4 — région ARIA live cachée pour les lecteurs d'écran
+let _trackAnnouncer = null;
+let _lastAnnouncedKey = "";
+function announceTrack(np) {
+  if (!np || !np.title) return;
+  const key = `${np.artist || ""}|${np.title}`;
+  if (key === _lastAnnouncedKey) return;
+  _lastAnnouncedKey = key;
+  if (!_trackAnnouncer) {
+    _trackAnnouncer = document.createElement("div");
+    _trackAnnouncer.className = "sr-only";
+    _trackAnnouncer.setAttribute("role", "status");
+    _trackAnnouncer.setAttribute("aria-live", "polite");
+    _trackAnnouncer.setAttribute("aria-atomic", "true");
+    document.body.appendChild(_trackAnnouncer);
+  }
+  _trackAnnouncer.textContent = np.artist
+    ? `Maintenant : ${np.title} par ${np.artist}`
+    : `Maintenant : ${np.title}`;
 }
 
 /* -----------------------------------------------------
@@ -3095,7 +3125,43 @@ function init() {
   // Phase 2 — UX
   initPhase2UX();
 
+  // Phase 3 — Multi-tab sync : pause les autres onglets quand un démarre
+  initMultiTabSync();
+
   registerSW();
+}
+
+/* -----------------------------------------------------
+  47b. PHASE 3 — Multi-tab sync via BroadcastChannel
+   ----------------------------------------------------- */
+let hrChannel = null;
+function initMultiTabSync() {
+  if (!("BroadcastChannel" in window)) return;
+  try {
+    hrChannel = new BroadcastChannel("hitradio-sync");
+    hrChannel.addEventListener("message", (e) => {
+      if (!e.data || typeof e.data !== "object") return;
+      if (e.data.type === "play-claim" && audio && !audio.paused) {
+        // Un autre onglet a démarré la lecture → on pause ici
+        pausePlayback();
+        toast("Lecture reprise dans un autre onglet", "info", 3500);
+      }
+    });
+    // Annonce quand l'audio démarre vraiment dans cet onglet
+    if (audio && !audio.dataset.hrSyncBound) {
+      audio.dataset.hrSyncBound = "1";
+      audio.addEventListener("playing", () => {
+        try { hrChannel?.postMessage({ type: "play-claim", ts: Date.now() }); } catch {}
+      });
+    }
+  } catch (err) {
+    console.warn("[HitRadio] BroadcastChannel error", err);
+  }
+
+  // Phase 3 — cleanup avant fermeture (libère l'audio + le channel)
+  window.addEventListener("beforeunload", () => {
+    try { hrChannel?.close(); } catch {}
+  });
 }
 
 /* -----------------------------------------------------
@@ -3248,7 +3314,23 @@ function openNowPlayingDrawer() {
   const npPlay = d.querySelector("#npPlay");
   npPlay.textContent = (audio && !audio.paused) ? "❚❚ Pause" : "▶ Lecture";
   d.hidden = false;
-  requestAnimationFrame(() => d.classList.add("is-open"));
+  // Phase 4 — a11y : focus trap basique
+  d.dataset.lastFocus = document.activeElement?.id || "";
+  requestAnimationFrame(() => {
+    d.classList.add("is-open");
+    d.querySelector(".np-close")?.focus();
+  });
+  if (!d.__trapBound) {
+    d.__trapBound = true;
+    d.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const focusables = d.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
   document.body.style.overflow = "hidden";
 }
 function closeNowPlayingDrawer() {
@@ -3256,7 +3338,12 @@ function closeNowPlayingDrawer() {
   if (!d) return;
   d.classList.remove("is-open");
   document.body.style.overflow = "";
-  setTimeout(() => { d.hidden = true; }, 280);
+  // Phase 4 — restaurer le focus
+  const last = d.dataset.lastFocus ? document.getElementById(d.dataset.lastFocus) : null;
+  setTimeout(() => {
+    d.hidden = true;
+    last?.focus?.();
+  }, 280);
 }
 
 if (document.readyState === "loading") {
