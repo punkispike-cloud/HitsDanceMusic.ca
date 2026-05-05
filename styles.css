@@ -463,10 +463,10 @@ body.is-scrolled .site-header {
 }
 
 .hero-title-line--xl {
-  font-size: clamp(3.8rem, 11vw, 8.4rem);
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
   font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.045em;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
   /* Dégradé vertical blanc → rose pâle → rouge vif (style image fournie) */
   background: linear-gradient(180deg,
     #ffffff 0%,
