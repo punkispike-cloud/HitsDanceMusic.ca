@@ -4786,3 +4786,27 @@ body.is-playing-radio .vumeter span {
   .vumeter span { animation: none !important; height: 50% !important; }
   .hr-reveal { opacity: 1; transform: none; }
 }
+
+/* =====================================================
+   FIX: empilement ticker + header
+   ===================================================== */
+:root { --hr-ticker-h: 26px; }
+
+.hr-ticker {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 60;            /* au-dessus du header (40) */
+  height: var(--hr-ticker-h);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.hr-ticker-track { line-height: var(--hr-ticker-h); }
+
+.site-header { top: var(--hr-ticker-h) !important; }
+.hero { margin-top: calc(110px + var(--hr-ticker-h)) !important; }
+body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
+
+@media (max-width: 760px) {
+  :root { --hr-ticker-h: 22px; }
+}
