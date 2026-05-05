@@ -4499,7 +4499,9 @@ body.watch-open { overflow: hidden; }
 .partner-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
   padding: 22px;
   border-radius: 16px;
   background: rgba(15,15,18,0.85);
