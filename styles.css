@@ -296,6 +296,7 @@ body.is-scrolled .site-header {
 .hero {
   position: relative;
   display: grid;
+  margin-top: 110px;
   aspect-ratio: 1312 / 784;
   align-items: end;
   overflow: hidden;
