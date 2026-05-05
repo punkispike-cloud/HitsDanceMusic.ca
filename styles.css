@@ -2134,7 +2134,7 @@ h2 {
 .player-panel--signature {
   display: flex;
   flex-direction: column;
-  width: min(100%, 32rem);
+  width: min(100%, 52rem);
   border: 1px solid rgba(220, 20, 48, 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -2213,15 +2213,15 @@ h2 {
 .player-onair {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-5) var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .player-cover {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -2376,7 +2376,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-6) var(--space-5);
+  padding: var(--space-3) var(--space-5);
   flex-wrap: nowrap;
 }
 
