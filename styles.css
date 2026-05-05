@@ -380,7 +380,7 @@ body.is-scrolled .site-header {
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: min(72rem, 80%);
+  max-width: min(46rem, 55%);
   width: 100%;
 }
 
@@ -2136,7 +2136,7 @@ h2 {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 72rem;
+  max-width: 44rem;
   border: 1px solid rgba(220, 20, 48, 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -4332,4 +4332,90 @@ body.watch-open { overflow: hidden; }
   box-shadow:
     0 0 0 2px #000,
     0 0 0 4px var(--dynamic-accent, #c8102e);
+}
+
+/* =====================================================
+   MOBILE POLISH — hero + lecteur (≤ 760px)
+   ===================================================== */
+@media (max-width: 760px) {
+  /* Hero : ratio naturel impossible sur portrait → hauteur libre, image
+     centrée, image complète visible, plus de bandes ni de coupure */
+  .hero {
+    aspect-ratio: auto;
+    margin-top: 76px;          /* hauteur du header en mobile */
+    min-height: auto;
+    padding: 18px 16px 28px;
+  }
+  .hero-media { position: relative; inset: auto; }
+  .hero-image {
+    position: relative;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1312 / 784;  /* image vue en entier au-dessus du contenu */
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  .hero-layer-bottom { display: none; }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 100%;
+    width: 100%;
+    margin-top: 16px;
+    padding: 0;
+  }
+  .hero-copy {
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  /* Player : compact mais lisible, aligné full-width */
+  .player-panel--signature {
+    width: 100%;
+    max-width: 100%;
+    font-size: 0.92em;
+    border-radius: 14px;
+  }
+  .player-header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .player-station-name { font-size: 0.78rem; }
+  .player-clock        { font-size: 0.70rem; }
+  .weather-chip        { font-size: 0.72rem; }
+
+  .player-onair {
+    padding: 14px;
+    gap: 14px;
+  }
+  .player-cover { width: 64px; height: 64px; }
+  .player-onair-title { font-size: 1.05rem; }
+  .player-onair-host  { font-size: 0.82rem; }
+
+  .player-controls {
+    padding: 12px 14px 14px;
+    gap: 12px;
+  }
+  .play-button { width: 56px; height: 56px; }
+  .volume-control input[type="range"] { width: 100%; min-width: 80px; }
+
+  /* Header : un peu plus serré */
+  .site-header { min-height: 76px; padding: 6px 14px; }
+}
+
+@media (max-width: 480px) {
+  .hero { padding: 14px 12px 22px; }
+  .player-onair-kicker { flex-wrap: wrap; }
+  .player-onair-tag    { font-size: 0.58rem; }
+  .player-onair-slot   { font-size: 0.66rem; }
+  .player-onair-title  { font-size: 0.98rem; line-height: 1.2; }
+  .player-track-live   { font-size: 0.72rem; }
+  .player-status       { font-size: 0.78rem; }
+  .player-status-sub   { font-size: 0.70rem; }
+
+  /* Boutons réactions sur 2 lignes propres */
+  .player-controls { flex-wrap: wrap; }
 }
