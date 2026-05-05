@@ -89,7 +89,7 @@ const SCHEDULE = {
     ["13:00","16:00","Hit List","Programmation","hitlist"],
     ["16:00","18:00","Le Hit Drive (live)","Alain Perron","drive"],
     ["18:00","21:00","Hit List","Programmation","hitlist"],
-    ["21:00","22:00","DJ OKSKANA","DJ OKSKANA","special"],
+    ["21:00","22:00","DJ OKSANA","DJ OKSANA","special"],
     ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
   ],
   5: [
@@ -110,7 +110,7 @@ const SCHEDULE = {
     ["14:00","17:00","Hit List","Programmation","hitlist"],
     ["17:00","18:00","DJ Jumpoff","DJ Jumpoff","drive"],
     ["18:00","21:00","Hommage au Limelight Montréal","DJ Pierre Jutras","limelight"],
-    ["21:00","22:00","DJ OKSKANA Show mix européen","DJ OKSKANA","special"],
+    ["21:00","22:00","DJ OKSANA Show mix européen","DJ OKSANA","special"],
     ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
   ],
 };
@@ -1191,7 +1191,7 @@ const SEARCH_INDEX = [
   { type: "team", label: "Alain Perron — Les matins d'Alain", url: "animateurs.html" },
   { type: "team", label: "DJ Pierre Jutras — Hommage Limelight", url: "animateurs.html" },
   { type: "team", label: "DJ Jumpoff — Mix club", url: "animateurs.html" },
-  { type: "team", label: "DJ OKSKANA — Show mix européen", url: "animateurs.html" },
+  { type: "team", label: "DJ OKSANA — Show mix européen", url: "animateurs.html" },
   { type: "team", label: "Pee Jee — Pee Jee Radio Show", url: "animateurs.html" },
   // Shows
   { type: "show", label: "Les matins d'Alain (live)", url: "emissions.html" },
@@ -1203,7 +1203,7 @@ const SEARCH_INDEX = [
   { type: "show", label: "Latino Show", url: "emissions.html" },
   { type: "show", label: "Hot Slow Show", url: "emissions.html" },
   { type: "show", label: "Pee Jee Radio Show", url: "emissions.html" },
-  { type: "show", label: "DJ OKSKANA Show mix européen", url: "emissions.html" },
+  { type: "show", label: "DJ OKSANA Show mix européen", url: "emissions.html" },
   // Actions
   { type: "action", label: "▶ Écouter le direct", action: () => startPlayback() },
   { type: "action", label: "⏸ Mettre en pause", action: () => pausePlayback() },
@@ -1998,11 +1998,12 @@ const WEBRADIOS = [
 ];
 
 const NEWS_ITEMS = [
+  { tag: "DJ Set",  title: "DJ JÜMPOFF — JÜMPOFFproject", text: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️" },
   { tag: "Antenne", title: "Hommage Limelight Montréal", text: "DJ Pierre Jutras revient cette semaine avec quatre créneaux signatures.", emoji: "🎙" },
   { tag: "Émission", title: "Nouvelle saison de Hit Drive", text: "Du lundi au vendredi 16h–18h, l'antenne accélère pour la sortie des bureaux.", emoji: "🚗" },
   { tag: "Nuit",    title: "BRW : Best DJ's internationaux", text: "Tous les soirs 22h–07h, mixes live d'Europe, Amérique, Asie.", emoji: "🌙" },
   { tag: "Studio",  title: "Alain Perron en matinale", text: "Café-actu-musique chaque matin 7h–9h. Appelle au 418-261-2886.", emoji: "☕" },
-  { tag: "Mix",     title: "DJ OKSKANA — Show européen", text: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧" },
+  { tag: "Mix",     title: "DJ OKSANA — Show européen", text: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧" },
   { tag: "Latino",  title: "Latino Show samedi", text: "Reggaeton, urbano et latin house par les meilleurs DJs de Montréal.", emoji: "🌶️" },
 ];
 
