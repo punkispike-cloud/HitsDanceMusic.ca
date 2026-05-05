@@ -4810,3 +4810,15 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
 @media (max-width: 760px) {
   :root { --hr-ticker-h: 22px; }
 }
+
+/* Partner logo image (BeatRadioWorld) */
+.partner-logo-img {
+  display: block;
+  max-width: 180px;
+  max-height: 70px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto 6px;
+  filter: drop-shadow(0 4px 12px rgba(220,20,48,0.35));
+}

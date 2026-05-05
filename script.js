@@ -33,14 +33,14 @@ const SLOT_TAGS = {
   hitlist:   { color: "#c8102e", label: "Hit List" },
   drive:     { color: "#e07020", label: "Drive" },
   limelight: { color: "#7c44a8", label: "Limelight" },
-  night:     { color: "#1a3055", label: "Nuits BRW" },
+  night:     { color: "#1a3055", label: "Nuits BeatRadioWorld" },
   special:   { color: "#2a7a6a", label: "Spécial" },
   audition:  { color: "#666",    label: "Audition" },
 };
 
 const SCHEDULE = {
   0: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Hit List","Programmation","hitlist"],
     ["09:00","11:00","Disco Fever Experience","Programmation","special"],
     ["11:00","14:00","Hommage au Limelight Montréal","DJ Pierre Jutras","limelight"],
@@ -48,30 +48,30 @@ const SCHEDULE = {
     ["15:00","17:00","Hits Dance Top 40 (reprise)","Programmation","hitlist"],
     ["17:00","19:00","Animateur en audition","Audition","audition"],
     ["19:00","20:00","Pee Jee Radio Show","Pee Jee","special"],
-    ["20:00","21:00","Latino Show","Programmation","special"],
+    ["20:00","21:00","Latino Show","DJ Isael Soccaras","special"],
     ["21:00","22:00","Franco chaud","Programmation","special"],
     ["22:00","24:00","Hot Slow Show","Programmation","limelight"],
   ],
   1: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Les matins d'Alain (live)","Alain Perron","morning"],
     ["09:00","11:00","Hit List","Programmation","hitlist"],
-    ["11:00","12:00","Latino Show","Programmation","special"],
+    ["11:00","12:00","Latino Show","DJ Isael Soccaras","special"],
     ["12:00","16:00","Hit List","Programmation","hitlist"],
     ["16:00","18:00","Le Hit Drive (live)","Alain Perron","drive"],
     ["18:00","22:00","Hit List","Programmation","hitlist"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
   2: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Les matins d'Alain (live)","Alain Perron","morning"],
     ["09:00","16:00","Hit List","Programmation","hitlist"],
     ["16:00","18:00","Le Hit Drive (live)","Alain Perron","drive"],
     ["18:00","22:00","Hit List","Programmation","hitlist"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
   3: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Les matins d'Alain (live)","Alain Perron","morning"],
     ["09:00","12:00","Hit List","Programmation","hitlist"],
     ["12:00","14:00","Disco Fever Experience","Programmation","special"],
@@ -79,39 +79,39 @@ const SCHEDULE = {
     ["16:00","18:00","Le Hit Drive","Alain Perron","drive"],
     ["18:00","21:00","Hommage au Limelight Montréal","DJ Pierre Jutras","limelight"],
     ["21:00","22:00","DJ Jumpoff","DJ Jumpoff","drive"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
   4: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Les matins d'Alain (live)","Alain Perron","morning"],
     ["09:00","12:00","Hit List","Programmation","hitlist"],
     ["12:00","13:00","DJ Jumpoff","DJ Jumpoff","drive"],
     ["13:00","16:00","Hit List","Programmation","hitlist"],
     ["16:00","18:00","Le Hit Drive (live)","Alain Perron","drive"],
     ["18:00","21:00","Hit List","Programmation","hitlist"],
-    ["21:00","22:00","DJ OKSANA","DJ OKSANA","special"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["21:00","22:00","DJ OSKANA","DJ OSKANA","special"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
   5: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Les matins d'Alain (live)","Alain Perron","morning"],
     ["09:00","16:00","Hit List","Programmation","hitlist"],
     ["16:00","18:00","Le Hit Drive (live)","Alain Perron","drive"],
     ["18:00","19:00","DJ Jumpoff","DJ Jumpoff","drive"],
     ["19:00","22:00","Hommage au Limelight Montréal","DJ Pierre Jutras","limelight"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
   6: [
-    ["00:00","07:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["00:00","07:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
     ["07:00","09:00","Hit List","Programmation","hitlist"],
-    ["09:00","10:00","Latino Show","Programmation","special"],
+    ["09:00","10:00","Latino Show","DJ Isael Soccaras","special"],
     ["10:00","12:00","Animateur en audition","Audition","audition"],
     ["12:00","14:00","Hits Dance Top 40","Programmation","hitlist"],
     ["14:00","17:00","Hit List","Programmation","hitlist"],
     ["17:00","18:00","DJ Jumpoff","DJ Jumpoff","drive"],
     ["18:00","21:00","Hommage au Limelight Montréal","DJ Pierre Jutras","limelight"],
-    ["21:00","22:00","DJ OKSANA Show mix européen","DJ OKSANA","special"],
-    ["22:00","24:00","Les nuits Best DJ's live internationaux BRW","BRW","night"],
+    ["21:00","22:00","DJ OSKANA Show mix européen","DJ OSKANA","special"],
+    ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
 };
 const DAY_NAMES = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
@@ -629,7 +629,7 @@ function renderClock() {
   const el = $("#playerClock");
   if (!el) return;
   const { hour, minute } = getMontrealParts();
-  el.textContent = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} Montréal`;
+  el.textContent = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} Québec`;
 }
 
 function renderOnAir() {
@@ -1268,19 +1268,19 @@ const SEARCH_INDEX = [
   { type: "team", label: "Alain Perron — Les matins d'Alain", url: "animateurs.html" },
   { type: "team", label: "DJ Pierre Jutras — Hommage Limelight", url: "animateurs.html" },
   { type: "team", label: "DJ Jumpoff — Mix club", url: "animateurs.html" },
-  { type: "team", label: "DJ OKSANA — Show mix européen", url: "animateurs.html" },
+  { type: "team", label: "DJ OSKANA — Show mix européen", url: "animateurs.html" },
   { type: "team", label: "Pee Jee — Pee Jee Radio Show", url: "animateurs.html" },
   // Shows
   { type: "show", label: "Les matins d'Alain (live)", url: "emissions.html" },
   { type: "show", label: "Hit List", url: "emissions.html" },
   { type: "show", label: "Le Hit Drive (live)", url: "emissions.html" },
   { type: "show", label: "Hommage au Limelight Montréal", url: "emissions.html" },
-  { type: "show", label: "Nuits Best DJ's BRW", url: "emissions.html" },
+  { type: "show", label: "Nuits Best DJ's BeatRadioWorld", url: "emissions.html" },
   { type: "show", label: "Disco Fever Experience", url: "emissions.html" },
   { type: "show", label: "Latino Show", url: "emissions.html" },
   { type: "show", label: "Hot Slow Show", url: "emissions.html" },
   { type: "show", label: "Pee Jee Radio Show", url: "emissions.html" },
-  { type: "show", label: "DJ OKSANA Show mix européen", url: "emissions.html" },
+  { type: "show", label: "DJ OSKANA Show mix européen", url: "emissions.html" },
   // Actions
   { type: "action", label: "▶ Écouter le direct", action: () => startPlayback() },
   { type: "action", label: "⏸ Mettre en pause", action: () => pausePlayback() },
@@ -2078,10 +2078,11 @@ const NEWS_ITEMS = [
   { tag: "DJ Set",  title: "DJ JÜMPOFF — JÜMPOFFproject", text: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️" },
   { tag: "Antenne", title: "Hommage Limelight Montréal", text: "DJ Pierre Jutras revient cette semaine avec quatre créneaux signatures.", emoji: "🎙" },
   { tag: "Émission", title: "Nouvelle saison de Hit Drive", text: "Du lundi au vendredi 16h–18h, l'antenne accélère pour la sortie des bureaux.", emoji: "🚗" },
-  { tag: "Nuit",    title: "BRW : Best DJ's internationaux", text: "Tous les soirs 22h–07h, mixes live d'Europe, Amérique, Asie.", emoji: "🌙" },
+  { tag: "Nuit",    title: "BeatRadioWorld : Best DJ's internationaux", text: "Tous les soirs 22h–07h, mixes live d'Europe, Amérique, Asie.", emoji: "🌙" },
   { tag: "Studio",  title: "Alain Perron en matinale", text: "Café-actu-musique chaque matin 7h–9h. Appelle au 418-261-2886.", emoji: "☕" },
-  { tag: "Mix",     title: "DJ OKSANA — Show européen", text: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧" },
+  { tag: "Mix",     title: "DJ OSKANA — Show européen", text: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧" },
   { tag: "Latino",  title: "Latino Show samedi", text: "Reggaeton, urbano et latin house par les meilleurs DJs de Montréal.", emoji: "🌶️" },
+  { tag: "Live",    title: "Ibiza — Le Chiwawa beach club", text: "Captations live des soirées Chiwawa : vibes balearic, house solaire et coucher de soleil.", emoji: "🌅" },
 ];
 
 function rail(title, emoji, items, renderItem, opts = {}) {
@@ -2242,7 +2243,7 @@ async function loadWeather() {
   const host = $("#mtlWeather");
   if (!host) return;
   try {
-    const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.5019&longitude=-73.5674&current=temperature_2m,weather_code,wind_speed_10m&timezone=America%2FToronto", { cache: "no-store" });
+    const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=46.8139&longitude=-71.2080&current=temperature_2m,weather_code,wind_speed_10m&timezone=America%2FToronto", { cache: "no-store" });
     if (!res.ok) throw new Error("weather");
     const data = await res.json();
     const c = data.current || {};
@@ -2251,7 +2252,7 @@ async function loadWeather() {
     host.innerHTML = `
       <span class="weather-emoji" aria-hidden="true">${emoji}</span>
       <span class="weather-temp">${Math.round(c.temperature_2m)}°</span>
-      <span class="weather-meta"><strong>Montréal</strong> · ${escapeHtml(label)}</span>`;
+      <span class="weather-meta"><strong>Québec</strong> · ${escapeHtml(label)}</span>`;
   } catch {
     host.hidden = true;
   }
