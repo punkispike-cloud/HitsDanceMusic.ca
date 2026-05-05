@@ -296,8 +296,7 @@ body.is-scrolled .site-header {
 .hero {
   position: relative;
   display: grid;
-  aspect-ratio: 1280 / 768;
-  max-height: 92vh;
+  min-height: 880px;
   align-items: end;
   overflow: hidden;
   padding: clamp(var(--space-8), 6vh, var(--space-12)) clamp(var(--space-4), 6vw, var(--space-16)) clamp(var(--space-10), 8vh, var(--space-12));
