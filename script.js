@@ -326,6 +326,64 @@ function setPlayingUI(isPlaying, label) {
   if (typeof syncWatch === "function") syncWatch();
 }
 
+// Wake Lock : empêche l'écran de s'éteindre pendant la lecture
+let _wakeLock = null;
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request("screen");
+    _wakeLock.addEventListener?.("release", () => { _wakeLock = null; });
+  } catch { /* ignoré (batterie faible / HTTP) */ }
+}
+async function releaseWakeLock() {
+  try { await _wakeLock?.release(); } catch { /* noop */ }
+  _wakeLock = null;
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && audio && !audio.paused && !_wakeLock) void requestWakeLock();
+});
+
+// Vibration tactile (mobile uniquement, ignoré sinon)
+function haptic(pattern = 12) {
+  try { navigator.vibrate?.(pattern); } catch { /* noop */ }
+}
+
+// Compteur de temps d'écoute de la session courante
+let _sessionStartedAt = 0;
+let _sessionAccumSec = 0;
+let _sessionTickId = 0;
+function sessionElapsedSec() {
+  const live = _sessionStartedAt ? Math.floor((Date.now() - _sessionStartedAt) / 1000) : 0;
+  return _sessionAccumSec + live;
+}
+function formatSessionShort(sec) {
+  if (sec < 60) return `${sec}s`;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h === 0) return `${m} min`;
+  return `${h}h${String(m).padStart(2,"0")}`;
+}
+function renderSessionBadge() {
+  const txt = `Tu écoutes depuis ${formatSessionShort(sessionElapsedSec())}`;
+  const a = document.getElementById("sessionBadgeMini");
+  const b = document.getElementById("sessionBadgeFull");
+  const visible = _sessionStartedAt > 0 || _sessionAccumSec > 0;
+  if (a) { a.textContent = txt; a.hidden = !visible; }
+  if (b) { b.textContent = txt; b.hidden = !visible; }
+}
+function startSessionClock() {
+  if (_sessionStartedAt) return;
+  _sessionStartedAt = Date.now();
+  if (!_sessionTickId) _sessionTickId = window.setInterval(renderSessionBadge, 30_000);
+  renderSessionBadge();
+}
+function pauseSessionClock() {
+  if (!_sessionStartedAt) return;
+  _sessionAccumSec += Math.floor((Date.now() - _sessionStartedAt) / 1000);
+  _sessionStartedAt = 0;
+  renderSessionBadge();
+}
+
 async function startPlayback() {
   ensureAudio();
   if (!audio) return;
@@ -338,6 +396,8 @@ async function startPlayback() {
     setPlayingUI(true, "En direct");
     store.set(STORAGE.playing, "1");
     store.set(STORAGE.resume, "1");
+    void requestWakeLock();
+    startSessionClock();
   } catch (err) {
     console.warn("[HitRadio] play error", err);
     setPlayingUI(false, "Lecture bloquée — clique à nouveau");
@@ -350,11 +410,14 @@ function pausePlayback() {
   audio.pause();
   setPlayingUI(false, "En pause");
   store.set(STORAGE.playing, "0");
+  void releaseWakeLock();
+  pauseSessionClock();
 }
 
 async function togglePlayback() {
   ensureAudio();
   if (!audio) return;
+  haptic(12);
   if (!audio.paused) pausePlayback();
   else await startPlayback();
 }
@@ -481,6 +544,7 @@ function makeMiniPlayerUI() {
     <div class="mini-meta">
       <span class="mini-show" id="miniShow">Hit Radio</span>
       <span class="mini-track" id="miniTrack">Les Hits Dance Music</span>
+      <span class="mini-session" id="sessionBadgeMini" hidden></span>
     </div>
     <div class="mini-controls">
       <button class="mini-icon-btn" id="miniMute" type="button" aria-label="Couper le son" title="Muet (M)">
@@ -720,6 +784,7 @@ function escapeHtml(s) {
 }
 
 async function shareCurrent() {
+  haptic([8, 30, 8]);
   const slot = currentSlot || getCurrentSlot();
   const trackText = currentTrack
     ? (currentTrack.artist ? `${currentTrack.artist} — ${currentTrack.title}` : currentTrack.title)
@@ -3012,6 +3077,29 @@ function bindV5Hotkeys() {
   46. Boot
    ----------------------------------------------------- */
 function init() {
+  // A11y : skip link "Aller au contenu" inject\u00e9 en premier focusable
+  if (!document.querySelector(".skip-link")) {
+    const main = document.querySelector("main");
+    if (main && !main.id) main.id = "main";
+    const targetId = (main?.id) || "main";
+    const skip = document.createElement("a");
+    skip.className = "skip-link";
+    skip.href = `#${targetId}`;
+    skip.textContent = "Aller au contenu";
+    document.body.insertBefore(skip, document.body.firstChild);
+    if (main) main.setAttribute("tabindex", "-1");
+  }
+
+  // Badge "Tu \u00e9coutes depuis\u2026" dans le panneau plein
+  const fullPanel = document.getElementById("player");
+  if (fullPanel && !document.getElementById("sessionBadgeFull")) {
+    const b = document.createElement("p");
+    b.id = "sessionBadgeFull";
+    b.className = "session-badge";
+    b.hidden = true;
+    fullPanel.appendChild(b);
+  }
+
   ensureAudio();
   bindAudioEvents();
 

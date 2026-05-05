@@ -4585,3 +4585,58 @@ body.watch-open { overflow: hidden; }
   /* Menu mobile : fond plus opaque + ombre */
   .site-header.is-open .main-nav { background: rgba(8,8,10,0.99); box-shadow: 0 30px 60px rgba(0,0,0,0.6); }
 }
+
+/* =====================================================
+   A11Y : skip link + reduced-motion + session badge
+   ===================================================== */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  z-index: 10000;
+  padding: 12px 18px;
+  background: #dc1430;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  transition: top .2s ease;
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+main:focus { outline: none; }
+
+.session-badge {
+  display: inline-block;
+  margin: 12px 0 0;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  background: rgba(220,20,48,0.18);
+  border: 1px solid rgba(220,20,48,0.4);
+  border-radius: 999px;
+}
+.mini-session {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .vinyl-disc, .is-spinning, .vumeter, .eq-bars,
+  .ticker, .marquee, .pulse, .shimmer { animation: none !important; }
+  html { scroll-behavior: auto !important; }
+}
