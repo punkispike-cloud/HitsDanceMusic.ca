@@ -2134,7 +2134,7 @@ h2 {
 .player-panel--signature {
   display: flex;
   flex-direction: column;
-  width: min(100%, 38rem);
+  width: min(100%, 32rem);
   border: 1px solid rgba(220, 20, 48, 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -2147,7 +2147,7 @@ h2 {
     0 0 50px rgba(220, 20, 48, 0.07);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
   backdrop-filter: blur(28px) saturate(1.4);
-  font-size: 0.84em;
+  font-size: 0.74em;
 }
 
 /* Header bar : LIVE + station + horloge */
