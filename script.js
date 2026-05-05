@@ -341,6 +341,15 @@ function toggleMute() {
 function setPlayingUI(isPlaying, label) {
   for (const ui of playerUIs) ui.setState(isPlaying, label);
   document.body.classList.toggle("is-playing-radio", isPlaying);
+  // Header play button : sync visuel + libellé
+  const hp = document.getElementById("headerPlay");
+  if (hp) {
+    hp.classList.toggle("is-playing", isPlaying);
+    hp.dataset.state = isPlaying ? "playing" : "paused";
+    hp.setAttribute("aria-label", isPlaying ? "Mettre la radio en pause" : "Lancer la radio");
+    const lbl = hp.querySelector(".hp-label");
+    if (lbl) lbl.textContent = isPlaying ? "En direct" : "Écouter";
+  }
   // Phase 1 : expose un état lisible pour le CSS (live / buffering / offline / paused)
   let state = "idle";
   const l = (label || "").toLowerCase();
@@ -3105,7 +3114,33 @@ function bindV5Hotkeys() {
 /* -----------------------------------------------------
   46. Boot
    ----------------------------------------------------- */
+// Injecte un bouton play dans le header (toutes les pages)
+function injectHeaderPlay() {
+  const header = document.querySelector(".site-header");
+  if (!header || document.getElementById("headerPlay")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "headerPlay";
+  btn.className = "header-play btn-play";
+  btn.setAttribute("aria-label", "Lancer la radio");
+  btn.dataset.state = "paused";
+  btn.innerHTML = `
+    <span class="hp-ico hp-ico--play" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+    <span class="hp-ico hp-ico--pause" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></span>
+    <span class="hp-pulse" aria-hidden="true"></span>
+    <span class="hp-label">Écouter</span>
+  `;
+  // Insère avant le bouton nav-toggle (ou en fin de header sinon)
+  const navToggle = header.querySelector(".nav-toggle");
+  if (navToggle) header.insertBefore(btn, navToggle);
+  else header.appendChild(btn);
+  btn.addEventListener("click", (e) => { e.preventDefault(); void togglePlayback(); });
+}
+
 function init() {
+  // Header play button (avant skip-link pour rester focusable rapidement)
+  injectHeaderPlay();
+
   // A11y : skip link "Aller au contenu" inject\u00e9 en premier focusable
   if (!document.querySelector(".skip-link")) {
     const main = document.querySelector("main");
