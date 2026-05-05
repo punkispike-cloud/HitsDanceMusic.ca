@@ -443,10 +443,10 @@ body.is-scrolled .site-header {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
   font-family: var(--font-display);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
 }
 
 .hero-title-line {
@@ -454,22 +454,35 @@ body.is-scrolled .site-header {
 }
 
 .hero-title-line--sm {
-  font-size: clamp(1.05rem, 2.5vw, 1.35rem);
-  font-weight: 700;
-  letter-spacing: 0.28em;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 0.35em;
 }
 
 .hero-title-line--xl {
-  font-size: clamp(3.5rem, 9.5vw, 7.5rem);
-  font-weight: 800;
-  line-height: 0.88;
-  background: linear-gradient(135deg, #fff 0%, var(--amber-soft) 38%, var(--accent-bright) 65%, rgba(160, 0, 20, 0.9) 100%);
+  font-size: clamp(3.8rem, 11vw, 8.4rem);
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  /* Dégradé vertical blanc → rose pâle → rouge vif (style image fournie) */
+  background: linear-gradient(180deg,
+    #ffffff 0%,
+    #ffd9dd 28%,
+    #ff5566 60%,
+    #e51d2c 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 14px 40px rgba(0, 0, 0, 0.55));
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.65))
+          drop-shadow(0 0 28px rgba(220, 30, 50, 0.25));
+  /* "Dance" et "Music" sur deux lignes empilées */
+  white-space: pre-line;
+  word-spacing: 999px; /* force le retour à la ligne entre les mots */
 }
 
 h1:not(.hero-title),
