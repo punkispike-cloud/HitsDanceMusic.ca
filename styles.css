@@ -1,3 +1,10 @@
+/* =====================================================
+   Fix global : l'attribut HTML [hidden] doit toujours cacher l'élément.
+   Sans !important, n'importe quelle règle .x { display: flex/grid/... }
+   écrasait display:none et empêchait les menus/panneaux de se fermer.
+   ===================================================== */
+[hidden] { display: none !important; }
+
 :root {
   /* Black / anthracite backgrounds */
   --bg: #0a0a0a;
@@ -985,7 +992,8 @@ h2 {
 
 .talent-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* auto-fit évite les rangées à trous quand 5/7 animateurs sur 3 ou 4 colonnes */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 
@@ -1552,7 +1560,8 @@ h2 {
 }
 
 .talent-grid.extended {
-  grid-template-columns: repeat(3, 1fr);
+  /* Hérite du auto-fit de .talent-grid : pas de redefinition rigide. */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 @media (max-width: 1080px) {
@@ -4289,8 +4298,8 @@ body.watch-open { overflow: hidden; }
 
 /* Bouton 'plus' */
 .more-btn svg { width: 18px; height: 18px; }
-.more-menu { position: fixed; min-width: 220px; padding: 6px; background: rgba(20,18,26,0.98); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; box-shadow: 0 30px 70px rgba(0,0,0,0.55); z-index: 180; animation: menuIn .15s ease; }
-@keyframes menuIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+/* Note: la règle .more-menu canonique est définie plus haut (position: absolute, ancrée au bouton).
+   On évite ici de la redéfinir en position: fixed sans coordonnées (causait le menu collé en haut-gauche). */
 [data-theme="light"] .more-menu { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); color: #131218; }
 .more-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; background: transparent; border: none; color: inherit; text-align: left; font: inherit; font-size: 0.92rem; border-radius: 8px; cursor: pointer; }
 .more-item:hover, .more-item:focus-visible { background: rgba(255,255,255,0.08); outline: none; }
@@ -4305,9 +4314,6 @@ body.watch-open { overflow: hidden; }
 .lyrics-panel.is-min .lyrics-body { display: none; }
 .lyrics-panel.is-min { width: 240px !important; }
 .lyrics-panel { left: auto; }
-
-
-
 
 /* =====================================================
    PHASE 2 — UX (drawer Now Playing + swipe + double-tap)
@@ -5323,12 +5329,35 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
 @media (max-width: 560px) {
   .viz-canvas { display: none; }
   .player-equalizer span { animation-duration: 1.6s; }
+  /* Allège les boucles infinies sur petits écrans (vinyl, blobs, ondes) */
+  .hero-vinyl,
+  .hr-ticker-track,
+  .watch-blob,
+  .waveform-bars span { animation-duration: 2.2s; }
+  /* Reveal/stagger : plus court et moins de saut */
+  .talent-card.revealed,
+  .quick-strip-card.revealed { animation-duration: 0.35s; }
 }
+
+/* Respect strict de prefers-reduced-motion : coupe TOUTES les animations
+   et transitions non essentielles, plus les boucles infinies bouffeuses. */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-vinyl,
+  .watch-blob,
   .player-equalizer span,
+  .waveform-bars span,
   .install-pwa-btn.is-available,
   .more-menu,
-  .ios-install-sheet { animation: none !important; }
+  .ios-install-sheet,
+  .hr-ticker-track { animation: none !important; }
 }
 
 /* Anti hover sticky tactile */

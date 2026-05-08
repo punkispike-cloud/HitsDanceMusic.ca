@@ -19,6 +19,41 @@ const NOWPLAYING_ENDPOINTS = [
 ];
 const ITUNES_SEARCH = "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=";
 const TIMEZONE = "America/Toronto";
+
+/* ----- Réseau : timeouts unifiés ----- */
+const NET_TIMEOUTS = {
+  nowPlaying: 6000,   // Centova/SHOUTcast metadata
+  cover:      5000,   // iTunes search
+  lyrics:     6000,   // LRCLib
+  weather:    5000,   // Open-Meteo
+  generic:    6000,
+};
+const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 15000];
+
+/* ----- Validation : URLs & contenus tiers ---------------------------
+   Toute donnée extérieure (iTunes, LRCLib, presence) est validée avant
+   d'être injectée dans le DOM. Refus si protocole non-https ou hôte
+   non whitelisté. Évite XSS via réponse compromise / MITM. ---------- */
+const TRUSTED_IMG_HOSTS = [
+  /\.mzstatic\.com$/i,           // iTunes covers
+  /\.apple\.com$/i,
+];
+function isTrustedImageUrl(u) {
+  try {
+    const url = new URL(u);
+    if (url.protocol !== "https:") return false;
+    return TRUSTED_IMG_HOSTS.some((re) => re.test(url.hostname));
+  } catch { return false; }
+}
+function clampString(s, max = 200) {
+  if (typeof s !== "string") return "";
+  // Strip control chars + newlines pour les champs courts (titre/artiste)
+  return s.replace(/[\u0000-\u001F\u007F]+/g, " ").trim().slice(0, max);
+}
+function clampLyrics(s, max = 20000) {
+  if (typeof s !== "string") return "";
+  return s.replace(/[\u0000-\u0008\u000B-\u001F\u007F]+/g, "").slice(0, max);
+}
 const STORAGE = {
   vol: "hr.volume",
   mute: "hr.mute",
@@ -214,11 +249,14 @@ async function fetchCover(artist, title) {
   if (coverCache.has(key)) return coverCache.get(key);
   try {
     const term = encodeURIComponent(`${artist} ${title}`.trim());
-    const r = await fetchWithTimeout(ITUNES_SEARCH + term, { mode: "cors" }, 5000);
+    const r = await fetchWithTimeout(ITUNES_SEARCH + term, { mode: "cors" }, NET_TIMEOUTS.cover);
     if (!r.ok) throw new Error("itunes http " + r.status);
     const data = await r.json();
-    const hit = data?.results?.[0];
-    const url = hit?.artworkUrl100?.replace("100x100", "300x300") || null;
+    const hit = Array.isArray(data?.results) ? data.results[0] : null;
+    const raw = typeof hit?.artworkUrl100 === "string" ? hit.artworkUrl100 : null;
+    // iTunes renvoie http:// historiquement → on force https et on valide l'hôte
+    const upgraded = raw ? raw.replace(/^http:\/\//, "https://").replace("100x100", "300x300") : null;
+    const url = upgraded && isTrustedImageUrl(upgraded) ? upgraded : null;
     coverCache.set(key, url);
     return url;
   } catch { coverCache.set(key, null); return null; }
@@ -231,17 +269,17 @@ let lastTrackKey = "";
 async function fetchNowPlaying() {
   for (const url of NOWPLAYING_ENDPOINTS) {
     try {
-      const r = await fetchWithTimeout(url, { mode: "cors", cache: "no-store" }, 6000);
+      const r = await fetchWithTimeout(url, { mode: "cors", cache: "no-store" }, NET_TIMEOUTS.nowPlaying);
       if (!r.ok) continue;
       const ct = r.headers.get("content-type") || "";
       if (ct.includes("application/json")) {
         const data = await r.json();
         const t = data?.data?.current_track || data?.track || data?.now_playing || data?.current || data;
-        const title = t?.title || t?.song || t?.now_playing_title || t?.track || "";
-        const artist = t?.artist || t?.now_playing_artist || "";
-        if (title) return parseTrackString(String(title), String(artist || ""));
+        const title  = clampString(t?.title || t?.song || t?.now_playing_title || t?.track || "", 200);
+        const artist = clampString(t?.artist || t?.now_playing_artist || "", 200);
+        if (title) return parseTrackString(title, artist);
       } else {
-        const txt = (await r.text()).trim();
+        const txt = clampString(await r.text(), 1000);
         // CentovaCast nowplaying.php : "Hits Dance Music Stream - ARTIST - TITLE"
         if (txt && !txt.includes("<") && txt.includes(" - ")) {
           return parseTrackString(txt);
@@ -250,7 +288,7 @@ async function fetchNowPlaying() {
         const csv = txt.replace(/<[^>]+>/g, "").trim();
         const cols = csv.split(",");
         if (cols.length >= 7) {
-          const song = cols.slice(6).join(",").trim();
+          const song = clampString(cols.slice(6).join(",").trim(), 200);
           if (song) return parseTrackString(song);
         }
       }
@@ -1128,9 +1166,11 @@ function bindContactForm() {
     if (q.length < 3) { suggestList.innerHTML = ""; suggestList.hidden = true; return; }
     timer = window.setTimeout(async () => {
       try {
-        const r = await fetch(`https://itunes.apple.com/search?media=music&entity=song&limit=5&term=${encodeURIComponent(q)}`);
+        const r = await fetchWithTimeout(`https://itunes.apple.com/search?media=music&entity=song&limit=5&term=${encodeURIComponent(q)}`, {}, NET_TIMEOUTS.cover);
         const data = await r.json();
-        const items = (data?.results || []).map((x) => `${x.artistName} — ${x.trackName}`);
+        const items = (Array.isArray(data?.results) ? data.results : [])
+          .map((x) => `${clampString(x?.artistName, 120)} — ${clampString(x?.trackName, 160)}`)
+          .filter((s) => s.length > 3);
         if (!items.length) { suggestList.hidden = true; return; }
         suggestList.innerHTML = items.map((t) => `<li role="option">${escapeHtml(t)}</li>`).join("");
         suggestList.hidden = false;
@@ -2525,15 +2565,18 @@ async function loadWeather() {
   const host = $("#mtlWeather");
   if (!host) return;
   try {
-    const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=46.8139&longitude=-71.2080&current=temperature_2m,weather_code,wind_speed_10m&timezone=America%2FToronto", { cache: "no-store" });
+    const res = await fetchWithTimeout("https://api.open-meteo.com/v1/forecast?latitude=46.8139&longitude=-71.2080&current=temperature_2m,weather_code,wind_speed_10m&timezone=America%2FToronto", { cache: "no-store" }, NET_TIMEOUTS.weather);
     if (!res.ok) throw new Error("weather");
     const data = await res.json();
-    const c = data.current || {};
-    const [emoji, label] = WEATHER_CODES[c.weather_code] || ["🌡", "—"];
+    const c = data?.current || {};
+    const code = Number(c.weather_code);
+    const temp = Number(c.temperature_2m);
+    if (!Number.isFinite(temp)) throw new Error("weather payload");
+    const [emoji, label] = WEATHER_CODES[code] || ["🌡", "—"];
     host.hidden = false;
     host.innerHTML = `
       <span class="weather-emoji" aria-hidden="true">${emoji}</span>
-      <span class="weather-temp">${Math.round(c.temperature_2m)}°</span>
+      <span class="weather-temp">${Math.round(temp)}°</span>
       <span class="weather-meta"><strong>Québec</strong> · ${escapeHtml(label)}</span>`;
   } catch {
     host.hidden = true;
@@ -2875,10 +2918,13 @@ async function fetchLyrics(artist, title) {
   if (_lyricsCache.has(key)) return _lyricsCache.get(key);
   try {
     const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(title)}`;
-    const r = await fetch(url);
+    const r = await fetchWithTimeout(url, { cache: "no-store" }, NET_TIMEOUTS.lyrics);
     if (!r.ok) { _lyricsCache.set(key, null); return null; }
     const data = await r.json();
-    const result = { synced: data.syncedLyrics || null, plain: data.plainLyrics || null };
+    const result = {
+      synced: clampLyrics(data?.syncedLyrics) || null,
+      plain:  clampLyrics(data?.plainLyrics)  || null,
+    };
     _lyricsCache.set(key, result);
     return result;
   } catch { return null; }

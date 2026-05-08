@@ -13,6 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hit Radio" />
     <meta name="hr-presence-url" content="" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,6 +29,18 @@
       <a class="brand" href="index.html" aria-label="Hit Radio">
         <img class="brand-mark brand-mark--final" src="assets/logo-final.jpg" alt="Hit Radio — Les Hits Dance Music" height="64" />
       </a>
+      <button
+        class="nav-toggle"
+        type="button"
+        id="navToggle"
+        aria-expanded="false"
+        aria-controls="primary-nav"
+        aria-label="Ouvrir le menu"
+      >
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
       <nav class="main-nav" id="primary-nav" aria-label="Navigation principale">
         <a href="index.html">Accueil</a>
         <a href="horaire.html">Horaire</a>
