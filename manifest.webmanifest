@@ -2,9 +2,11 @@
   "name": "Hit Radio Dance Music",
   "short_name": "Hit Radio",
   "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+  "id": "/",
   "start_url": "./index.html?utm_source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#0f0f12",
@@ -12,15 +14,14 @@
   "categories": ["music", "entertainment"],
   "icons": [
     { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Écouter le direct", "url": "./index.html?play=1#player", "icons": [{ "src": "assets/favicon.svg", "sizes": "any" }] },
-    { "name": "Horaire 2026", "url": "./horaire.html" },
-    { "name": "Mes stats", "url": "./stats.html" },
-    { "name": "Contact", "url": "./contact.html" }
+    { "name": "Écouter le direct", "short_name": "Écouter", "url": "./index.html?play=1#player", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Horaire 2026", "short_name": "Horaire", "url": "./horaire.html" },
+    { "name": "Mes stats", "short_name": "Stats", "url": "./stats.html" },
+    { "name": "Contact studio", "short_name": "Contact", "url": "./contact.html" }
   ]
 }

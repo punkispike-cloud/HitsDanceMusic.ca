@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta
       name="description"
       content="Hit Radio — Les Hits Dance Music 2026. Radio en ligne live, dance et house, programmation complète avec DJs et animateurs."
@@ -26,7 +26,12 @@
     <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
     <title>Hit Radio | Les Hits Dance Music — Radio en ligne live</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="assets/hitradio-logo.jpg" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hit Radio" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="canonical" href="https://hitsdancemusic.ca/" />
     <link rel="preload" as="image" href="assets/landing-bg.jpg" fetchpriority="high" />
@@ -84,9 +89,29 @@
         <a href="#animateurs">Animateurs</a>
         <a href="#horaire">Horaire</a>
         <a href="#emissions">Émissions</a>
-        <a href="#contact">Contact</a>
         <a href="animateurs.html">Équipe</a>
       </nav>
+      <div class="header-tools">
+        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" onclick="triggerInstall()" aria-label="Installer l'application Hit Radio" title="Installer l'app">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <div class="more-menu-wrap">
+          <button id="moreMenuBtn" class="header-tool" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" aria-label="Plus d'actions — contact et dédicaces" title="Contact &amp; dédicaces">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+            </svg>
+          </button>
+          <div id="moreMenu" class="more-menu" role="menu" hidden>
+            <p class="more-menu-title">Studio · 418 261-2886</p>
+            <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
+            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
+            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
+            <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
+          </div>
+        </div>
+      </div>
     </header>
 
     <main id="main">
@@ -400,20 +425,24 @@
         </div>
       </section>
 
-      <section class="contact-band" id="contact">
-        <div>
-          <p class="eyebrow"><span></span> Studio</p>
-          <h2>Contact antenne</h2>
-          <p>
-            <strong>Alain Perron</strong> — studio et antenne. Immense merci à vous d’écouter Hit Radio.
-          </p>
-          <p class="contact-phone">
-            <a class="cta-link" href="tel:+14182612886">418&nbsp;261‑2886</a>
-          </p>
-        </div>
-        <div class="contact-actions">
-          <a class="button primary" href="contact.html">Formulaire &amp; liens</a>
-          <a class="button ghost-light" href="#player" id="listenOnPage">Écouter sur la page</a>
+      <section class="section install-band" id="install" aria-label="Installer l'application">
+        <div class="install-card">
+          <div class="install-card-text">
+            <p class="eyebrow"><span></span> App mobile</p>
+            <h2>Installe Hit Radio sur ton téléphone</h2>
+            <p>Une icône sur ton écran d'accueil, lecture en plein écran, accès en un tap au direct — sans passer par le navigateur. Gratuit, aucun compte.</p>
+            <ul class="install-features">
+              <li><span aria-hidden="true">⚡</span> Démarrage instantané du flux 192 kbps</li>
+              <li><span aria-hidden="true">🎧</span> Contrôles dans le centre média (lock screen)</li>
+              <li><span aria-hidden="true">📱</span> Fonctionne hors-ligne pour la navigation</li>
+            </ul>
+          </div>
+          <div class="install-card-actions">
+            <button type="button" class="button primary install-pwa-btn install-cta" onclick="triggerInstall()">
+              <span aria-hidden="true">⬇️</span> Installer l'app
+            </button>
+            <p class="install-hint" id="installHint">Sur iPhone : touche <strong>Partager</strong> puis <strong>Sur l'écran d'accueil</strong>.</p>
+          </div>
         </div>
       </section>
 
@@ -438,27 +467,6 @@
             <img class="partner-logo-img" src="assets/carlogix.jpg" alt="Carlogix" loading="lazy" />
             <span class="partner-logo">Car<strong>logix</strong></span>
             <span class="partner-meta">Solutions automobiles</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="section requests-band" aria-label="Demandes et dédicaces">
-        <div class="requests-card">
-          <div class="requests-text">
-            <p class="eyebrow"><span></span> Demandes &amp; dédicaces</p>
-            <h2>Envoie ta demande au studio</h2>
-            <p>Une chanson à demander ou une dédicace pour quelqu’un&nbsp;? L’équipe répond en direct — appelle, texte ou WhatsApp.</p>
-          </div>
-          <div class="requests-actions">
-            <a class="button primary" href="tel:+14182612886" aria-label="Appeler le studio">
-              <span aria-hidden="true">📞</span> Appeler 418&nbsp;261-2886
-            </a>
-            <a class="button ghost-light" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" aria-label="Envoyer un SMS au studio">
-              <span aria-hidden="true">✍️</span> SMS
-            </a>
-            <a class="button ghost-light" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener" aria-label="Écrire sur WhatsApp">
-              <span aria-hidden="true">💬</span> WhatsApp
-            </a>
           </div>
         </div>
       </section>

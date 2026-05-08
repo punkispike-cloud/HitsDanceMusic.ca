@@ -303,7 +303,7 @@ function ensureAudio() {
   if (!audio) {
     audio = document.createElement("audio");
     audio.id = "radioPlayer";
-    audio.preload = "none";
+    audio.preload = "auto";
     const src = document.createElement("source");
     src.src = STREAM_URL;
     src.type = "audio/mpeg";
@@ -462,18 +462,103 @@ async function togglePlayback() {
 function bindAudioEvents() {
   if (!audio || audio.dataset.bound === "1") return;
   audio.dataset.bound = "1";
+
+  // ----- Réseau résilient : reconnect intelligent + watchdog -----
+  let reconnectTimer = null;
+  let reconnectAttempt = 0;
+  let lastTime = 0;
+  let lastTimeAt = Date.now();
+  let watchdog = null;
+
+  const wantPlay = () => store.get(STORAGE.playing, "0") === "1";
+
+  function scheduleReconnect(reason) {
+    if (reconnectTimer) return;
+    if (!wantPlay()) return;
+    reconnectAttempt++;
+    // Backoff doux : 1s, 2s, 4s, 8s, max 15s
+    const delay = Math.min(15000, 1000 * Math.pow(2, reconnectAttempt - 1));
+    setPlayingUI(false, `Reconnexion… (${reconnectAttempt})`);
+    console.info(`[HitRadio] reconnect (${reason}) in ${delay}ms`);
+    reconnectTimer = setTimeout(async () => {
+      reconnectTimer = null;
+      if (!wantPlay()) return;
+      try {
+        // Force un nouveau GET (cache-bust)
+        audio.src = `${STREAM_URL}?_=${Date.now()}`;
+        audio.load();
+        await audio.play();
+      } catch {
+        scheduleReconnect("retry-failed");
+      }
+    }, delay);
+  }
+
+  function cancelReconnect() {
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    reconnectAttempt = 0;
+  }
+
+  function startWatchdog() {
+    stopWatchdog();
+    lastTime = audio.currentTime;
+    lastTimeAt = Date.now();
+    watchdog = setInterval(() => {
+      if (audio.paused) return;
+      // Si la position n'avance plus depuis 10 s en lecture → flux figé
+      if (audio.currentTime !== lastTime) {
+        lastTime = audio.currentTime;
+        lastTimeAt = Date.now();
+      } else if (Date.now() - lastTimeAt > 10000) {
+        console.warn("[HitRadio] watchdog: stream stalled");
+        scheduleReconnect("watchdog");
+      }
+    }, 3000);
+  }
+  function stopWatchdog() {
+    if (watchdog) { clearInterval(watchdog); watchdog = null; }
+  }
+
   audio.addEventListener("waiting", () => setPlayingUI(false, "Mise en mémoire tampon…"));
-  audio.addEventListener("playing", () => setPlayingUI(true, "En direct"));
-  audio.addEventListener("pause", () => setPlayingUI(false, "En pause"));
+  audio.addEventListener("playing", () => {
+    setPlayingUI(true, "En direct");
+    cancelReconnect();
+    startWatchdog();
+  });
+  audio.addEventListener("pause", () => {
+    setPlayingUI(false, "En pause");
+    stopWatchdog();
+  });
+  audio.addEventListener("stalled", () => scheduleReconnect("stalled"));
+  audio.addEventListener("ended", () => scheduleReconnect("ended"));
   audio.addEventListener("error", () => {
-    setPlayingUI(false, "Flux indisponible — réessaie");
-    toast("Flux indisponible. Nouvel essai dans 5 s.", "error");
-    if (store.get(STORAGE.playing, "0") === "1") {
-      setTimeout(() => { void startPlayback(); }, 5000);
-    }
+    setPlayingUI(false, "Connexion perdue — reconnexion…");
+    scheduleReconnect("error");
   });
   audio.addEventListener("volumechange", () => {
     for (const ui of playerUIs) ui.syncVolume(audio.volume, audio.muted);
+  });
+
+  // Network online/offline → reprise immédiate
+  window.addEventListener("online", () => {
+    if (!wantPlay()) return;
+    console.info("[HitRadio] network back online → resume");
+    cancelReconnect();
+    reconnectAttempt = 0;
+    scheduleReconnect("online");
+  });
+  window.addEventListener("offline", () => {
+    if (!audio.paused) {
+      setPlayingUI(false, "Hors ligne — reprise auto");
+      toast("Réseau perdu. Lecture reprendra dès que possible.", "warn");
+    }
+  });
+
+  // Page redevient visible (mobile sortie de veille) → vérifie le flux
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && wantPlay() && audio.paused) {
+      scheduleReconnect("visibility");
+    }
   });
 }
 
@@ -1248,25 +1333,164 @@ function toggleSleepMenu(anchor) {
   18. Bouton install PWA
    ----------------------------------------------------- */
 let deferredInstallPrompt = null;
+const ua = navigator.userAgent || "";
+const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+const isAndroid = /Android/i.test(ua);
+const isBrave = (navigator.brave && typeof navigator.brave.isBrave === "function") || /Brave/i.test(ua);
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+function showInstallButtons() {
+  $$("#installPwaBtn, .install-pwa-btn").forEach((b) => b.classList.add("is-available"));
+}
+function hideInstallButtons() {
+  $$("#installPwaBtn, .install-pwa-btn").forEach((b) => b.classList.remove("is-available"));
+}
+
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
-  $$("#installPwaBtn, .install-pwa-btn").forEach((b) => b.classList.add("is-available"));
+  showInstallButtons();
 });
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
-  $$("#installPwaBtn, .install-pwa-btn").forEach((b) => b.classList.remove("is-available"));
+  hideInstallButtons();
   toast("Hit Radio installé sur ton appareil ! 🎉", "ok");
 });
+
+// Sur iOS / Brave Android : pas toujours d'event beforeinstallprompt — afficher
+// quand même le bouton pour montrer un guide manuel.
+if (!isStandalone) {
+  document.addEventListener("DOMContentLoaded", showInstallButtons);
+} else {
+  document.addEventListener("DOMContentLoaded", hideInstallButtons);
+}
+
 async function triggerInstall() {
-  if (!deferredInstallPrompt) {
-    toast("Installation déjà effectuée ou non supportée.", "info");
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    try { await deferredInstallPrompt.userChoice; } catch { /* noop */ }
+    deferredInstallPrompt = null;
     return;
   }
-  deferredInstallPrompt.prompt();
-  try { await deferredInstallPrompt.userChoice; } catch { /* noop */ }
-  deferredInstallPrompt = null;
+  if (isStandalone) {
+    toast("L'app est déjà installée sur cet appareil ✅", "ok");
+    return;
+  }
+  if (isIOS) {
+    // Brave/Chrome/Firefox iOS = WebKit, pas de "Sur l'écran d'accueil" hors Safari
+    showInstallSheet("ios", isBrave);
+    return;
+  }
+  if (isAndroid) {
+    // Android : Brave avec Shields agressifs ou navigateur sans prompt → guide manuel
+    showInstallSheet("android", isBrave);
+    return;
+  }
+  showInstallSheet("desktop", false);
 }
+
+function showInstallSheet(platform, brave) {
+  const existing = document.getElementById("installSheet");
+  if (existing) existing.remove();
+
+  let title = "Installer Hit Radio";
+  let body = "";
+
+  if (platform === "ios" && brave) {
+    body = `
+      <p class="install-sheet-warn">⚠️ Brave sur iPhone ne permet pas l'install directe (limitation Apple).</p>
+      <ol>
+        <li>Touche <strong>Partager</strong> en bas de l'écran, puis <strong>« Ouvrir avec Safari »</strong>.</li>
+        <li>Dans Safari, touche à nouveau <strong>Partager</strong>.</li>
+        <li>Choisis <strong>« Sur l'écran d'accueil »</strong>, puis <strong>Ajouter</strong>. 🎉</li>
+      </ol>`;
+  } else if (platform === "ios") {
+    body = `
+      <ol>
+        <li>Touche le bouton <strong>Partager</strong>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M20 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"/></svg>
+          dans la barre Safari.
+        </li>
+        <li>Fais défiler puis choisis <strong>« Sur l'écran d'accueil »</strong>.</li>
+        <li>Confirme avec <strong>Ajouter</strong>. C'est fait 🎉</li>
+      </ol>`;
+  } else if (platform === "android" && brave) {
+    body = `
+      <p class="install-sheet-warn">💡 Astuce Brave : si l'install est bloquée, désactive les <strong>Shields</strong> pour ce site (touche le 🦁 dans la barre).</p>
+      <ol>
+        <li>Touche le menu <strong>⋮</strong> en haut à droite de Brave.</li>
+        <li>Choisis <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</li>
+        <li>Confirme. L'icône Hit Radio apparaît sur ton écran d'accueil 🎉</li>
+      </ol>`;
+  } else if (platform === "android") {
+    body = `
+      <ol>
+        <li>Touche le menu <strong>⋮</strong> de ton navigateur.</li>
+        <li>Choisis <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+        <li>Confirme l'installation. 🎉</li>
+      </ol>`;
+  } else {
+    body = `
+      <ol>
+        <li>Dans la barre d'adresse, cherche l'icône <strong>⊕</strong> ou <strong>⬇️</strong> à droite.</li>
+        <li>Clique puis confirme <strong>« Installer »</strong>.</li>
+        <li>Hit Radio s'ouvre comme une vraie app. 🎉</li>
+      </ol>`;
+  }
+
+  const sheet = document.createElement("div");
+  sheet.id = "installSheet";
+  sheet.className = "ios-install-sheet";
+  sheet.setAttribute("role", "dialog");
+  sheet.setAttribute("aria-label", title);
+  sheet.innerHTML = `
+    <div class="ios-install-card">
+      <button type="button" class="ios-install-close" aria-label="Fermer">×</button>
+      <h3>${title}</h3>
+      ${body}
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  const close = () => sheet.remove();
+  sheet.querySelector(".ios-install-close").addEventListener("click", close);
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) close(); });
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); }
+  });
+}
+
+/* More menu (⋯) — contact & dédicaces */
+(function bindMoreMenu() {
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("moreMenuBtn");
+    const menu = document.getElementById("moreMenu");
+    if (!btn || !menu) return;
+    const close = () => {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+    };
+    const open = () => {
+      menu.hidden = false;
+      btn.setAttribute("aria-expanded", "true");
+      const first = menu.querySelector("a");
+      first && first.focus({ preventScroll: true });
+    };
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menu.hidden ? open() : close();
+    });
+    document.addEventListener("click", (e) => {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { close(); btn.focus(); }
+    });
+    menu.addEventListener("click", (e) => {
+      if (e.target.closest("a")) close();
+    });
+  });
+})();
 
 /* -----------------------------------------------------
   19. Theme : auto / dark / light

@@ -1,6 +1,6 @@
-/* Hit Radio — Service Worker minimal
+/* Hit Radio — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-v44";
+const CACHE = "hitradio-v48";
 const SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,10 @@ const SHELL = [
   "./script.js",
   "./manifest.webmanifest",
   "./assets/favicon.svg",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/logo-final.jpg",
+  "./assets/landing-bg.jpg",
 ];
 
 self.addEventListener("install", (e) => {
@@ -33,7 +37,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Ne jamais cacher : flux audio, métadonnées Centova, iTunes
+  // Ne jamais cacher : flux audio, métadonnées Centova, iTunes, fonts dynamiques
   if (
     url.hostname.includes("asurahosting.com") ||
     url.hostname.includes("itunes.apple.com") ||
@@ -41,7 +45,7 @@ self.addEventListener("fetch", (event) => {
     req.headers.get("range")
   ) return;
 
-  // Same-origin : stale-while-revalidate
+  // Same-origin : stale-while-revalidate avec fallback offline
   if (url.origin === location.origin) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
@@ -49,7 +53,13 @@ self.addEventListener("fetch", (event) => {
         const network = fetch(req).then((res) => {
           if (res && res.ok) cache.put(req, res.clone());
           return res;
-        }).catch(() => cached);
+        }).catch(async () => {
+          if (cached) return cached;
+          if (req.mode === "navigate") {
+            return (await cache.match("./index.html")) || (await cache.match("./404.html"));
+          }
+          return Response.error();
+        });
         return cached || network;
       })
     );
