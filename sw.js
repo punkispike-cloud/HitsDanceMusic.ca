@@ -1,6 +1,6 @@
 /* Hit Radio — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-v48";
+const CACHE = "hitradio-v49";
 const SHELL = [
   "./",
   "./index.html",

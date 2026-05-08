@@ -13,6 +13,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hit Radio" />
+    <meta name="hr-presence-url" content="" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -37,6 +38,10 @@
         <a href="emissions.html">Émissions</a>
         <a href="animateurs.html">Équipe</a>
       </nav>
+      <div class="presence-badge" id="presenceBadge" hidden aria-live="polite" title="Personnes en ligne · auditeurs en direct">
+        <span class="presence-pill presence-visitors"><span aria-hidden="true">👥</span><span class="presence-count" data-presence="visitors">0</span></span>
+        <span class="presence-pill presence-listeners"><span aria-hidden="true">🎧</span><span class="presence-count" data-presence="listeners">0</span></span>
+      </div>
       <div class="header-tools">
         <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" onclick="triggerInstall()" aria-label="Installer l'application Hit Radio" title="Installer l'app">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

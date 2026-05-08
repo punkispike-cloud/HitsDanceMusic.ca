@@ -341,6 +341,8 @@ function toggleMute() {
 function setPlayingUI(isPlaying, label) {
   for (const ui of playerUIs) ui.setState(isPlaying, label);
   document.body.classList.toggle("is-playing-radio", isPlaying);
+  // Compteur live : signaler l'état d'écoute au service presence
+  if (typeof presenceSetListening === "function") presenceSetListening(isPlaying);
   // Header play button : sync visuel + libellé
   const hp = document.getElementById("headerPlay");
   if (hp) {
@@ -3870,3 +3872,154 @@ if (document.readyState === "loading") {
 } else {
   init();
 }
+
+/* =====================================================================
+   PRESENCE — compteur live (visiteurs / auditeurs)
+   Lit l'URL WS depuis <meta name="hr-presence-url" content="wss://...">.
+   Si vide ou échec : reste silencieux (badge caché).
+   ===================================================================== */
+let presenceWS = null;
+let presenceWantConnected = true;
+let presenceReconnectAttempt = 0;
+let presenceReconnectTimer = null;
+let presenceListening = false;
+let presenceBadgeShown = false;
+let presenceLastVisitors = 0;
+let presenceLastListeners = 0;
+
+function presenceGetUrl() {
+  const meta = document.querySelector('meta[name="hr-presence-url"]');
+  const url = (meta?.content || "").trim();
+  if (!url) return null;
+  // Normalise : http(s):// → ws(s)://
+  if (url.startsWith("http://")) return "ws://" + url.slice(7);
+  if (url.startsWith("https://")) return "wss://" + url.slice(8);
+  return url;
+}
+
+function presenceUpdateUI(visitors, listeners) {
+  const badge = document.getElementById("presenceBadge");
+  if (!badge) return;
+  if (!presenceBadgeShown) {
+    badge.hidden = false;
+    requestAnimationFrame(() => badge.classList.add("is-live"));
+    presenceBadgeShown = true;
+  }
+  const vEl = badge.querySelector('[data-presence="visitors"]');
+  const lEl = badge.querySelector('[data-presence="listeners"]');
+  if (vEl && visitors !== presenceLastVisitors) {
+    vEl.textContent = String(visitors);
+    const pill = vEl.closest(".presence-pill");
+    if (pill) {
+      pill.classList.remove("is-bumped");
+      void pill.offsetWidth;
+      pill.classList.add("is-bumped");
+    }
+    presenceLastVisitors = visitors;
+  }
+  if (lEl && listeners !== presenceLastListeners) {
+    lEl.textContent = String(listeners);
+    const pill = lEl.closest(".presence-pill");
+    if (pill) {
+      pill.classList.remove("is-bumped");
+      void pill.offsetWidth;
+      pill.classList.add("is-bumped");
+    }
+    presenceLastListeners = listeners;
+  }
+}
+
+function presenceConnect() {
+  const url = presenceGetUrl();
+  if (!url) return; // feature dormante
+  if (!presenceWantConnected) return;
+  if (presenceWS && (presenceWS.readyState === WebSocket.OPEN || presenceWS.readyState === WebSocket.CONNECTING)) return;
+
+  let ws;
+  try {
+    ws = new WebSocket(url);
+  } catch (err) {
+    console.warn("[presence] cannot open WS", err);
+    presenceScheduleReconnect();
+    return;
+  }
+  presenceWS = ws;
+
+  ws.addEventListener("open", () => {
+    presenceReconnectAttempt = 0;
+    // Si on est déjà en lecture quand la WS se reconnecte
+    if (presenceListening) presenceSendListening(true);
+  });
+
+  ws.addEventListener("message", (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg && msg.type === "stats") {
+      presenceUpdateUI(msg.visitors | 0, msg.listeners | 0);
+    }
+  });
+
+  ws.addEventListener("close", () => {
+    presenceWS = null;
+    presenceScheduleReconnect();
+  });
+
+  ws.addEventListener("error", () => {
+    try { ws.close(); } catch { /* noop */ }
+  });
+}
+
+function presenceScheduleReconnect() {
+  if (!presenceWantConnected) return;
+  if (presenceReconnectTimer) return;
+  presenceReconnectAttempt++;
+  // Backoff doux, max 30 s, abandon silencieux après 8 essais
+  if (presenceReconnectAttempt > 8) return;
+  const delay = Math.min(30000, 1500 * Math.pow(1.6, presenceReconnectAttempt - 1));
+  presenceReconnectTimer = setTimeout(() => {
+    presenceReconnectTimer = null;
+    presenceConnect();
+  }, delay);
+}
+
+function presenceSendListening(on) {
+  if (!presenceWS || presenceWS.readyState !== WebSocket.OPEN) return;
+  try {
+    presenceWS.send(JSON.stringify({ type: "listening", on: !!on }));
+  } catch { /* noop */ }
+}
+
+// Hook appelé depuis setPlayingUI() — défini avant via hoisting (function decl)
+function presenceSetListening(on) {
+  presenceListening = !!on;
+  presenceSendListening(on);
+}
+
+// Cycle de vie : pause WS quand l'onglet est caché longtemps, reprise visible
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    presenceWantConnected = true;
+    presenceConnect();
+  }
+});
+window.addEventListener("online", () => {
+  presenceWantConnected = true;
+  presenceReconnectAttempt = 0;
+  presenceConnect();
+});
+window.addEventListener("pagehide", () => {
+  presenceWantConnected = false;
+  if (presenceReconnectTimer) { clearTimeout(presenceReconnectTimer); presenceReconnectTimer = null; }
+  try { presenceWS?.close(1000, "pagehide"); } catch { /* noop */ }
+  presenceWS = null;
+});
+
+// Démarrage : après init du site pour ne pas concurrencer le rendu critique
+if (document.readyState === "complete") {
+  setTimeout(presenceConnect, 600);
+} else {
+  window.addEventListener("load", () => setTimeout(presenceConnect, 600), { once: true });
+}
+
+
+
