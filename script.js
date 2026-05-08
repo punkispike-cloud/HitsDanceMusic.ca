@@ -1475,21 +1475,40 @@ function showInstallSheet(platform, brave) {
     const open = () => {
       menu.hidden = false;
       btn.setAttribute("aria-expanded", "true");
-      const first = menu.querySelector("a");
+      const first = menu.querySelector("a, button, [role='menuitem']");
       first && first.focus({ preventScroll: true });
     };
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       menu.hidden ? open() : close();
     });
-    document.addEventListener("click", (e) => {
-      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) close();
-    });
+    // Fermeture au clic extérieur (capture pour passer avant les handlers internes)
+    document.addEventListener("pointerdown", (e) => {
+      if (menu.hidden) return;
+      if (menu.contains(e.target) || e.target === btn || btn.contains(e.target)) return;
+      close();
+    }, true);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") { close(); btn.focus(); }
     });
+    // Ferme à chaque action dans le menu (a, button, menuitem) — délai 0 pour
+    // laisser tel:/sms:/wa.me déclencher leur action navigateur d'abord
     menu.addEventListener("click", (e) => {
-      if (e.target.closest("a")) close();
+      const target = e.target.closest("a, button, [role='menuitem']");
+      if (!target) return;
+      setTimeout(close, 0);
+    });
+    // Ferme aussi quand le focus quitte le menu (Tab vers l'extérieur)
+    menu.addEventListener("focusout", (e) => {
+      if (menu.hidden) return;
+      const next = e.relatedTarget;
+      if (!next) return; // perte de focus système → laisse ouvert
+      if (menu.contains(next) || next === btn) return;
+      close();
+    });
+    // Ferme si l'onglet devient invisible (tel: ouvre l'app téléphone iOS)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") close();
     });
   });
 })();
@@ -3223,6 +3242,10 @@ function startTour(force = false) {
 function injectV5Tools() {
   const tools = $(".header-tools");
   if (!tools) return;
+  // Si le HTML fournit déjà le bouton ⋯ + le menu (#moreMenuBtn / #moreMenu)
+  // on ne crée PAS de doublon : on réutilise l'existant et on n'ajoute pas
+  // les items v5 (Lyrics/PiP/etc.) pour garder le menu Contact & dédicaces propre.
+  if ($("#moreMenuBtn") && $("#moreMenu")) return;
   // 1) Construit/récupère le menu d'overflow
   let more = $("#moreBtn");
   if (!more) {
