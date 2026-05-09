@@ -5590,10 +5590,29 @@ html, body { overflow-x: hidden; }
     flex: 0 0 auto;
   }
 
-  /* Le menu déroulant s'aligne sous l'en-tête réel (et non un offset figé) */
+  /* Le menu déroulant s'aligne pile sous le header compact (64 px) */
   .main-nav {
-    top: 100%;
-    padding: 14px clamp(14px, 4vw, 24px) 20px;
+    top: 64px;
+    max-height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Bloque le scroll de la page quand le menu burger est ouvert */
+  body:has(.site-header.is-open) { overflow: hidden; }
+
+  /* More menu (⋯) : ne déborde plus de l'écran */
+  .more-menu {
+    position: fixed;
+    top: 64px;
+    right: 8px;
+    left: auto;
+    min-width: 0;
+    width: min(280px, calc(100vw - 16px));
+    max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
   }
 
   /* Hero/page : compenser la nouvelle hauteur de header */
@@ -5605,6 +5624,7 @@ html, body { overflow-x: hidden; }
   .site-header {
     padding: 6px 10px;
     gap: 6px;
+    min-height: 60px;
   }
   .brand-mark,
   .brand-mark--final {
@@ -5618,6 +5638,18 @@ html, body { overflow-x: hidden; }
   .header-tool { width: 36px; height: 36px; }
   .nav-toggle  { width: 40px; height: 40px; }
   .header-tools { gap: 4px; }
+
+  /* Aligner le dropdown sur la nouvelle hauteur (60 px) */
+  .main-nav {
+    top: 60px;
+    max-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px));
+  }
+  .more-menu {
+    top: 60px;
+    right: 6px;
+    width: min(260px, calc(100vw - 12px));
+    max-height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 380px) {
