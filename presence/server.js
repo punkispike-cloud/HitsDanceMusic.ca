@@ -14,10 +14,26 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 
 const PORT = process.env.PORT || 8081;
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
+
+// Sécurité : par défaut, n'autoriser QUE les domaines de production.
+// Pour du développement local, exporter explicitement ALLOWED_ORIGINS=*
+// (ne JAMAIS laisser "*" en production).
+const ALLOWED_ORIGINS = (
+  process.env.ALLOWED_ORIGINS
+    || "https://hitsdancemusic.ca,https://www.hitsdancemusic.ca"
+)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+if (ALLOWED_ORIGINS.includes("*")) {
+  console.warn(
+    "[presence] ⚠️  ALLOWED_ORIGINS contient '*' — toutes les origines sont acceptées. "
+      + "À NE PAS utiliser en production."
+  );
+} else {
+  console.log("[presence] Origines autorisées :", ALLOWED_ORIGINS.join(", "));
+}
 
 const HEARTBEAT_MS = 25_000;     // ping aux clients toutes les 25 s
 const BROADCAST_MS = 2_000;      // diffusion stats toutes les 2 s
