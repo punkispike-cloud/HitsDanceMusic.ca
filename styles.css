@@ -1637,7 +1637,7 @@ h2 {
 
 @media (max-width: 560px) {
   .hero {
-    min-height: 92vh;
+    min-height: 92dvh; /* dvh : pas coupé par la barre d'URL Safari iOS */
     padding-top: 108px;
   }
 
@@ -1958,7 +1958,7 @@ h2 {
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-family: var(--font-ui);
-  font-size: 0.96rem;
+  font-size: 16px; /* ≥ 16px : évite l'auto-zoom de Safari iOS au focus */
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -5593,7 +5593,7 @@ html, body { overflow-x: hidden; }
   /* Le menu déroulant s'aligne pile sous le header compact (64 px) */
   .main-nav {
     top: 64px;
-    max-height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
@@ -5611,7 +5611,7 @@ html, body { overflow-x: hidden; }
     left: auto;
     min-width: 0;
     width: min(280px, calc(100vw - 16px));
-    max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
@@ -5642,13 +5642,13 @@ html, body { overflow-x: hidden; }
   /* Aligner le dropdown sur la nouvelle hauteur (60 px) */
   .main-nav {
     top: 60px;
-    max-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
   }
   .more-menu {
     top: 60px;
     right: 6px;
     width: min(260px, calc(100vw - 12px));
-    max-height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 68px - env(safe-area-inset-bottom, 0px));
   }
 }
 
