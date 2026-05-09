@@ -1107,7 +1107,7 @@ function bindNav() {
 
   const navSectionIds = ["animateurs", "horaire", "emissions", "contact"];
   const navSectionLinks = navSectionIds
-    .map((id) => document.querySelector(`#primary-nav a[href="#${id}"]`))
+    .map((id) => document.querySelector(`#primary-nav a[href$="#${id}"]`))
     .filter(Boolean);
   const navSections = navSectionIds.map((id) => document.getElementById(id)).filter(Boolean);
 
@@ -1137,6 +1137,67 @@ function bindNav() {
     }, { threshold: 0.12 });
     staggerTargets.forEach((el) => revealObserver.observe(el));
   }
+}
+
+/* -----------------------------------------------------
+  13b. Header partagé (SSI) : marquage du lien actif
+       + intercept anchor clicks vers index.html sur l'index
+       + bouton "Réinitialiser ma localisation"
+   ----------------------------------------------------- */
+function markActiveNav() {
+  const path = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+  const map = {
+    "": "navAccueil",
+    "index.html": "navAccueil",
+    "animateurs.html": "navEquipe",
+    "horaire.html": "navHoraire",
+    "emissions.html": "navEmissions",
+  };
+  const id = map[path];
+  if (id) document.getElementById(id)?.classList.add("active");
+}
+
+function smoothScrollToHashOnIndex() {
+  // Sur la page d'accueil, les liens "index.html#section" du header partagé
+  // déclenchent un rechargement complet. On intercepte pour faire un simple scroll.
+  const path = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+  if (path !== "" && path !== "index.html") return;
+  document.querySelectorAll('#primary-nav a[href*="index.html#"], a.brand[href="index.html"]').forEach((a) => {
+    a.addEventListener("click", (e) => {
+      const href = a.getAttribute("href") || "";
+      const hashIdx = href.indexOf("#");
+      if (a.classList.contains("brand")) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        history.replaceState(null, "", location.pathname);
+        return;
+      }
+      if (hashIdx === -1) return;
+      const id = href.slice(hashIdx + 1);
+      const target = document.getElementById(id);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", `#${id}`);
+    });
+  });
+}
+
+function bindResetGeo() {
+  const btn = document.getElementById("resetGeoBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    try { localStorage.removeItem("hr.weather.geo"); } catch { /* noop */ }
+    if (typeof loadWeather === "function") loadWeather();
+    if (typeof toast === "function") toast("Localisation réinitialisée — nouvelle demande de position.", "ok");
+    // Ferme le menu si ouvert
+    const menu = document.getElementById("moreMenu");
+    const trigger = document.getElementById("moreMenuBtn");
+    if (menu && trigger) {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
+  });
 }
 
 /* -----------------------------------------------------
@@ -3595,6 +3656,9 @@ function init() {
   });
 
   bindNav();
+  markActiveNav();
+  smoothScrollToHashOnIndex();
+  bindResetGeo();
   bindShortcuts();
   bindContactForm();
   buildScheduleTable();

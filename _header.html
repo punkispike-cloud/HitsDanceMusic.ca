@@ -1,0 +1,54 @@
+<!--
+  Header partagé inclus via SSI (Server-Side Include) par nginx.
+  Voir nginx.conf : `ssi on;` + `map $uri $hdr_class { ... }`
+  Ne pas inclure directement côté client : ce fichier est marqué `internal;`.
+-->
+<header class="<!--#echo var="hdr_class" default="site-header solid" -->" id="top">
+  <a class="brand" href="index.html" aria-label="Hit Radio — Les Hits Dance Music">
+    <img class="brand-mark brand-mark--final" src="assets/logo-final.webp" alt="Hit Radio — Les Hits Dance Music" width="64" height="64" decoding="async" fetchpriority="high" />
+  </a>
+  <button
+    class="nav-toggle"
+    type="button"
+    id="navToggle"
+    aria-expanded="false"
+    aria-controls="primary-nav"
+    aria-label="Ouvrir le menu"
+  >
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+  </button>
+  <nav class="main-nav" id="primary-nav" aria-label="Navigation principale">
+    <a id="navAccueil" href="index.html">Accueil</a>
+    <a id="navAnimateurs" href="index.html#animateurs">Animateurs</a>
+    <a id="navHoraire" href="index.html#horaire">Horaire</a>
+    <a id="navEmissions" href="index.html#emissions">Émissions</a>
+    <a id="navEquipe" href="animateurs.html">Équipe</a>
+  </nav>
+  <div class="presence-badge" id="presenceBadge" hidden aria-live="polite" title="Personnes en ligne · auditeurs en direct">
+    <span class="presence-pill presence-visitors"><span aria-hidden="true">👥</span><span class="presence-count" data-presence="visitors">0</span></span>
+    <span class="presence-pill presence-listeners"><span aria-hidden="true">🎧</span><span class="presence-count" data-presence="listeners">0</span></span>
+  </div>
+  <div class="header-tools">
+    <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" onclick="triggerInstall()" aria-label="Installer l'application Hit Radio" title="Installer l'app">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </button>
+    <div class="more-menu-wrap">
+      <button id="moreMenuBtn" class="header-tool" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" aria-label="Plus d'actions — contact et dédicaces" title="Contact &amp; dédicaces">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+        </svg>
+      </button>
+      <div id="moreMenu" class="more-menu" role="menu" hidden>
+        <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
+        <a role="menuitem" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
+        <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
+        <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
+        <button type="button" role="menuitem" id="resetGeoBtn"><span aria-hidden="true">📍</span> Réinitialiser ma localisation</button>
+      </div>
+    </div>
+  </div>
+</header>
