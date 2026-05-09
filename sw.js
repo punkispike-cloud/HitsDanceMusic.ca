@@ -1,6 +1,6 @@
 /* Hit Radio — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-v51-2026-01-audit";
+const CACHE = "hitradio-v52-2026-05-webp";
 const SHELL = [
   "./",
   "./index.html",
@@ -16,8 +16,8 @@ const SHELL = [
   "./assets/favicon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
-  "./assets/logo-final.jpg",
-  "./assets/landing-bg.jpg",
+  "./assets/logo-final.webp",
+  "./assets/landing-bg.webp",
 ];
 
 self.addEventListener("install", (e) => {
