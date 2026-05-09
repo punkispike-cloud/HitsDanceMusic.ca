@@ -4726,6 +4726,28 @@ body.watch-open { overflow: hidden; }
   color: rgba(255,255,255,0.6);
 }
 
+/* BRW partner card — artistes invités (noms seulement) */
+.partner-card--brw .brw-djs-names {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.partner-card--brw .brw-djs-names li {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(220,20,48,0.18);
+  border: 1px solid rgba(220,20,48,0.45);
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
 @media (max-width: 760px) {
   .featured-grid { grid-template-columns: 1fr; }
   .featured-card { padding: 18px; }
