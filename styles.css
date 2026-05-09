@@ -143,7 +143,12 @@ img {
   justify-content: space-between;
   gap: 16px;
   min-height: 110px;
-  padding: 8px clamp(18px, 4vw, 56px);
+  /* iOS standalone : respecter l'encoche / safe-area en haut + côtés */
+  padding:
+    calc(8px + env(safe-area-inset-top, 0px))
+    calc(clamp(18px, 4vw, 56px) + env(safe-area-inset-right, 0px))
+    8px
+    calc(clamp(18px, 4vw, 56px) + env(safe-area-inset-left, 0px));
   background: rgba(10, 10, 10, 0.85);
   color: var(--ink);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -5543,8 +5548,12 @@ html, body { overflow-x: hidden; }
 @media (max-width: 900px) {
   /* Header plus compact et sans wrap chaotique */
   .site-header {
-    min-height: 64px;
-    padding: 8px 14px;
+    min-height: calc(64px + env(safe-area-inset-top, 0px));
+    padding:
+      calc(8px + env(safe-area-inset-top, 0px))
+      calc(14px + env(safe-area-inset-right, 0px))
+      8px
+      calc(14px + env(safe-area-inset-left, 0px));
     gap: 8px;
     flex-wrap: nowrap;
   }
@@ -5590,10 +5599,10 @@ html, body { overflow-x: hidden; }
     flex: 0 0 auto;
   }
 
-  /* Le menu déroulant s'aligne pile sous le header compact (64 px) */
+  /* Le menu déroulant s'aligne pile sous le header compact (64 px + safe-area) */
   .main-nav {
-    top: 64px;
-    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
@@ -5606,25 +5615,29 @@ html, body { overflow-x: hidden; }
   /* More menu (⋯) : ne déborde plus de l'écran */
   .more-menu {
     position: fixed;
-    top: 64px;
-    right: 8px;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
     left: auto;
     min-width: 0;
     width: min(280px, calc(100vw - 16px));
-    max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
   /* Hero/page : compenser la nouvelle hauteur de header */
-  .hero { margin-top: 64px; }
-  .page-main { padding-top: 64px; }
+  .hero { margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
 }
 
 @media (max-width: 560px) {
   .site-header {
-    padding: 6px 10px;
+    padding:
+      calc(6px + env(safe-area-inset-top, 0px))
+      calc(10px + env(safe-area-inset-right, 0px))
+      6px
+      calc(10px + env(safe-area-inset-left, 0px));
     gap: 6px;
-    min-height: 60px;
+    min-height: calc(60px + env(safe-area-inset-top, 0px));
   }
   .brand-mark,
   .brand-mark--final {
@@ -5639,21 +5652,81 @@ html, body { overflow-x: hidden; }
   .nav-toggle  { width: 40px; height: 40px; }
   .header-tools { gap: 4px; }
 
-  /* Aligner le dropdown sur la nouvelle hauteur (60 px) */
+  /* Aligner le dropdown sur la nouvelle hauteur (60 px + safe-area) */
   .main-nav {
-    top: 60px;
-    max-height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
   .more-menu {
-    top: 60px;
-    right: 6px;
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
     width: min(260px, calc(100vw - 12px));
-    max-height: calc(100dvh - 68px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 68px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
+  .hero { margin-top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }
 }
 
 @media (max-width: 380px) {
   /* Si l'espace manque vraiment : le bouton install se cache (reste accessible
      via le menu ⋯ et la bannière "Installer l'app") */
   .install-pwa-btn { display: none !important; }
+}
+
+/* =====================================================================
+   MODE CLAIR — overrides cohérence composants principaux
+   (le header, les dropdowns et les cartes utilisent des fonds sombres
+    en dur ; ces overrides les rendent lisibles en thème light)
+   ===================================================================== */
+:root[data-theme="light"] .site-header {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  border-bottom-color: var(--line);
+}
+:root[data-theme="light"] .site-header.solid,
+:root[data-theme="light"] body.is-scrolled .site-header {
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="light"] .nav-toggle-bar { background: var(--ink); }
+:root[data-theme="light"] .nav-toggle {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+:root[data-theme="light"] .main-nav { background: rgba(255, 255, 255, 0.97); border-bottom-color: rgba(0, 0, 0, 0.12); }
+:root[data-theme="light"] .main-nav a { color: rgba(0, 0, 0, 0.7); }
+:root[data-theme="light"] .main-nav a:hover,
+:root[data-theme="light"] .main-nav a.active,
+:root[data-theme="light"] .main-nav a.is-active { background: rgba(220, 20, 48, 0.08); color: var(--accent); }
+
+:root[data-theme="light"] .partner-card {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.10);
+  color: var(--ink);
+}
+:root[data-theme="light"] .partner-card:hover {
+  background: #fff;
+  border-color: rgba(220, 20, 48, 0.4);
+}
+:root[data-theme="light"] .partner-logo { color: var(--ink); }
+:root[data-theme="light"] .partner-meta { color: rgba(0, 0, 0, 0.6); }
+:root[data-theme="light"] .partner-card--brw .brw-djs-names li {
+  color: var(--ink);
+  background: rgba(220, 20, 48, 0.08);
+  border-color: rgba(220, 20, 48, 0.35);
+}
+
+:root[data-theme="light"] .featured-card {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.10);
+  color: var(--ink);
+}
+:root[data-theme="light"] .featured-card p:last-child { color: rgba(0, 0, 0, 0.7); }
+:root[data-theme="light"] .featured-cover { background: #f0f0f0; border-color: rgba(0, 0, 0, 0.08); }
+
+:root[data-theme="light"] .site-footer {
+  background: #f5f5f5;
+  color: var(--ink);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
