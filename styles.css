@@ -4308,7 +4308,7 @@ body.watch-open { overflow: hidden; }
   filter: drop-shadow(0 8px 22px rgba(0,0,0,0.7)) drop-shadow(0 0 32px rgba(255,80,120,0.55));
 }
 @media (max-width: 720px) {
-  .site-header .brand .brand-mark--final { height: 64px !important; max-height: 64px; }
+  .site-header .brand .brand-mark--final { height: 44px !important; max-height: 44px; width: auto !important; }
   .hero-media { inset: 0; }
 }
 
@@ -5153,42 +5153,12 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
 }
 .site-footer { padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
 
-/* Header compact mobile (< 900px) */
-@media (max-width: 900px) {
-  .site-header {
-    min-height: 84px;
-    gap: 10px;
-    padding-top: max(6px, env(safe-area-inset-top, 0px));
-    padding-bottom: 6px;
-  }
-  .brand-mark { width: 38px; height: 38px; }
-  .brand img.brand-mark--final { height: 50px !important; width: auto; }
-  .nav-toggle {
-    width: 44px; height: 44px;
-    order: 99;
-    margin-left: 4px;
-  }
-  .header-tools {
-    gap: 6px;
-    margin-left: auto;
-    order: 50;
-  }
-  .header-tool { width: 44px !important; height: 44px !important; }
-  .header-tool svg { width: 20px; height: 20px; }
-}
-@media (max-width: 480px) {
-  .site-header {
-    min-height: 72px;
-    gap: 6px;
-    padding-left: max(10px, env(safe-area-inset-left, 0px));
-    padding-right: max(10px, env(safe-area-inset-right, 0px));
-  }
-  .brand img.brand-mark--final { height: 42px !important; }
-  .header-tool { width: 40px !important; height: 40px !important; }
-  .header-tools { gap: 4px; }
-  .nav-toggle { width: 40px; height: 40px; }
-  .hero { margin-top: calc(72px + var(--hr-ticker-h, 22px)) !important; }
-}
+/* Header compact mobile (< 900px)
+   NOTE: les regles de calibration mobile vivent maintenant dans le bloc
+   "MOBILE HEADER FIX" plus bas (>900/560/380). Ce bloc duplique etait
+   en conflit (min-height:84px sans safe-area + padding-top max() au lieu de +)
+   et faisait sortir le hamburger en haut sur iPhone avec encoche.
+   On garde uniquement les overrides du more-menu mobile. */
 
 /* More menu (⋯) — toujours dans le viewport */
 .more-menu {
@@ -5570,7 +5540,7 @@ html, body { overflow-x: hidden; }
       calc(10px + env(safe-area-inset-left, 0px));
     gap: 6px;
     flex-wrap: nowrap;
-    /* Garantit que les enfants restent dans la largeur de l'écran */
+    align-items: center;             /* hamburger jamais decale verticalement */
     justify-content: flex-start;
     overflow: hidden;
   }
