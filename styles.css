@@ -5542,7 +5542,10 @@ html, body { overflow-x: hidden; }
     flex-wrap: nowrap;
     align-items: center;             /* hamburger jamais decale verticalement */
     justify-content: flex-start;
-    overflow: hidden;
+    /* overflow: visible — .brand gère déjà sa propre troncature.
+       Mettre overflow:hidden ici clippe le menu ⋯ (.more-menu position:fixed)
+       car le header est containing-block (transform/backdrop-filter). */
+    overflow: visible;
   }
 
   /* La marque rétrécit en priorité (image fixe à 44px, texte tronqué) */
