@@ -1,4 +1,4 @@
-# Hit Radio — Presence Service
+# Hits Dance Music — Presence Service
 
 Mini-service Node.js qui compte en temps réel :
 - 👥 **visiteurs** sur le site (= connexions WebSocket actives)
@@ -6,7 +6,7 @@ Mini-service Node.js qui compte en temps réel :
 
 ## Déploiement Railway (recommandé)
 
-1. Dans le projet Railway de Hit Radio, clique **+ New → GitHub Repo → HitsDanceMusic.ca**.
+1. Dans le projet Railway de Hits Dance Music, clique **+ New → GitHub Repo → HitsDanceMusic.ca**.
 2. Une fois le service créé, va dans **Settings → Source** et règle :
    - **Root Directory** : `presence`
    - **Builder** : Dockerfile (auto-détecté)

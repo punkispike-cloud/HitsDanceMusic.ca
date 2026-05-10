@@ -4908,7 +4908,7 @@ main:focus { outline: none; }
   align-items: center;
   gap: 12px;
   white-space: nowrap;
-  animation: hr-ticker-scroll 60s linear infinite;
+  animation: hr-ticker-scroll 2000s linear infinite;
   padding-left: 100%;
 }
 .hr-ticker-dot {
@@ -5018,7 +5018,7 @@ body.is-playing-radio .vumeter span {
 
 @media (max-width: 760px) {
   .hr-ticker { font-size: 0.7rem; padding: 5px 0; }
-  .hr-ticker-track { animation-duration: 45s; }
+  .hr-ticker-track { animation-duration: 2000s; }
   .back-to-top { bottom: 100px; right: 12px; width: 40px; height: 40px; }
 }
 

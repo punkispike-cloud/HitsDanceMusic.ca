@@ -1,4 +1,4 @@
-# Hit Radio — Les Hits Dance Music
+# Hits Dance Music — La radio
 
 Site statique (HTML / CSS / JS) pour la landing page et quelques pages satellites. Aucun backend : le lecteur lit directement le flux SHOUTcast.
 
@@ -40,7 +40,7 @@ Depuis les pages satellites, la barre **Écouter le direct** pointe vers `index.
 
 ## Modifier le contenu
 
-- Marque : chercher `Hit Radio` et `Les Hits Dance Music`.
+- Marque : chercher `Hits Dance Music` et `Les Hits Dance Music`.
 - Grille : blocs `<details class="day-block">` dans `index.html`.
 - Lecteur : textes d’état dans `script.js`.
 

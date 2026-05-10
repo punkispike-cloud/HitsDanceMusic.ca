@@ -1,5 +1,5 @@
 /**
- * Hit Radio — Presence WebSocket service
+ * Hits Dance Music — Presence WebSocket service
  * Compte les visiteurs sur le site et les auditeurs actifs du flux.
  *
  * Protocole client → serveur (JSON) :
@@ -49,7 +49,7 @@ const server = http.createServer((req, res) => {
     }));
   }
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Hit Radio presence service\n");
+  res.end("Hits Dance Music presence service\n");
 });
 
 const wss = new WebSocketServer({

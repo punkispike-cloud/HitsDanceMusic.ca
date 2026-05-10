@@ -1,5 +1,5 @@
 /* =====================================================
-   Hit Radio — Les Hits Dance Music
+   Hits Dance Music — La radio
    Player persistant cross-page, MediaSession, PWA,
    horaire interactif, historique, partage, raccourcis.
    ===================================================== */
@@ -204,7 +204,7 @@ function getCurrentSlot(date = new Date()) {
       return { from, to: to === "24:00" ? "00:00" : to, title, host, tag, day };
     }
   }
-  return { from: "00:00", to: "07:00", title: "Hit Radio en continu", host: "Programmation", tag: "hitlist", day };
+  return { from: "00:00", to: "07:00", title: "Hits Dance Music en continu", host: "Programmation", tag: "hitlist", day };
 }
 
 /* -----------------------------------------------------
@@ -698,13 +698,13 @@ function makeMiniPlayerUI() {
   const bar = document.createElement("aside");
   bar.id = "miniPlayer";
   bar.className = "mini-player";
-  bar.setAttribute("aria-label", "Lecteur radio Hit Radio");
+  bar.setAttribute("aria-label", "Lecteur radio Hits Dance Music");
   bar.innerHTML = `
     <button class="mini-play" id="miniPlay" type="button" aria-label="Lancer la radio" data-state="paused">
       <span class="mini-play-icon" aria-hidden="true"></span>
     </button>
     <div class="mini-meta">
-      <span class="mini-show" id="miniShow">Hit Radio</span>
+      <span class="mini-show" id="miniShow">Hits Dance Music</span>
       <span class="mini-track" id="miniTrack">Les Hits Dance Music</span>
       <span class="mini-session" id="sessionBadgeMini" hidden></span>
     </div>
@@ -862,12 +862,12 @@ function announceTrack(np) {
 function updateMediaSession() {
   if (!("mediaSession" in navigator)) return;
   const slot = currentSlot || getCurrentSlot();
-  const title = currentTrack ? (currentTrack.title || "Hit Radio") : (slot.title || "Hit Radio");
-  const artist = currentTrack ? (currentTrack.artist || slot.host || "Hit Radio") : (slot.host || "Programmation");
+  const title = currentTrack ? (currentTrack.title || "Hits Dance Music") : (slot.title || "Hits Dance Music");
+  const artist = currentTrack ? (currentTrack.artist || slot.host || "Hits Dance Music") : (slot.host || "Programmation");
   const artworkSrc = currentCover || fallbackCoverDataUri(slot);
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title, artist, album: "Hit Radio — Les Hits Dance Music",
+      title, artist, album: "Hits Dance Music — La radio",
       artwork: [
         { src: artworkSrc, sizes: "300x300", type: artworkSrc.startsWith("data:") ? "image/svg+xml" : "image/jpeg" },
       ],
@@ -951,10 +951,10 @@ async function shareCurrent() {
   const trackText = currentTrack
     ? (currentTrack.artist ? `${currentTrack.artist} — ${currentTrack.title}` : currentTrack.title)
     : slot.title;
-  const text = `J'écoute « ${trackText} » sur Hit Radio — Les Hits Dance Music`;
+  const text = `J'écoute « ${trackText} » sur Hits Dance Music — La radio`;
   const url = `${location.origin}${location.pathname}?play=1#player`;
   if (navigator.share) {
-    try { await navigator.share({ title: "Hit Radio", text, url }); return; }
+    try { await navigator.share({ title: "Hits Dance Music", text, url }); return; }
     catch { /* annulé */ }
   }
   try {
@@ -1253,7 +1253,7 @@ function bindContactForm() {
     // Construit un mailto enrichi
     e.preventDefault();
     const fd = new FormData(form);
-    const sujet = fd.get("sujet") || "Message Hit Radio";
+    const sujet = fd.get("sujet") || "Message Hits Dance Music";
     const body = [
       `Nom : ${fd.get("nom") || ""}`,
       `Email : ${fd.get("email") || ""}`,
@@ -1263,7 +1263,7 @@ function bindContactForm() {
       String(fd.get("message") || ""),
     ].join("\n");
     const to = form.dataset.mail || "studio@hit.radio";
-    location.href = `mailto:${to}?subject=${encodeURIComponent("[Hit Radio] " + sujet)}&body=${encodeURIComponent(body)}`;
+    location.href = `mailto:${to}?subject=${encodeURIComponent("[Hits Dance Music] " + sujet)}&body=${encodeURIComponent(body)}`;
     toast("Ouverture de ton client email…", "ok");
   });
 }
@@ -1295,7 +1295,7 @@ function buildScheduleTable() {
 
 function downloadIcs() {
   const lines = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Hit Radio//Schedule//FR", "CALSCALE:GREGORIAN",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Hits Dance Music//Schedule//FR", "CALSCALE:GREGORIAN",
   ];
   const order = [1,2,3,4,5,6,0]; // commence lundi
   // Référence : prochain lundi à partir d'aujourd'hui
@@ -1321,7 +1321,7 @@ function downloadIcs() {
         `DTSTART;TZID=America/Toronto:${fmt(start)}`,
         `DTEND;TZID=America/Toronto:${fmt(end)}`,
         `SUMMARY:${title.replace(/[\r\n,;]/g, " ")}`,
-        `DESCRIPTION:${(host || "").replace(/[\r\n,;]/g, " ")} — Hit Radio`,
+        `DESCRIPTION:${(host || "").replace(/[\r\n,;]/g, " ")} — Hits Dance Music`,
         "RRULE:FREQ=WEEKLY",
         "END:VEVENT");
     }
@@ -1457,7 +1457,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
   hideInstallButtons();
-  toast("Hit Radio installé sur ton appareil ! 🎉", "ok");
+  toast("Hits Dance Music installé sur ton appareil ! 🎉", "ok");
 });
 
 // Sur iOS / Brave Android : pas toujours d'event beforeinstallprompt — afficher
@@ -1496,7 +1496,7 @@ function showInstallSheet(platform, brave) {
   const existing = document.getElementById("installSheet");
   if (existing) existing.remove();
 
-  let title = "Installer Hit Radio";
+  let title = "Installer Hits Dance Music";
   let body = "";
 
   if (platform === "ios" && brave) {
@@ -1523,7 +1523,7 @@ function showInstallSheet(platform, brave) {
       <ol>
         <li>Touche le menu <strong>⋮</strong> en haut à droite de Brave.</li>
         <li>Choisis <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</li>
-        <li>Confirme. L'icône Hit Radio apparaît sur ton écran d'accueil 🎉</li>
+        <li>Confirme. L'icône Hits Dance Music apparaît sur ton écran d'accueil 🎉</li>
       </ol>`;
   } else if (platform === "android") {
     body = `
@@ -1537,7 +1537,7 @@ function showInstallSheet(platform, brave) {
       <ol>
         <li>Dans la barre d'adresse, cherche l'icône <strong>⊕</strong> ou <strong>⬇️</strong> à droite.</li>
         <li>Clique puis confirme <strong>« Installer »</strong>.</li>
-        <li>Hit Radio s'ouvre comme une vraie app. 🎉</li>
+        <li>Hits Dance Music s'ouvre comme une vraie app. 🎉</li>
       </ol>`;
   }
 
@@ -1909,10 +1909,10 @@ function injectJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "RadioStation",
-    "name": "Hit Radio — Les Hits Dance Music",
+    "name": "Hits Dance Music — La radio",
     "url": location.origin + "/",
     "logo": location.origin + "/assets/favicon.svg",
-    "broadcastDisplayName": "Hit Radio",
+    "broadcastDisplayName": "Hits Dance Music",
     "broadcastTimezone": "America/Toronto",
     "inLanguage": "fr-CA",
     "genre": ["Dance", "House", "Hits"],
@@ -2104,7 +2104,7 @@ function notifyShowChange(slot) {
   if (document.visibilityState === "visible") return; // pas de doublon avec toast in-page
   const tag = SLOT_TAGS[slot.tag] || SLOT_TAGS.hitlist;
   try {
-    new Notification(`Maintenant sur Hit Radio : ${slot.title}`, {
+    new Notification(`Maintenant sur Hits Dance Music : ${slot.title}`, {
       body: `${slot.from}–${slot.to} · ${slot.host || tag.label}`,
       icon: "assets/favicon.svg",
       tag: "hr-show",
@@ -2448,7 +2448,13 @@ function injectExtraHeaderTools() {
   eqBtn.setAttribute("aria-label", "Égaliseur");
   eqBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`;
   eqBtn.addEventListener("click", toggleEqPanel);
-  tools.insertBefore(eqBtn, $("#installPwaBtn"));
+  // Scope la recherche du bouton install à l'intérieur de #headerTools :
+  // le HTML statique peut contenir un autre #installPwaBtn (doublon) qui
+  // n'est pas un enfant de `tools`, ce qui faisait planter insertBefore et
+  // bloquait la suite de l'init (ticker rouge, vumetre, etc.).
+  const installRef = tools.querySelector("#installPwaBtn");
+  if (installRef) tools.insertBefore(eqBtn, installRef);
+  else tools.appendChild(eqBtn);
 
   const notifBtn = document.createElement("button");
   notifBtn.type = "button";
@@ -2458,7 +2464,8 @@ function injectExtraHeaderTools() {
   notifBtn.setAttribute("aria-label", "Notifications de show");
   notifBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
   notifBtn.addEventListener("click", toggleShowNotifications);
-  tools.insertBefore(notifBtn, $("#installPwaBtn"));
+  if (installRef) tools.insertBefore(notifBtn, installRef);
+  else tools.appendChild(notifBtn);
 
   // Reflète l'état activé
   if (store.get(STORAGE.notifShow, "0") === "1") notifBtn.classList.add("is-on");
@@ -2468,7 +2475,7 @@ function injectExtraHeaderTools() {
   35. Wave 4 — bandes scrollables (rails)
    ----------------------------------------------------- */
 const WEBRADIOS = [
-  { id: "main",    name: "Hit Radio Live", desc: "Le flux principal 24/7", color: "#c8102e", emoji: "📻", main: true },
+  { id: "main",    name: "Hits Dance Music Live", desc: "Le flux principal 24/7", color: "#c8102e", emoji: "📻", main: true },
   { id: "dance",   name: "Dance Floor",    desc: "100 % club & house",     color: "#ff3a6e", emoji: "💃" },
   { id: "disco",   name: "Disco Fever",    desc: "Le meilleur du disco",   color: "#e8b84b", emoji: "🪩" },
   { id: "latino",  name: "Latino Mix",     desc: "Reggaeton, salsa, urbano", color: "#ff8a3d", emoji: "🌶️" },
@@ -2813,7 +2820,7 @@ function ensureWatchMode() {
         ${Array.from({length: 24}, (_, i) => `<span style="--i:${i}"></span>`).join("")}
       </div>
       <div class="watch-info">
-        <p class="watch-tag" id="watchTag">LIVE · Hit Radio</p>
+        <p class="watch-tag" id="watchTag">LIVE · Hits Dance Music</p>
         <h2 class="watch-title" id="watchTitle">En direct</h2>
         <p class="watch-host" id="watchHost">Programmation</p>
         <p class="watch-track" id="watchTrack" hidden></p>
@@ -3295,7 +3302,7 @@ function drawPipFrame() {
   ctx.fillStyle = "#ff3a6e";
   const slot = currentSlot || getCurrentSlot();
   ctx.font = "bold 20px system-ui, sans-serif";
-  wrapText(ctx, slot?.title || "Hit Radio", 270, 90, 200, 24);
+  wrapText(ctx, slot?.title || "Hits Dance Music", 270, 90, 200, 24);
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = "16px system-ui, sans-serif";
   if (currentTrack?.title) {
@@ -3875,7 +3882,7 @@ function ensureNowPlayingDrawer() {
     <div class="np-inner">
       <img class="np-cover" id="npCover" alt="" />
       <div class="np-meta">
-        <span class="np-tag" id="npTag">Hit Radio</span>
+        <span class="np-tag" id="npTag">Hits Dance Music</span>
         <h2 class="np-title" id="npTitle">Les Hits Dance Music</h2>
         <p class="np-host" id="npHost"></p>
         <p class="np-track" id="npTrack" hidden></p>
@@ -3908,7 +3915,7 @@ function openNowPlayingDrawer() {
     npCover.src = coverSrc;
     npBg.style.backgroundImage = `url("${coverSrc}")`;
   }
-  d.querySelector("#npTitle").textContent = currentSlot?.title || "Hit Radio";
+  d.querySelector("#npTitle").textContent = currentSlot?.title || "Hits Dance Music";
   d.querySelector("#npHost").textContent = currentSlot?.host || "";
   const tag = SLOT_TAGS?.[currentSlot?.tag] || null;
   const npTag = d.querySelector("#npTag");
@@ -3981,7 +3988,7 @@ function injectTicker() {
   t.setAttribute("aria-live", "off");
   t.innerHTML = `<div class="hr-ticker-track" id="hrTickerTrack">
     <span class="hr-ticker-dot" aria-hidden="true"></span>
-    <span class="hr-ticker-text">EN DIRECT — Hit Radio · Les Hits Dance Music</span>
+    <span class="hr-ticker-text">EN DIRECT — Hits Dance Music · La radio</span>
   </div>`;
   header.parentElement.insertBefore(t, header.nextSibling);
   refreshTicker();
@@ -4001,6 +4008,16 @@ function refreshTicker() {
   // Repete pour effet defilant continu
   const line = parts.join(" · ");
   txt.textContent = `${line}     ★     ${line}     ★     ${line}`;
+  // Ajuste la duree d'animation pour une vitesse de lecture confortable
+  // (~70 px/s desktop, ~55 px/s mobile)
+  requestAnimationFrame(() => {
+    const track = document.getElementById("hrTickerTrack");
+    if (!track) return;
+    const distance = track.scrollWidth + window.innerWidth; // padding-left:100% + translateX(-100%)
+    const pxPerSec = window.matchMedia("(max-width: 760px)").matches ? 55 : 70;
+    const duration = Math.max(30, Math.round(distance / pxPerSec));
+    track.style.animationDuration = `${duration}s`;
+  });
 }
 
 // 5.2 Vumetre CSS sous le bouton play (panneau plein)

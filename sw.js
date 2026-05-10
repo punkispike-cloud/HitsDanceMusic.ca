@@ -1,4 +1,4 @@
-/* Hit Radio — Service Worker
+/* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
 const CACHE = "hitradio-v52-2026-05-webp";
 const SHELL = [

@@ -1,6 +1,6 @@
 {
-  "name": "Hit Radio Dance Music",
-  "short_name": "Hit Radio",
+  "name": "Hits Dance Music",
+  "short_name": "Hits Dance Music",
   "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
   "id": "/",
   "start_url": "./index.html?utm_source=pwa",
