@@ -5741,3 +5741,274 @@ html, body { overflow-x: hidden; }
   .site-header .main-nav { display: none !important; }
 }
 
+/* =====================================================================
+   PLAYER 2026 — refonte propre, moderne, optimale
+   - grid 2 colonnes (cover gauche, infos droite) sur >=560px
+   - cover 160px (desktop) / 120px (mobile), arrondi, shadow, halo
+   - typo claire, hierarchie nette
+   - controles compacts, slider volume large, plus de bouton "ouvrir"
+   - hide vumetre auto-injecté (les points qui polluaient le bas)
+   ===================================================================== */
+.player-2026 {
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 2.4vw, 26px);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(220,20,48,0.18), transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(120,0,30,0.18), transparent 60%),
+    rgba(14, 14, 18, 0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 30px 80px -30px rgba(0,0,0,0.65),
+    0 0 0 1px rgba(220,20,48,0.18) inset;
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+.player-2026.player-panel--signature::after { display: none; }
+
+/* Header bar : LIVE + station + meta (clock+meteo) */
+.player-2026 .p26-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.player-2026 .player-live-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(90deg, #dc1430, #b40e26);
+  color: #fff; font-weight: 800; font-size: 0.72rem; letter-spacing: 0.16em;
+  padding: 5px 10px; border-radius: 999px; text-transform: uppercase;
+  box-shadow: 0 4px 14px -4px rgba(220,20,48,0.6);
+}
+.player-2026 .player-live-badge .live-tag-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 8px #fff; animation: hr-blink 1.4s ease-in-out infinite;
+}
+.player-2026 .player-station-name {
+  font-weight: 700; font-size: 0.95rem; color: #fff;
+  letter-spacing: 0.01em; flex: 1 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-2026 .p26-meta {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-left: auto; flex-wrap: wrap; justify-content: flex-end;
+}
+.player-2026 .player-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem; font-weight: 600;
+  color: rgba(255,255,255,0.78);
+  text-transform: none;
+  letter-spacing: 0;
+  background: rgba(255,255,255,0.06);
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.player-2026 .weather-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; color: #fff;
+  background: rgba(255,255,255,0.06);
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.player-2026 .weather-chip .weather-temp { font-weight: 700; }
+.player-2026 .weather-chip .weather-meta { font-size: 0.72rem; opacity: 0.8; }
+.player-2026 .weather-chip .weather-meta strong { font-weight: 700; opacity: 1; }
+
+/* Onair grid : cover + info */
+.player-2026 .p26-onair {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.player-2026 .p26-cover {
+  width: 160px; height: 160px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 16px 40px -12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.06) inset;
+  background:
+    linear-gradient(135deg, rgba(220,20,48,0.35), rgba(40,0,10,0.6)),
+    #0c0c10;
+}
+.player-2026 .p26-cover::before {
+  content: ""; position: absolute; inset: -30%;
+  background: radial-gradient(circle, var(--dynamic-accent, rgba(220,20,48,0.4)), transparent 65%);
+  filter: blur(40px); opacity: 0; transition: opacity .6s ease;
+  z-index: -1;
+}
+.player-2026.is-playing .p26-cover::before { opacity: 0.9; }
+.player-2026 .p26-cover img {
+  width: 100% !important; height: 100% !important;
+  object-fit: cover; display: block;
+  transition: transform .8s ease;
+}
+.player-2026.is-playing .p26-cover img { transform: scale(1.04); }
+.player-2026 .p26-cover .player-equalizer {
+  position: absolute; left: 10px; bottom: 10px;
+  display: none; gap: 3px; align-items: flex-end; height: 20px;
+  padding: 4px 6px; background: rgba(0,0,0,0.45);
+  border-radius: 6px; backdrop-filter: blur(4px);
+}
+.player-2026.is-playing .p26-cover .player-equalizer { display: inline-flex; }
+.player-2026 .p26-cover .player-equalizer span {
+  width: 3px; background: #fff; border-radius: 2px;
+  animation: vu-bar 0.7s ease-in-out infinite alternate;
+}
+.player-2026 .p26-cover .player-equalizer span:nth-child(1) { animation-delay: 0s; }
+.player-2026 .p26-cover .player-equalizer span:nth-child(2) { animation-delay: 0.12s; }
+.player-2026 .p26-cover .player-equalizer span:nth-child(3) { animation-delay: 0.06s; }
+.player-2026 .p26-cover .player-equalizer span:nth-child(4) { animation-delay: 0.18s; }
+.player-2026 .p26-cover .player-equalizer span:nth-child(5) { animation-delay: 0.09s; }
+
+/* Info bloc */
+.player-2026 .p26-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.player-2026 .player-onair-kicker {
+  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.player-2026 .player-onair-tag {
+  display: inline-block; font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--tag-color, #c8102e);
+  background: color-mix(in srgb, var(--tag-color, #c8102e) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, #c8102e) 40%, transparent);
+  padding: 3px 8px; border-radius: 999px;
+}
+.player-2026 .player-onair-slot {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem; color: rgba(255,255,255,0.7);
+}
+.player-2026 .player-onair-title {
+  font-size: clamp(1.1rem, 1.4vw + 0.6rem, 1.45rem);
+  font-weight: 800; color: #fff; line-height: 1.2;
+  margin: 2px 0 0; letter-spacing: -0.01em;
+}
+.player-2026 .player-onair-host {
+  font-size: 0.86rem; color: rgba(255,255,255,0.7);
+}
+.player-2026 .player-track-live {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 8px 0 0; padding: 8px 12px;
+  background: rgba(220,20,48,0.12);
+  border: 1px solid rgba(220,20,48,0.28);
+  border-radius: 10px;
+  color: #fff; font-size: 0.85rem; font-weight: 600;
+  max-width: 100%; overflow: hidden;
+}
+.player-2026 .player-track-live svg { color: #ff4d6d; flex-shrink: 0; }
+.player-2026 .player-track-live #liveTrackText {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.player-2026 .countdown-line {
+  margin: 6px 0 0; font-size: 0.78rem; color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.player-2026 .countdown-line strong { color: #fff; font-weight: 700; }
+
+/* Mute button auto-injecté par script.js : redondant avec vol-icon, on cache */
+.player-2026 .p26-volume #muteToggle { display: none !important; }
+
+/* Canvas viz : laisser script.js le gérer mais limiter */
+.player-2026 .viz-canvas {
+  width: 100%; height: 36px; border-radius: 8px;
+  opacity: 0.55;
+}
+
+/* Controles */
+.player-2026 .p26-controls {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.player-2026 .play-button {
+  width: 64px !important; height: 64px !important; flex: 0 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dc1430, #ff4d6d) !important;
+  color: #fff; border: none; cursor: pointer;
+  box-shadow:
+    0 12px 32px -8px rgba(220,20,48,0.6),
+    0 0 0 4px rgba(220,20,48,0.12);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.player-2026 .play-button:hover {
+  transform: scale(1.06);
+  box-shadow:
+    0 16px 40px -8px rgba(220,20,48,0.8),
+    0 0 0 6px rgba(220,20,48,0.18);
+}
+.player-2026 .p26-status { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.player-2026 .player-status {
+  font-size: 0.95rem; font-weight: 700; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-2026 .player-status-sub {
+  font-size: 0.74rem; color: rgba(255,255,255,0.55); letter-spacing: 0.02em;
+}
+.player-2026 .p26-volume {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.05);
+  padding: 8px 12px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 160px;
+}
+.player-2026 .p26-volume .vol-icon { color: rgba(255,255,255,0.8); flex-shrink: 0; }
+.player-2026 .p26-volume input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 999px;
+  background: linear-gradient(90deg, #dc1430 var(--vol-fill, 85%), rgba(255,255,255,0.15) var(--vol-fill, 85%));
+  outline: none; cursor: pointer;
+}
+.player-2026 .p26-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 2px solid #dc1430;
+  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.player-2026 .p26-volume input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 2px solid #dc1430;
+  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Hide la vieille equalizer sous le cover (deja remplace par overlay sur cover) */
+.player-2026 .p26-onair > .p26-cover > .player-equalizer ~ .player-equalizer { display: none; }
+
+/* Hide vumetre auto-injecté en bas (polluait le panneau) */
+.player-2026 #hrVumeter,
+#hrVumeter { display: none !important; }
+
+/* Mobile : pile verticale, cover plus petit */
+@media (max-width: 560px) {
+  .player-2026 { padding: 16px; gap: 14px; border-radius: 18px; }
+  .player-2026 .p26-onair {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+  }
+  .player-2026 .p26-cover { width: 96px; height: 96px; border-radius: 12px; }
+  .player-2026 .player-onair-title { font-size: 1.05rem; }
+  .player-2026 .p26-controls {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "play status" "vol vol";
+    gap: 12px 14px;
+  }
+  .player-2026 .play-button { grid-area: play; width: 56px !important; height: 56px !important; }
+  .player-2026 .p26-status { grid-area: status; }
+  .player-2026 .p26-volume { grid-area: vol; min-width: 0; }
+  .player-2026 .p26-meta { width: auto; justify-content: flex-end; gap: 6px; }
+  .player-2026 .player-clock,
+  .player-2026 .weather-chip { font-size: 0.7rem; padding: 3px 8px; }
+  .player-2026 .weather-chip .weather-meta { display: none; }
+  .player-2026 .player-station-name { font-size: 0.85rem; }
+}

@@ -3970,7 +3970,9 @@ function closeNowPlayingDrawer() {
    ===================================================== */
 function initPhase5UX() {
   injectTicker();
-  injectVumeter();
+  // Vumetre auto-injecte desactive : remplace par l'equalizer overlay
+  // sur la pochette dans le nouveau lecteur 2026.
+  // injectVumeter();
   injectBackToTop();
   extendScrollReveal();
   applyMetaSkeletons();
