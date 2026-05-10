@@ -3189,6 +3189,7 @@ function tickLyrics() {
   41. Wave 5 — Réactions emoji live (engagement)
    ----------------------------------------------------- */
 function injectReactions() {
+  return; // desactive : les emojis polluaient le bas du lecteur
   if ($("#reactionsBar")) return;
   const player = $("#player");
   if (!player) return;

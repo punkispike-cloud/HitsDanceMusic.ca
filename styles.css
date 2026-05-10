@@ -6012,3 +6012,6 @@ html, body { overflow-x: hidden; }
   .player-2026 .weather-chip .weather-meta { display: none; }
   .player-2026 .player-station-name { font-size: 0.85rem; }
 }
+
+/* Kill emoji reactions bar (trop polluant) */
+#reactionsBar, .reactions-bar { display: none !important; }
