@@ -639,7 +639,9 @@ function makeFullPanelUI() {
     syncVolume(v, muted) {
       if (vol) {
         vol.value = String(v);
-        vol.style.setProperty("--vol-fill", `${Math.round((muted ? 0 : v) * 100)}%`);
+        const ratio = muted ? 0 : v; // 0..1
+        vol.style.setProperty("--vol-fill", `${Math.round(ratio * 100)}%`);
+        vol.style.setProperty("--vol-pos", String(ratio));
       }
       muteBtn?.classList.toggle("is-muted", muted);
       muteBtn?.setAttribute("aria-label", muted ? "Activer le son" : "Couper le son");

@@ -5967,7 +5967,14 @@ html, body { overflow-x: hidden; }
 .player-2026 .p26-volume input[type="range"] {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: 4px; border-radius: 999px;
-  background: linear-gradient(90deg, #dc1430 var(--vol-fill, 85%), rgba(255,255,255,0.15) var(--vol-fill, 85%));
+  /* On calque le remplissage sur la position reelle du pouce
+     (pouce = 14px, donc piste utile = 100% - 14px) */
+  --_fill: calc(var(--vol-pos, 0.85) * (100% - 14px) + 7px);
+  background: linear-gradient(90deg,
+    #dc1430 0,
+    #dc1430 var(--_fill),
+    rgba(255,255,255,0.15) var(--_fill),
+    rgba(255,255,255,0.15) 100%);
   outline: none; cursor: pointer;
 }
 .player-2026 .p26-volume input[type="range"]::-webkit-slider-thumb {
