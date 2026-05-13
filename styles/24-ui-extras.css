@@ -1,0 +1,224 @@
+/* =====================================================
+   PHASE 5 UX : ticker, vumetre, back-to-top, reveal,
+   skeleton metas, vinyl cursor
+   ===================================================== */
+
+/* Ticker defilant sous le header */
+.hr-ticker {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(220,20,48,0.95), rgba(140,10,30,0.95));
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 6px 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+}
+.hr-ticker-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  animation: hr-ticker-scroll 2000s linear infinite;
+  padding-left: 100%;
+}
+.hr-ticker-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px #fff, 0 0 4px #fff;
+  animation: hr-blink 1.4s ease-in-out infinite;
+}
+@keyframes hr-ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes hr-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* Bouton retour en haut */
+.back-to-top {
+  position: fixed;
+  bottom: 88px;
+  right: 18px;
+  z-index: 90;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(220,20,48,0.5);
+  background: rgba(15,15,18,0.92);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity .25s ease, transform .25s ease, background .25s ease;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.back-to-top.is-shown { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.back-to-top:hover    { background: rgba(220,20,48,0.85); transform: translateY(-2px); }
+
+/* Scroll reveal generique */
+.hr-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .55s cubic-bezier(.2,.7,.2,1), transform .55s cubic-bezier(.2,.7,.2,1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.hr-reveal-in { opacity: 1; transform: none; }
+
+/* Skeleton metas (titre/artiste pendant chargement) */
+.is-skeleton {
+  display: inline-block;
+  min-width: 140px;
+  min-height: 1em;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.06) 0%,
+    rgba(255,255,255,0.16) 50%,
+    rgba(255,255,255,0.06) 100%);
+  background-size: 200% 100%;
+  animation: hr-skeleton-shimmer 1.4s ease-in-out infinite;
+  color: transparent !important;
+}
+@keyframes hr-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 760px) {
+  .hr-ticker { font-size: 0.7rem; padding: 5px 0; }
+  .hr-ticker-track { animation-duration: 2000s; }
+  .back-to-top { bottom: 100px; right: 12px; width: 40px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hr-ticker-track { animation: none; padding-left: 0; }
+  .hr-reveal { opacity: 1; transform: none; }
+}
+
+/* =====================================================
+   FIX: empilement ticker + header
+   ===================================================== */
+:root { --hr-ticker-h: 26px; }
+
+.hr-ticker {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 60;            /* au-dessus du header (40) */
+  height: var(--hr-ticker-h);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.hr-ticker-track { line-height: var(--hr-ticker-h); }
+
+.site-header { top: var(--hr-ticker-h) !important; }
+.hero { margin-top: calc(110px + var(--hr-ticker-h)) !important; }
+body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
+
+@media (max-width: 760px) {
+  :root { --hr-ticker-h: 22px; }
+}
+
+/* Partner logo image (BeatRadioWorld) */
+.partner-logo-img {
+  display: block;
+  max-width: 180px;
+  max-height: 70px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto 6px;
+  filter: drop-shadow(0 4px 12px rgba(220,20,48,0.35));
+}
+
+/* ============================================================
+   Header play button (injecté par script.js sur toutes les pages)
+   ============================================================ */
+.header-play {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 12px;
+  padding: 9px 16px 9px 14px;
+  border: 1px solid rgba(220, 20, 48, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dc1430 0%, #a80020 100%);
+  color: #fff;
+  font: 600 0.78rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(220, 20, 48, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform 0.18s var(--ease-out, ease), filter 0.18s ease, box-shadow 0.18s ease, background 0.25s ease, border-color 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.header-play:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px rgba(220, 20, 48, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.header-play:active { transform: translateY(0); }
+.header-play:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 3px;
+}
+.header-play .hp-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+.header-play .hp-ico--pause { display: none; }
+.header-play.is-playing .hp-ico--play { display: none; }
+.header-play.is-playing .hp-ico--pause { display: inline-flex; }
+.header-play.is-playing {
+  background: linear-gradient(135deg, #16a34a 0%, #047a2c 100%);
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.header-play .hp-pulse {
+  display: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  animation: hpPulse 1.4s infinite;
+}
+.header-play.is-playing .hp-pulse { display: inline-block; }
+@keyframes hpPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+@media (max-width: 640px) {
+  .header-play {
+    padding: 8px 12px;
+    margin-right: 8px;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+  .header-play .hp-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-play, .header-play:hover { transition: none; transform: none; }
+  .header-play .hp-pulse { animation: none; }
+}

@@ -8,7 +8,7 @@
       content="Hits Dance Music — La radio 2026. Radio en ligne live, dance et house, programmation complète avec DJs et animateurs."
     />
     <meta name="theme-color" content="#0f0f12" />
-    <script>(function(){try{var m=localStorage.getItem("hr.theme")||"auto";var r=(m==="light"||m==="dark")?m:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=r;document.documentElement.dataset.themeMode=m;var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(r==="light"?"#fafafa":"#0f0f12");}catch(e){}})();</script>
+    <script src="assets/theme-init.js"></script>
     <meta property="og:title" content="Hits Dance Music | La radio" />
     <meta
       property="og:description"
@@ -26,18 +26,19 @@
     <meta name="twitter:description" content="Écoute le direct, découvre la grille hebdo 2026 et l’équipe — dance, house et lounge au Québec." />
     <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
     <title>Hits Dance Music | La radio — Radio en ligne live</title>
+    <link rel="canonical" href="https://hitsdancemusic.ca/" />
+        <meta name="format-detection" content="telephone=no" />
+    <link rel="preload" as="image" href="assets/landing-bg.webp" fetchpriority="high" />
+    <!--#include name="head-icons"-->
+    <link rel="modulepreload" href="js/main.js" />
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hits Dance Music" />
-    <!-- Compteur live : remplacer par wss://<service-presence>.up.railway.app/ws/presence -->
     <meta name="hr-presence-url" content="" />
-    <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="canonical" href="https://hitsdancemusic.ca/" />
-    <link rel="preload" as="image" href="assets/landing-bg.webp" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -45,6 +46,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+<!--#endinclude-->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -82,12 +84,15 @@
         <a href="#emissions">Émissions</a>
         <a href="animateurs.html">Équipe</a>
       </nav>
+      <!--#include name="presence-badge"-->
       <div class="presence-badge" id="presenceBadge" hidden aria-live="polite" title="Personnes en ligne · auditeurs en direct">
         <span class="presence-pill presence-visitors"><span aria-hidden="true">👥</span><span class="presence-count" data-presence="visitors">0</span></span>
         <span class="presence-pill presence-listeners"><span aria-hidden="true">🎧</span><span class="presence-count" data-presence="listeners">0</span></span>
       </div>
+<!--#endinclude-->
+      <!--#include name="header-tools"-->
       <div class="header-tools">
-        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" onclick="triggerInstall()" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
+        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
@@ -107,6 +112,7 @@
           </div>
         </div>
       </div>
+<!--#endinclude-->
     </header>
 
     <main id="main">
@@ -160,8 +166,6 @@
                 <p class="countdown-line" id="nextShowCountdown" hidden></p>
               </div>
             </div>
-
-            <canvas id="vizCanvas" class="viz-canvas" aria-hidden="true"></canvas>
 
             <!-- Controles : play / status / volume -->
             <div class="player-controls p26-controls">
@@ -328,7 +332,7 @@
         </div>
 
         <div class="program-schedule" id="scheduleFull" role="region" aria-label="Programme par jour">
-          <!-- Généré par script.js : buildScheduleTable() — source unique = SCHEDULE -->
+          <!-- Généré par js/schedule.js : buildScheduleTable() — source unique = SCHEDULE -->
           <noscript>
             <p>Active JavaScript pour voir l'horaire complet, ou consulte la <a href="horaire.html">grille hebdomadaire</a>.</p>
           </noscript>
@@ -348,7 +352,7 @@
             </ul>
           </div>
           <div class="install-card-actions">
-            <button type="button" class="button primary install-pwa-btn install-cta" onclick="triggerInstall()">
+            <button type="button" class="button primary install-pwa-btn install-cta">
               <span aria-hidden="true">⬇️</span> Installer l'app
             </button>
             <p class="install-hint" id="installHint">Sur iPhone : touche <strong>Partager</strong> puis <strong>Sur l'écran d'accueil</strong>.</p>
@@ -404,7 +408,6 @@
 
       <!-- V4 : bandes scrollables (insérées par JS) -->
       <section class="rail-section" id="rail-upcoming" hidden></section>
-      <section class="rail-section" id="rail-webradios" hidden></section>
       <section class="rail-section" id="rail-replays" hidden></section>
       <section class="rail-section" id="rail-news" hidden></section>
     </main>
@@ -414,6 +417,6 @@
       <span>Radio en ligne live</span>
     </footer>
 
-    <script src="script.js"></script>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>

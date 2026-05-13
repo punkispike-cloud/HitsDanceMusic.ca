@@ -1,0 +1,127 @@
+/* =====================================================
+   HERO — fond musical (vinyle + ondes + EQ floor)
+   ===================================================== */
+.hero-vinyl {
+  position: absolute;
+  right: -12%;
+  bottom: -22%;
+  width: 78vmin;
+  height: 78vmin;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle at center,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 4px),
+    radial-gradient(circle at 38% 38%, rgba(220, 20, 48, 0.22) 0%, transparent 38%),
+    radial-gradient(circle at center, #1a1a1a 0%, #050505 70%);
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.9),
+    0 40px 140px rgba(0, 0, 0, 0.6);
+  opacity: 0.55;
+  animation: heroVinylSpin 60s linear infinite;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.hero-vinyl::before,
+.hero-vinyl::after {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.hero-vinyl::before {
+  width: 22%;
+  height: 22%;
+  background: radial-gradient(circle at 35% 35%, var(--accent-bright) 0%, var(--accent) 60%, #5a000d 100%);
+  box-shadow: 0 0 40px rgba(220, 20, 48, 0.4), inset 0 -4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.hero-vinyl::after {
+  width: 5%;
+  height: 5%;
+  background: #050505;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+@keyframes heroVinylSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ondes radio concentriques émanant du vinyle */
+.hero-waves {
+  position: absolute;
+  right: 18%;
+  bottom: 18%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.hero-waves span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border: 2px solid rgba(220, 20, 48, 0.5);
+  border-radius: 50%;
+  opacity: 0;
+  animation: heroWavePulse 4s ease-out infinite;
+}
+
+.hero-waves span:nth-child(2) { animation-delay: 1.33s; }
+.hero-waves span:nth-child(3) { animation-delay: 2.66s; }
+
+@keyframes heroWavePulse {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.4); }
+  25%  { opacity: 0.6; }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(4.2); }
+}
+
+/* Équaliseur ancré tout en bas du hero, traverse la largeur */
+.hero-eq-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 4vw;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  opacity: 0.4;
+}
+
+.hero-eq-floor span {
+  flex: 1;
+  height: 100%;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, var(--accent-bright) 0%, rgba(220, 20, 48, 0.1) 100%);
+  transform-origin: bottom;
+  animation: heroEqFloor var(--d, 1s) ease-in-out infinite alternate;
+}
+
+@keyframes heroEqFloor {
+  from { transform: scaleY(var(--mn, 0.10)); }
+  to   { transform: scaleY(var(--mx, 0.85)); }
+}
+
+.hero-eq-floor span:nth-child(1)  { --mn: 0.08; --mx: 0.30; --d: 0.80s; }
+.hero-eq-floor span:nth-child(2)  { --mn: 0.18; --mx: 0.55; --d: 1.10s; animation-delay: 0.10s; }
+.hero-eq-floor span:nth-child(3)  { --mn: 0.10; --mx: 0.42; --d: 0.95s; animation-delay: 0.20s; }
+.hero-eq-floor span:nth-child(4)  { --mn: 0.25; --mx: 0.78; --d: 0.70s; animation-delay: 0.05s; }
+.hero-eq-floor span:nth-child(5)  { --mn: 0.14; --mx: 0.50; --d: 1.20s; animation-delay: 0.15s; }
+.hero-eq-floor span:nth-child(6)  { --mn: 0.30; --mx: 0.92; --d: 0.85s; animation-delay: 0.08s; }
+.hero-eq-floor span:nth-child(7)  { --mn: 0.12; --mx: 0.48; --d: 1.05s; animation-delay: 0.18s; }
+.hero-eq-floor span:nth-child(8)  { --mn: 0.22; --mx: 0.70; --d: 0.75s; animation-delay: 0.12s; }
+.hero-eq-floor span:nth-child(9)  { --mn: 0.10; --mx: 0.40; --d: 1.15s; animation-delay: 0.22s; }
+.hero-eq-floor span:nth-child(10) { --mn: 0.28; --mx: 0.85; --d: 0.65s; animation-delay: 0.04s; }
+.hero-eq-floor span:nth-child(11) { --mn: 0.16; --mx: 0.58; --d: 0.90s; animation-delay: 0.16s; }
+.hero-eq-floor span:nth-child(12) { --mn: 0.20; --mx: 0.65; --d: 1.00s; animation-delay: 0.07s; }

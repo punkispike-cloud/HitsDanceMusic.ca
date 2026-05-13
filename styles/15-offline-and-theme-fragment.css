@@ -1,0 +1,69 @@
+/* =====================================================
+   Offline banner
+   ===================================================== */
+.offline-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 10px 16px;
+  background: #b8341a;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  z-index: 150;
+  transform: translateY(-100%);
+  transition: transform 0.3s var(--ease-out);
+}
+.offline-banner.is-shown { transform: translateY(0); }
+
+/* =====================================================
+   Talent next slot annotation
+   ===================================================== */
+.talent-next {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.talent-next-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.talent-next strong { color: var(--accent-bright); font-weight: 800; }
+
+/* =====================================================
+   Theme : light mode (override scoped)
+   ===================================================== */
+:root[data-theme="light"] {
+  --bg: #fafafa;
+  --bg-elevated: #ffffff;
+  --surface: #f3f3f3;
+  --surface-glass: rgba(0,0,0,0.03);
+  --surface-warm: #ececec;
+  --vinyl: #e8e8e8;
+  --ink: #141414;
+  --muted: #5a5a5a;
+  --line: rgba(0,0,0,0.10);
+  --gold-border: rgba(0,0,0,0.13);
+  --night: #f0f0f0;
+  --shadow: 0 28px 80px rgba(0,0,0,0.18);
+  --shadow-rest: 0 4px 24px rgba(0,0,0,0.10);
+  --shadow-lift: 0 18px 52px rgba(0,0,0,0.15);
+}
+:root[data-theme="light"] body { background: var(--bg); color: var(--ink); }
+:root[data-theme="light"] .mini-player {
+  background: rgba(255,255,255,0.92);
+  color: var(--ink);
+}
+:root[data-theme="light"] .mini-show { color: var(--accent); }
+:root[data-theme="light"] .toast { background: rgba(255,255,255,0.95); color: var(--ink); }
+:root[data-theme="light"] .history-drawer { background: #fff; color: var(--ink); }
+:root[data-theme="light"] .search-box,
+:root[data-theme="light"] .sleep-menu { background: #fff; color: var(--ink); }
+:root[data-theme="light"] .header-tool { color: var(--ink); }
+
+/* === Layout : pousser footer si banner offline === */
+body.is-offline .site-header { margin-top: 38px; }
+

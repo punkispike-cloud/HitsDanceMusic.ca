@@ -15,8 +15,11 @@
     <meta name="twitter:description" content="Joignez le studio Hits Dance Music — téléphone, SMS, WhatsApp et formulaire." />
     <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
     <meta name="theme-color" content="#0f0f12" />
-    <script>(function(){try{var m=localStorage.getItem("hr.theme")||"auto";var r=(m==="light"||m==="dark")?m:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=r;document.documentElement.dataset.themeMode=m;var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(r==="light"?"#fafafa":"#0f0f12");}catch(e){}})();</script>
+    <script src="assets/theme-init.js"></script>
     <title>Contact | Hits Dance Music</title>
+    <link rel="canonical" href="https://hitsdancemusic.ca/contact.html" />
+    <!--#include name="head-icons"-->
+    <link rel="modulepreload" href="js/main.js" />
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -25,7 +28,6 @@
     <meta name="apple-mobile-web-app-title" content="Hits Dance Music" />
     <meta name="hr-presence-url" content="" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="canonical" href="https://hitsdancemusic.ca/contact.html" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -33,6 +35,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+<!--#endinclude-->
   </head>
   <body>
     <a class="skip-link" href="#page-main">Aller au contenu</a>
@@ -47,12 +50,15 @@
         <a href="index.html#emissions">Émissions</a>
         <a href="animateurs.html">Équipe</a>
       </nav>
+      <!--#include name="presence-badge"-->
       <div class="presence-badge" id="presenceBadge" hidden aria-live="polite" title="Personnes en ligne · auditeurs en direct">
         <span class="presence-pill presence-visitors"><span aria-hidden="true">👥</span><span class="presence-count" data-presence="visitors">0</span></span>
         <span class="presence-pill presence-listeners"><span aria-hidden="true">🎧</span><span class="presence-count" data-presence="listeners">0</span></span>
       </div>
+<!--#endinclude-->
+      <!--#include name="header-tools"-->
       <div class="header-tools">
-        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" onclick="triggerInstall()" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
+        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
@@ -72,6 +78,7 @@
           </div>
         </div>
       </div>
+<!--#endinclude-->
     </header>
 
     <main class="page-main" id="page-main">
@@ -187,6 +194,6 @@
       <span>Radio en ligne live</span>
     </footer>
 
-    <script src="script.js"></script>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>

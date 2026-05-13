@@ -5,12 +5,15 @@ Site statique (HTML / CSS / JS) pour la landing page et quelques pages satellite
 ## Fichiers principaux
 
 - `index.html` — accueil : hero, lecteur live, grille **programmation 2026** (7 jours), équipe, contact **Alain Perron** · **418 261‑2886**.
-- `styles.css` — thème **lounge** noir / rouge, navigation mobile, sections glass.
-- `script.js` — lecture / pause **sur la page** (pas de navigation vers le flux), volume, menu burger &lt; 900px ; le bouton « Écouter sur la page » en bas d’accueil fait défiler vers `#player` et lance le direct.
+- `styles.css` — manifest de `@import` ; le code CSS réel est dans `styles/` (29 fichiers thématiques numérotés, l'ordre d'import préserve la cascade).
+- `js/main.js` — point d'entrée modules ES (chargé via `<script type="module">`). 42 modules dans `js/` : player, schedule, presence, watch, lyrics, install-pwa, etc. Voir `js/main.js` pour l'ordre d'init.
+- `assets/theme-init.js` — bootstrap thème inline anti-FOUC, chargé tôt dans le `<head>`.
 - `assets/favicon.svg` — favicon **HR**.
-- `assets/radio-studio-hero.svg` — visuel hero (overlay assombri en CSS).
+- `assets/landing-bg.webp` — visuel hero (overlay assombri en CSS).
+- `presence/server.js` — micro-service WebSocket optionnel pour compteur live (origines vérifiées, plafond MAX_CONNECTIONS, dédup par clientId UUID).
+- `nginx.conf` — CSP stricte sans `script-src 'unsafe-inline'`, proxy `/np` pour now-playing sans dépendre de proxies CORS publics, MIME types pour modules ES.
 
-Pages optionnelles : `animateurs.html`, `horaire.html` (lien vers la grille sur l’accueil), `emissions.html`, `contact.html`.
+Pages optionnelles : `animateurs.html`, `horaire.html`, `emissions.html`, `contact.html`, `stats.html`, `404.html`.
 
 ## Flux radio
 
@@ -41,8 +44,59 @@ Depuis les pages satellites, la barre **Écouter le direct** pointe vers `index.
 ## Modifier le contenu
 
 - Marque : chercher `Hits Dance Music` et `Les Hits Dance Music`.
-- Grille : blocs `<details class="day-block">` dans `index.html`.
-- Lecteur : textes d’état dans `script.js`.
+- Grille : la source unique est `SCHEDULE` dans `js/schedule.js` (le DOM est généré).
+- Lecteur : textes d'état dans `js/player.js` (`setPlayingUI`).
+- Thème : tokens couleurs dans `styles/00-base.css` (variables `:root`).
+- **Header, presence-badge, header-tools, head-icons** : éditer le fichier dans `_partials/`, puis lancer `node scripts/build-html.mjs` pour propager sur les 7 HTML.
+
+## Tests
+
+Suite unitaire sur les fonctions pures (zéro dépendance, Node 18+ built-in test runner) :
+
+```sh
+node --test tests/                       # tout
+node --test tests/parsing.test.mjs       # parser now-playing
+node --test tests/time.test.mjs          # TZ + helpers
+node --test tests/schedule.test.mjs      # grille hebdomadaire
+node --test tests/store.test.mjs         # localStorage wrapper (mode privé safari)
+```
+
+Couvre : parsing des chaînes Centova/SHOUTcast (10 formats), continuité 24/7 de la grille des 7 jours, conversion UTC → heure Toronto, dégradation gracieuse de `localStorage` en mode privé.
+
+## Checklist visuelle (post-déploiement)
+
+Pas encore de screenshot baseline (Playwright). À chaque mise en prod, vérifier manuellement sur les 7 pages × 3 viewports (mobile 375, tablette 768, desktop 1280) :
+
+- [ ] Hero + lecteur live affichés correctement sur l'accueil
+- [ ] Click play → flux démarre dans les 3 s (cf. logs console pour erreur reconnect)
+- [ ] Volume + mute fonctionnent (clavier ↑↓ M, souris)
+- [ ] Menu burger mobile s'ouvre/ferme proprement
+- [ ] Mini-player apparaît au scroll hors du player principal
+- [ ] Menu "Plus" (⋯) ouvre tel/SMS/WhatsApp/contact
+- [ ] Bouton install affiché tant que non installé
+- [ ] Drawer historique s'ouvre via touche H
+- [ ] Mode plein écran (touche W) affiche le bon titre/host/morceau
+- [ ] Paroles (touche L) tente une recherche LRCLib
+- [ ] Thème clair/sombre/auto (bouton header) — sans flash au reload
+- [ ] Compteur presence visible si `hr-presence-url` configuré
+- [ ] DevTools → onglet Application → Service Worker → version active = celle de `sw.js` actuelle
+
+## Build scripts
+
+Deux scripts, à exécuter après modif (manuellement ou via pre-commit hook) :
+
+```sh
+node scripts/build-html.mjs          # propage les partials vers les *.html (idempotent)
+node scripts/build-html.mjs --check  # exit 1 si HTML hors sync
+
+node scripts/build-sw.mjs            # bumpe CACHE dans sw.js selon hash SHA-256 du SHELL
+node scripts/build-sw.mjs --check    # exit 1 si CACHE hors sync avec contenu réel
+```
+
+Pas de dépendance npm — Node 18+ suffit. Workflow recommandé : lancer les deux scripts avant chaque `git commit`.
+
+- `build-html` : remplace le contenu entre `<!--#include name="X"-->` et `<!--#endinclude-->` par `_partials/X.html`.
+- `build-sw` : régénère `const CACHE` dans `sw.js` à partir du hash du contenu réel des 86 ressources du SHELL — invalidation auto à toute modif de JS/CSS/HTML/asset.
 
 ## Ouvrir en local
 

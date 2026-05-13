@@ -1,0 +1,382 @@
+/* =====================================================================
+   MOBILE PERFECTION — audit fixes (header, touch targets, layouts, perfs)
+   ===================================================================== */
+
+/* Safe areas iOS */
+.site-header {
+  padding-left: max(clamp(18px, 4vw, 56px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(18px, 4vw, 56px), env(safe-area-inset-right, 0px));
+  padding-top: max(8px, env(safe-area-inset-top, 0px));
+}
+.site-footer { padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
+
+/* Header compact mobile (< 900px)
+   NOTE: les regles de calibration mobile vivent maintenant dans le bloc
+   "MOBILE HEADER FIX" plus bas (>900/560/380). Ce bloc duplique etait
+   en conflit (min-height:84px sans safe-area + padding-top max() au lieu de +)
+   et faisait sortir le hamburger en haut sur iPhone avec encoche.
+   On garde uniquement les overrides du more-menu mobile. */
+
+/* More menu (⋯) — toujours dans le viewport */
+.more-menu {
+  min-width: min(260px, calc(100vw - 24px));
+  max-width: calc(100vw - 16px);
+}
+@media (max-width: 480px) {
+  .more-menu {
+    right: -8px;
+    min-width: min(280px, calc(100vw - 24px));
+  }
+  .more-menu a {
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 0.96rem;
+  }
+}
+@media (max-width: 360px) {
+  .more-menu {
+    position: fixed;
+    top: calc(72px + env(safe-area-inset-top, 0px));
+    left: 8px; right: 8px;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+  }
+}
+
+/* Hero pas écraser le player en dessous */
+@media (max-width: 900px) { .hero { aspect-ratio: 1.25; } }
+@media (max-width: 560px) {
+  .hero {
+    aspect-ratio: auto;
+    min-height: 0;
+    padding-top: 24px;
+    padding-bottom: 18px;
+  }
+  .hero-media { aspect-ratio: 16 / 10; }
+  .hero-content { padding-top: 14px; }
+  .hero-copy { font-size: 0.95rem; line-height: 1.5; }
+}
+
+/* Player panel & controls */
+@media (max-width: 560px) {
+  .player-panel { padding: 16px; border-radius: 18px; }
+  .player-header { flex-wrap: wrap; gap: 8px; font-size: 0.78rem; }
+  .player-onair { gap: 12px; }
+  .player-cover img { width: 72px !important; height: 72px !important; }
+  .player-onair-title { font-size: 1.05rem; line-height: 1.25; }
+  .player-controls { flex-wrap: wrap; gap: 12px; }
+  .play-button { width: 56px !important; height: 56px !important; flex: 0 0 auto; }
+  .player-status-block { flex: 1 1 140px; min-width: 120px; }
+  .stream-link { width: 44px; height: 44px; flex: 0 0 auto; }
+  .volume-control { flex: 1 1 100%; order: 5; padding-top: 4px; }
+  .volume-control input[type="range"] { width: 100%; min-width: 0; }
+}
+
+/* Volume slider focus + thumbs tactiles */
+.volume-control input[type="range"]:focus-visible,
+.mini-volume:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 20, 48, 0.55);
+  border-radius: 999px;
+}
+@media (pointer: coarse) {
+  .volume-control input[type="range"]::-webkit-slider-thumb { width: 22px !important; height: 22px !important; }
+  .volume-control input[type="range"]::-moz-range-thumb { width: 22px !important; height: 22px !important; }
+  .mini-volume::-webkit-slider-thumb { width: 18px !important; height: 18px !important; }
+  .mini-volume::-moz-range-thumb { width: 18px !important; height: 18px !important; }
+}
+
+/* Quick strip */
+@media (max-width: 700px) {
+  .quick-strip { grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
+  .quick-strip-card { padding: 14px; min-height: auto; }
+}
+@media (max-width: 420px) { .quick-strip { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .quick-strip-kicker { font-size: 0.72rem; } }
+
+/* Schedule slots tactiles */
+@media (max-width: 700px) {
+  .slot-list li {
+    min-height: 48px;
+    padding: 10px 12px;
+    gap: 8px;
+    align-items: center;
+  }
+  .slot-time { font-size: 0.84rem; min-width: 105px; }
+  .slot-title { font-size: 0.92rem; }
+  details.day-block summary {
+    min-height: 52px;
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+}
+
+/* Talent / featured / partners grids */
+@media (max-width: 560px) {
+  .talent-grid, .talent-grid.extended {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .talent-card { padding: 14px 10px; }
+  .talent-grid.extended .avatar.has-photo,
+  .avatar.has-photo { width: 64px !important; height: 64px !important; }
+  .talent-card p { font-size: 0.78rem; }
+  .talent-card strong { font-size: 0.9rem; line-height: 1.3; }
+  .talent-card span { font-size: 0.74rem; }
+}
+@media (max-width: 380px) {
+  .talent-grid, .talent-grid.extended { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .featured-grid, .partners-grid { grid-template-columns: 1fr; gap: 14px; }
+  .featured-cover img { max-height: 220px; }
+}
+
+/* Page hero text overflow */
+.page-hero h1, .hero h1, .section h2 {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+@media (max-width: 560px) {
+  .page-hero h1 { font-size: clamp(1.7rem, 6vw, 2.3rem); }
+  .section h2 { font-size: clamp(1.4rem, 5.5vw, 1.9rem); }
+}
+
+/* Install band CTA mobile */
+@media (max-width: 560px) {
+  .install-card { padding: 20px 18px; border-radius: 18px; }
+  .install-card-text h2 { font-size: 1.4rem; }
+  .install-features li { font-size: 0.9rem; }
+  .install-cta {
+    width: 100%;
+    padding: 16px 18px;
+    font-size: 1rem;
+    min-height: 52px;
+  }
+  .install-hint { font-size: 0.78rem; text-align: center; }
+}
+
+/* Touch targets minimums */
+@media (pointer: coarse) {
+  .button, .channel-btn, .partner-card, .talent-card a, .stream-chip,
+  a[role="menuitem"] { min-height: 48px; }
+}
+
+/* iOS install sheet dans viewport */
+.ios-install-card {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* History / search palette mobile */
+@media (max-width: 560px) {
+  .history-drawer {
+    width: 100% !important;
+    height: 70vh !important;
+    height: 70dvh !important;
+    bottom: 0;
+    top: auto !important;
+    right: 0; left: 0;
+    border-radius: 18px 18px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+  .search-palette { padding: 12px; }
+  .search-box {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+}
+
+/* Performance : alléger animations */
+@media (max-width: 560px) {
+  .player-equalizer span { animation-duration: 1.6s; }
+  /* Allège les boucles infinies sur petits écrans (vinyl, blobs, ondes) */
+  .hero-vinyl,
+  .hr-ticker-track,
+  .watch-blob,
+  .waveform-bars span { animation-duration: 2.2s; }
+  /* Reveal/stagger : plus court et moins de saut */
+  .talent-card.revealed,
+  .quick-strip-card.revealed { animation-duration: 0.35s; }
+}
+
+/* Respect strict de prefers-reduced-motion : coupe TOUTES les animations
+   et transitions non essentielles, plus les boucles infinies bouffeuses. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-vinyl,
+  .watch-blob,
+  .player-equalizer span,
+  .waveform-bars span,
+  .install-pwa-btn.is-available,
+  .more-menu,
+  .ios-install-sheet,
+  .hr-ticker-track { animation: none !important; }
+}
+
+/* Anti hover sticky tactile */
+@media (hover: none) {
+  .button:hover, .channel-btn:hover, .partner-card:hover,
+  .talent-card:hover, .header-tool:hover, .more-menu a:hover { transform: none; }
+}
+
+/* Anti pull-to-refresh pendant lecture */
+body.is-playing-radio { overscroll-behavior-y: contain; }
+
+/* Footer mobile */
+@media (max-width: 560px) {
+  .site-footer {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    padding: 18px 14px max(20px, env(safe-area-inset-bottom, 0px));
+    font-size: 0.84rem;
+  }
+}
+
+/* Stream chips */
+@media (max-width: 560px) {
+  .stream-chips { grid-template-columns: 1fr; gap: 10px; }
+  .stream-chip { padding: 14px; min-height: 60px; }
+}
+
+/* =====================================================================
+   APPLE / iOS WebKit polish
+   ===================================================================== */
+
+/* Pas de flash gris au tap iOS */
+a, button, [role="button"], .button, .channel-btn, .header-tool,
+.play-button, .nav-toggle, .stream-chip, .talent-card, .partner-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Désactiver la sélection accidentelle sur les contrôles */
+.play-button, .header-tool, .nav-toggle, .button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Inputs : pas de zoom auto iOS (font-size >= 16px) */
+input[type="text"], input[type="email"], input[type="search"],
+input[type="tel"], input[type="url"], input[type="password"],
+textarea, select {
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 12px;
+}
+
+/* Momentum scroll sur les zones défilables */
+.history-drawer, .more-menu, .ios-install-card, .search-box,
+.day-block, .talent-grid {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 100dvh fallback (iOS Safari < 15.4 utilise -webkit-fill-available) */
+@supports (-webkit-touch-callout: none) {
+  .ios-install-sheet { min-height: -webkit-fill-available; }
+}
+
+/* Standalone mode (PWA installée iOS) : fond plein écran */
+@media (display-mode: standalone) {
+  html, body { background: var(--bg, #0a0a0f); }
+  /* iOS standalone n'a pas de barre URL → on récupère le top */
+  .site-header { padding-top: max(10px, env(safe-area-inset-top, 0px)); }
+}
+
+/* Fix iOS : <details> open animation saccadée */
+@supports (-webkit-touch-callout: none) {
+  details.day-block[open] .slot-list { animation: none; }
+}
+
+/* Anti-bounce horizontal iOS */
+html, body { overflow-x: hidden; }
+
+/* Position fixed sur iOS quand clavier ouvert : éviter le glitch */
+.site-header { transform: translateZ(0); -webkit-transform: translateZ(0); }
+
+/* =====================================================================
+   PRESENCE BADGE — compteur live (visiteurs / auditeurs)
+   ===================================================================== */
+.presence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.presence-badge.is-live {
+  opacity: 1;
+  transform: none;
+}
+.presence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.92);
+}
+.presence-listeners {
+  background: linear-gradient(135deg, rgba(220, 20, 48, 0.22), rgba(220, 20, 48, 0.12));
+  color: #ffd6dd;
+  box-shadow: inset 0 0 0 1px rgba(220, 20, 48, 0.35);
+}
+.presence-listeners .presence-count { color: #fff; }
+.presence-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.2ch;
+  text-align: center;
+  transition: color .2s ease;
+}
+.presence-pill.is-bumped .presence-count {
+  animation: presenceBump .35s ease-out;
+}
+@keyframes presenceBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+@media (max-width: 900px) {
+  .presence-badge { margin-left: 4px; }
+  .presence-pill { padding: 3px 8px; font-size: 0.74rem; }
+}
+@media (max-width: 480px) {
+  /* Sur très petits écrans : on cache les visiteurs, on garde les auditeurs */
+  .presence-visitors { display: none; }
+}
+@media (max-width: 360px) {
+  .presence-badge { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence-pill.is-bumped .presence-count { animation: none; }
+}
+

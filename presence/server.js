@@ -1,10 +1,11 @@
 /**
  * Hits Dance Music — Presence WebSocket service
- * Compte les visiteurs sur le site et les auditeurs actifs du flux.
+ * Compte les visiteurs uniques (par clientId) et les auditeurs actifs.
  *
  * Protocole client → serveur (JSON) :
- *   { type: "listening", on: true|false }   // bascule l'état d'écoute
- *   { type: "ping" }                         // heartbeat (sinon pong serveur géré par ws)
+ *   { type: "hello", clientId: "<uuid>" }        // identifie le client
+ *   { type: "listening", on: true|false }         // bascule l'état d'écoute
+ *   { type: "ping" }                              // heartbeat
  *
  * Protocole serveur → client (JSON, broadcast toutes les 2 s) :
  *   { type: "stats", visitors: N, listeners: M }
@@ -16,8 +17,6 @@ import { WebSocketServer } from "ws";
 const PORT = process.env.PORT || 8081;
 
 // Sécurité : par défaut, n'autoriser QUE les domaines de production.
-// Pour du développement local, exporter explicitement ALLOWED_ORIGINS=*
-// (ne JAMAIS laisser "*" en production).
 const ALLOWED_ORIGINS = (
   process.env.ALLOWED_ORIGINS
     || "https://hitsdancemusic.ca,https://www.hitsdancemusic.ca"
@@ -25,6 +24,14 @@ const ALLOWED_ORIGINS = (
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+// Par défaut, on REFUSE les connexions sans Origin (clients non-navigateur,
+// hors flux normal). Pour autoriser explicitement (dev local, tests),
+// exporter ALLOW_NO_ORIGIN=1.
+const ALLOW_NO_ORIGIN = process.env.ALLOW_NO_ORIGIN === "1";
+
+// Plafond global anti-saturation triviale.
+const MAX_CONNECTIONS = parseInt(process.env.MAX_CONNECTIONS || "5000", 10);
 
 if (ALLOWED_ORIGINS.includes("*")) {
   console.warn(
@@ -34,6 +41,10 @@ if (ALLOWED_ORIGINS.includes("*")) {
 } else {
   console.log("[presence] Origines autorisées :", ALLOWED_ORIGINS.join(", "));
 }
+if (ALLOW_NO_ORIGIN) {
+  console.warn("[presence] ⚠️  ALLOW_NO_ORIGIN=1 — connexions sans Origin acceptées (dev only).");
+}
+console.log(`[presence] MAX_CONNECTIONS = ${MAX_CONNECTIONS}`);
 
 const HEARTBEAT_MS = 25_000;     // ping aux clients toutes les 25 s
 const BROADCAST_MS = 2_000;      // diffusion stats toutes les 2 s
@@ -44,6 +55,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({
       ok: true,
+      connections: clients.size,
       visitors: countVisitors(),
       listeners: countListeners(),
     }));
@@ -55,10 +67,14 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({
   server,
   path: "/ws/presence",
-  // Vérification d'origine basique
+  // Vérification d'origine stricte par défaut.
   verifyClient: ({ origin }, cb) => {
+    if (clients.size >= MAX_CONNECTIONS) return cb(false, 503, "Service overloaded");
     if (ALLOWED_ORIGINS.includes("*")) return cb(true);
-    if (!origin) return cb(true); // navigateurs natifs sans Origin (rare)
+    if (!origin) {
+      if (ALLOW_NO_ORIGIN) return cb(true);
+      return cb(false, 403, "Origin required");
+    }
     if (ALLOWED_ORIGINS.includes(origin)) return cb(true);
     cb(false, 403, "Forbidden origin");
   },
@@ -67,13 +83,23 @@ const wss = new WebSocketServer({
 /** @type {Set<import("ws").WebSocket>} */
 const clients = new Set();
 
+// Visiteurs uniques : chaque client envoie son clientId (UUID stable
+// stocké en localStorage). Un même UUID sur N onglets/connexions ne compte
+// qu'une seule fois. Sans clientId, on ne compte pas (cas exceptionnel,
+// car le front en envoie systématiquement).
 function countVisitors() {
-  return clients.size;
+  const ids = new Set();
+  for (const ws of clients) {
+    if (ws.clientId) ids.add(ws.clientId);
+  }
+  return ids.size;
 }
 function countListeners() {
-  let n = 0;
-  for (const ws of clients) if (ws.isListening) n++;
-  return n;
+  const ids = new Set();
+  for (const ws of clients) {
+    if (ws.isListening && ws.clientId) ids.add(ws.clientId);
+  }
+  return ids.size;
 }
 
 function broadcastStats() {
@@ -89,9 +115,16 @@ function broadcastStats() {
   }
 }
 
-wss.on("connection", (ws, req) => {
+function isValidClientId(id) {
+  return typeof id === "string"
+    && id.length >= 8 && id.length <= 64
+    && /^[A-Za-z0-9_-]+$/.test(id);
+}
+
+wss.on("connection", (ws) => {
   ws.isAlive = true;
   ws.isListening = false;
+  ws.clientId = null;
   ws.msgWindowStart = Date.now();
   ws.msgInWindow = 0;
   clients.add(ws);
@@ -113,9 +146,13 @@ wss.on("connection", (ws, req) => {
     try { msg = JSON.parse(raw.toString()); } catch { return; }
     if (!msg || typeof msg !== "object") return;
 
-    if (msg.type === "listening") {
+    if (msg.type === "hello") {
+      if (isValidClientId(msg.clientId)) {
+        ws.clientId = msg.clientId;
+        broadcastStats();
+      }
+    } else if (msg.type === "listening") {
       ws.isListening = msg.on === true;
-      // Broadcast immédiat sur changement d'état d'écoute
       broadcastStats();
     } else if (msg.type === "ping") {
       try { ws.send(JSON.stringify({ type: "pong" })); } catch { /* noop */ }
@@ -131,7 +168,7 @@ wss.on("connection", (ws, req) => {
     try { ws.terminate(); } catch { /* noop */ }
   });
 
-  // Envoi immédiat des stats au nouvel arrivant
+  // Envoi immédiat des stats au nouvel arrivant (clientId inconnu encore)
   try {
     ws.send(JSON.stringify({
       type: "stats",

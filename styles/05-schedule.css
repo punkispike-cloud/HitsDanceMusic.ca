@@ -1,0 +1,43 @@
+/* =====================================================
+   Slot ON AIR (horaire interactif)
+   ===================================================== */
+.day-block.is-today > summary {
+  background: linear-gradient(90deg, rgba(220,20,48,0.10), transparent 60%);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(var(--space-4) - 3px);
+}
+.slot-list li.is-now {
+  position: relative;
+  background: rgba(220,20,48,0.10);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(var(--space-4) - 3px);
+  animation: slotGlow 2.5s ease-in-out infinite;
+}
+@keyframes slotGlow {
+  0%, 100% { background: rgba(220,20,48,0.08); }
+  50%      { background: rgba(220,20,48,0.18); }
+}
+.now-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.now-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  animation: hr-blink 1.2s ease-in-out infinite;
+}
+@keyframes hr-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .slot-list li.is-now, .now-dot { animation: none; }
+}

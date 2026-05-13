@@ -1,0 +1,151 @@
+/* =====================================================================
+   MOBILE HEADER FIX — recalibrage de l'en-tête sur petits écrans
+   (icônes, menu hamburger, badge présence, hauteur, dropdown)
+   ===================================================================== */
+@media (max-width: 900px) {
+  /* Header plus compact et sans wrap chaotique */
+  .site-header {
+    min-height: calc(64px + env(safe-area-inset-top, 0px));
+    padding:
+      calc(8px + env(safe-area-inset-top, 0px))
+      calc(10px + env(safe-area-inset-right, 0px))
+      8px
+      calc(10px + env(safe-area-inset-left, 0px));
+    gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;             /* hamburger jamais decale verticalement */
+    justify-content: flex-start;
+    /* overflow: visible — .brand gère déjà sa propre troncature.
+       Mettre overflow:hidden ici clippe le menu ⋯ (.more-menu position:fixed)
+       car le header est containing-block (transform/backdrop-filter). */
+    overflow: visible;
+  }
+
+  /* La marque rétrécit en priorité (image fixe à 44px, texte tronqué) */
+  .brand {
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 8px;
+    overflow: hidden;
+    margin-right: auto;       /* pousse tout le cluster droit à droite */
+  }
+  .brand strong,
+  .brand small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .brand-mark,
+  .brand-mark--final {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;           /* logo jamais compressé */
+  }
+  .brand small {
+    font-size: 0.7rem;
+    line-height: 1.1;
+  }
+
+  /* Cluster droit : ordre + INCOMPRESSIBLE pour ne jamais sortir de l'écran */
+  .presence-badge {
+    order: 3;
+    margin-left: 0;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .header-tools {
+    order: 4;
+    margin-left: 0;
+    gap: 6px;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+  .header-tool {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+  .nav-toggle {
+    order: 5;
+    margin-left: 2px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;           /* hamburger TOUJOURS visible */
+  }
+
+  /* Le menu déroulant s'aligne pile sous le header compact (64 px + safe-area) */
+  .main-nav {
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Bloque le scroll de la page quand le menu burger est ouvert */
+  body:has(.site-header.is-open) { overflow: hidden; }
+
+  /* More menu (⋯) : ne déborde plus de l'écran */
+  .more-menu {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    left: auto;
+    min-width: 0;
+    width: min(280px, calc(100vw - 16px));
+    max-height: calc(100dvh - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+  }
+
+  /* Hero/page : compenser la nouvelle hauteur de header */
+  .hero { margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    padding:
+      calc(6px + env(safe-area-inset-top, 0px))
+      calc(8px + env(safe-area-inset-right, 0px))
+      6px
+      calc(8px + env(safe-area-inset-left, 0px));
+    gap: 4px;
+    min-height: calc(60px + env(safe-area-inset-top, 0px));
+  }
+  .brand-mark,
+  .brand-mark--final {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+  }
+  /* Sur très petits écrans, le label de la marque peut masquer les outils */
+  .brand strong { font-size: 0.95rem; }
+  .brand small  { display: none; }
+
+  .header-tool { width: 36px; height: 36px; flex: 0 0 36px; }
+  .nav-toggle  { width: 40px; height: 40px; flex: 0 0 40px; }
+  .header-tools { gap: 4px; }
+
+  /* Aligner le dropdown sur la nouvelle hauteur (60 px + safe-area) */
+  .main-nav {
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .more-menu {
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    width: min(260px, calc(100vw - 12px));
+    max-height: calc(100dvh - 68px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .hero { margin-top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }
+}
+
+@media (max-width: 380px) {
+  /* Si l'espace manque vraiment : le bouton install se cache (reste accessible
+     via le menu ⋯ et la bannière "Installer l'app") */
+  .install-pwa-btn { display: none !important; }
+  /* Et la pastille présence (👥/🎧) : reste visible dans le footer/stats */
+  .presence-badge { display: none !important; }
+}

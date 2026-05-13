@@ -1,0 +1,124 @@
+/* =====================================================
+   Bande "Installer l'app" — mise en valeur
+   ===================================================== */
+.install-band { padding-top: 32px; padding-bottom: 32px; }
+.install-card {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: 28px 32px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(200,16,46,0.18), rgba(124,68,168,0.18));
+  border: 1px solid rgba(200,16,46,0.35);
+  position: relative;
+  overflow: hidden;
+}
+.install-card::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(200,16,46,0.35), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.install-card-text { position: relative; }
+.install-card-text h2 { margin: 4px 0 10px; }
+.install-features {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.install-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.94rem;
+  color: var(--ink);
+}
+.install-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+}
+.install-cta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  padding: 14px 22px;
+}
+.install-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.45;
+}
+.install-hint strong { color: var(--ink); }
+@media (max-width: 760px) {
+  .install-card {
+    grid-template-columns: 1fr;
+    padding: 22px;
+    gap: 18px;
+  }
+  .install-card-actions { align-items: stretch; }
+  .install-cta { justify-content: center; }
+}
+
+/* iOS install instructions sheet */
+.ios-install-sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  animation: iosSheetIn 0.2s ease-out;
+}
+@keyframes iosSheetIn { from { opacity: 0; } to { opacity: 1; } }
+.ios-install-card {
+  width: min(440px, 92vw);
+  margin: 0 0 24px;
+  padding: 22px 22px 26px;
+  background: #15151a;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  position: relative;
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.ios-install-card h3 { margin: 0 0 12px; font-size: 1.15rem; }
+.ios-install-card ol { margin: 0; padding-left: 20px; display: grid; gap: 10px; font-size: 0.95rem; line-height: 1.5; }
+.ios-install-card svg { vertical-align: -3px; margin: 0 2px; color: var(--accent-bright); }
+.install-sheet-warn {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: rgba(255, 180, 0, 0.12);
+  border: 1px solid rgba(255, 180, 0, 0.35);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #ffd27a;
+  line-height: 1.4;
+}
+.ios-install-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.ios-install-close:hover { background: rgba(255,255,255,0.08); }
+@media (min-width: 600px) {
+  .ios-install-sheet { align-items: center; }
+  .ios-install-card { margin: 0; }
+}

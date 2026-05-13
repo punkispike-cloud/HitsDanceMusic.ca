@@ -1,0 +1,399 @@
+/* =====================================================
+   PLAYER — composant on-air pro
+   ===================================================== */
+.player-panel--signature {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 44rem;
+  border: 1px solid rgba(220, 20, 48, 0.30);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, rgba(220, 20, 48, 0.07) 0%, transparent 50%),
+    rgba(10, 10, 10, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 60px rgba(0, 0, 0, 0.75),
+    0 0 50px rgba(220, 20, 48, 0.07);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  backdrop-filter: blur(28px) saturate(1.4);
+  font-size: 0.74em;
+}
+
+/* Header bar : LIVE + station + horloge */
+.player-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(220, 20, 48, 0.06);
+  flex-wrap: wrap;
+}
+
+.player-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: rgba(220, 20, 48, 0.18);
+  border: 1px solid rgba(220, 20, 48, 0.42);
+  color: var(--accent-bright);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.live-tag-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-bright);
+  box-shadow: 0 0 7px rgba(220, 20, 48, 0.9);
+  animation: livePulse 2.4s ease-in-out infinite;
+}
+
+.player-station-name {
+  flex: 1;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.80rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.42);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Zone "On Air" : pochette + show + piste live */
+.player-onair {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-cover {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(220, 20, 48, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(220, 20, 48, 0.15);
+  background: #0a0a0a;
+}
+
+.player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Mini équaliseur en overlay sur la pochette quand is-playing */
+.player-equalizer {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.player-equalizer span {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(220, 20, 48, 0.8);
+  transform-origin: bottom;
+  transform: scaleY(0.2);
+}
+
+.player-panel.is-playing .player-equalizer {
+  opacity: 1;
+}
+
+.player-panel.is-playing .player-equalizer span {
+  animation: playerEqBar 0.9s ease-in-out infinite alternate;
+}
+
+.player-panel.is-playing .player-equalizer span:nth-child(1) { animation-delay: 0.00s; --mx: 0.7; }
+.player-panel.is-playing .player-equalizer span:nth-child(2) { animation-delay: 0.18s; --mx: 1.0; }
+.player-panel.is-playing .player-equalizer span:nth-child(3) { animation-delay: 0.06s; --mx: 0.5; }
+.player-panel.is-playing .player-equalizer span:nth-child(4) { animation-delay: 0.22s; --mx: 0.85; }
+.player-panel.is-playing .player-equalizer span:nth-child(5) { animation-delay: 0.12s; --mx: 0.6; }
+
+@keyframes playerEqBar {
+  from { transform: scaleY(0.18); }
+  to   { transform: scaleY(var(--mx, 0.9)); }
+}
+
+.player-onair-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-onair-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.player-onair-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tag-color, #c8102e) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, #c8102e) 50%, transparent);
+  color: var(--tag-color, #c8102e);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.player-onair-slot {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.42);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-onair-title {
+  display: block;
+  color: #fff;
+  font-family: var(--font-display, Syne, Inter, sans-serif);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-onair-host {
+  display: block;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.player-track-live[hidden] {
+  display: none !important;
+}
+
+.player-track-live {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(220, 20, 48, 0.10);
+  border: 1px solid rgba(220, 20, 48, 0.22);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-track-live svg {
+  flex-shrink: 0;
+  color: var(--accent-bright);
+}
+
+.player-track-live span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Barre de contrôles : play + statut + volume + lien */
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  flex-wrap: nowrap;
+}
+
+.player-status-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-status {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-status-sub {
+  color: rgba(255, 255, 255, 0.40);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.volume-control:hover,
+.volume-control:focus-within {
+  background: rgba(232, 25, 46, 0.10);
+  border-color: rgba(232, 25, 46, 0.35);
+}
+
+.vol-icon {
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.player-controls .volume-control input[type="range"],
+.volume-control.player-volume input[type="range"],
+.player-panel .volume-control input[type="range"] {
+  width: 150px;
+  margin: 0;
+}
+
+.stream-link {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.stream-link:hover {
+  background: rgba(220, 20, 48, 0.12);
+  color: #fff;
+  border-color: rgba(220, 20, 48, 0.45);
+}
+
+.stream-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* =====================================================
+   Responsive — player
+   ===================================================== */
+@media (max-width: 720px) {
+  .player-onair {
+    padding: var(--space-4) var(--space-4);
+    gap: var(--space-4);
+  }
+  .player-cover {
+    width: 76px;
+    height: 76px;
+  }
+  .player-onair-title {
+    font-size: 1rem;
+    white-space: normal;
+  }
+  .player-controls {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .player-status-block {
+    order: 2;
+    flex: 1 0 100%;
+    text-align: left;
+  }
+  .play-button {
+    order: 1;
+  }
+  .volume-control {
+    order: 3;
+  }
+  .stream-link {
+    order: 4;
+  }
+  .volume-control input[type="range"] {
+    width: 80px;
+  }
+  .player-clock {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 460px) {
+  .player-onair {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .player-onair-title {
+    white-space: normal;
+  }
+}
+

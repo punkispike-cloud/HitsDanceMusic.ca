@@ -1,0 +1,21 @@
+/* =====================================================
+   Countdown next show
+   ===================================================== */
+.countdown-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.countdown-kicker {
+  font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.06em; font-size: 0.65rem;
+  color: var(--accent-bright);
+}
+.countdown-time { color: var(--ink); font-weight: 600; }
