@@ -7,7 +7,7 @@
 import { $, $$ } from "./util.js";
 import { store, STORAGE } from "./store.js";
 import { ensureLiveRegion, ensureSkipLink, announce } from "./a11y.js";
-import { applyTheme, initThemeWatchers, THEME_KEY } from "./theme.js";
+import { applyTheme, initThemeWatchers } from "./theme.js";
 
 import {
   ensureAudio, bindAudioEvents, applyVolumeFromStore,
@@ -170,8 +170,8 @@ function initCritical() {
   $("#openHistoryBtn")?.addEventListener("click", (e) => { e.preventDefault(); toggleHistory(true); });
   renderHistory();
 
-  // Thème — applique selon le store (bootstrap déjà fait par theme-init.js)
-  applyTheme(store.get(THEME_KEY, "auto"));
+  // Thème — verrouillé en sombre (bootstrap déjà fait par theme-init.js)
+  applyTheme();
   initThemeWatchers();
 
   // Tracking stats au premier play

@@ -5,7 +5,6 @@ import { startPlayback, pausePlayback, toggleMute } from "./player.js";
 import { toggleSleepMenu } from "./sleep.js";
 import { toggleHistory, exportHistory } from "./history-drawer.js";
 import { shareCurrent } from "./share.js";
-import { cycleTheme } from "./theme.js";
 import { triggerInstall } from "./install-pwa.js";
 import { downloadIcs } from "./schedule.js";
 
@@ -49,7 +48,6 @@ const SEARCH_INDEX = [
   { type: "action", label: "🎵 Historique des morceaux", action: () => toggleHistory(true) },
   { type: "action", label: "📅 Télécharger la grille (.ics)", action: () => downloadIcs() },
   { type: "action", label: "🔗 Partager le direct", action: () => shareCurrent() },
-  { type: "action", label: "🎨 Changer de thème", action: () => cycleTheme() },
   { type: "action", label: "📲 Installer l'app", action: () => triggerInstall() },
   { type: "action", label: "🔔 Activer/désactiver notifications", action: () => _toggleNotif() },
   { type: "action", label: "⛶ Mode plein écran", action: () => _openWatch() },
