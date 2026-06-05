@@ -9,15 +9,13 @@ import { SLOT_TAGS } from "./schedule.js";
 export const STREAM_URL = "https://cast5.asurahosting.com/proxy/hitsdanc/stream";
 export const PANEL_URL = "https://cast5.asurahosting.com/start/hitsdanc/";
 
-// Now-playing : /np proxifié par nginx en priorité (CORS contrôlé),
-// puis les endpoints publics Centova/SHOUTcast (peuvent envoyer CORS
-// selon l'humeur du serveur). Plus de proxies CORS publics tiers.
+// Now-playing : uniquement /np, le flux SHOUTcast 7.html proxifié par
+// nginx (cf. location /np dans nginx.conf) qui ajoute l'en-tête CORS.
+// Les endpoints Centova/SHOUTcast publics ont été retirés : asurahosting
+// ne renvoie jamais d'en-tête Access-Control-Allow-Origin (donc bloqués
+// par le navigateur), et 3 d'entre eux sont morts (404 / erreur XML).
 const NOWPLAYING_ENDPOINTS = [
   "/np",
-  "https://cast5.asurahosting.com/cc-common/nowplaying.php?m=hitsdanc",
-  "https://cast5.asurahosting.com/api/nowplaying/hitsdanc",
-  "https://cast5.asurahosting.com/cast/api/v2.standard/account?username=hitsdanc&xml=0&f=json",
-  "https://cast5.asurahosting.com/proxy/hitsdanc/7.html",
 ];
 const ITUNES_SEARCH = "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=";
 

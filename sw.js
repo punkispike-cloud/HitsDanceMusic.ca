@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-7e747b055d11";
+const CACHE = "hitradio-a1c9f30b62e4";
 const SHELL = [
   "./",
   "./index.html",
@@ -119,8 +119,10 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Ne jamais cacher : flux audio, métadonnées Centova, iTunes, fonts dynamiques
+  // Ne jamais cacher : flux audio, métadonnées now-playing (/np proxifié +
+  // asurahosting direct), iTunes, fonts dynamiques
   if (
+    url.pathname === "/np" ||
     url.hostname.includes("asurahosting.com") ||
     url.hostname.includes("itunes.apple.com") ||
     url.hostname.includes("fonts.gstatic.com") ||
