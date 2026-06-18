@@ -29,7 +29,10 @@ function setRefreshCookie(c: Parameters<typeof setCookie>[0], token: string): vo
   setCookie(c, REFRESH_COOKIE, token, {
     httpOnly: true,
     secure: env.isProd,
-    sameSite: "Strict",
+    // En prod, l'admin et l'api sont sur des domaines distincts
+    // (*.up.railway.app = cross-site) → le cookie doit être SameSite=None
+    // pour être transmis. En dev local (http, même host), Lax suffit.
+    sameSite: env.isProd ? "None" : "Lax",
     path: "/auth",
     maxAge: env.REFRESH_TOKEN_TTL,
   });
