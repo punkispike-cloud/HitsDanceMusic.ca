@@ -41,6 +41,9 @@ interface CrudPageProps<T extends { id: string }> {
   rowLabel: (row: T) => string;
   /** Transforme une ligne en valeurs de formulaire (édition). */
   toForm?: (row: T) => FormValues;
+  /** Actions personnalisées par ligne (ex. téléversement audio). reload
+      permet de rafraîchir la liste après l'action. */
+  extraActions?: (row: T, reload: () => Promise<void>) => ReactNode;
 }
 
 function emptyForm(fields: FieldConfig[]): FormValues {
@@ -186,6 +189,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
                   ))}
                   <td>
                     <div className="row-actions">
+                      {props.extraActions?.(row, load)}
                       {canEdit(row) && (
                         <button className="btn btn-sm btn-ghost" onClick={() => openEdit(row)}>
                           Éditer

@@ -5,6 +5,7 @@ import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Spinner } from "@/components/ui";
+import { AudioUpload } from "@/components/audio-upload";
 import type { Artist, Mix } from "@/lib/types";
 
 const STATUS_OPTIONS = [
@@ -76,6 +77,11 @@ export default function MixesPage() {
         canEdit={owns}
         canDelete={owns}
         rowLabel={(r) => r.title}
+        extraActions={(r, reload) =>
+          owns(r) ? (
+            <AudioUpload kind="mix" targetId={r.id} hasAudio={!!r.audioUrl} onDone={reload} />
+          ) : null
+        }
         toForm={(r) => ({
           title: r.title,
           artistId: r.artistId,

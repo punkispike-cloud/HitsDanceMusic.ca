@@ -151,6 +151,7 @@ export default function StatistiquesPage() {
                   <thead>
                     <tr>
                       <th>IP</th>
+                      <th>Localisation</th>
                       <th>Appareil</th>
                       <th>Navigateur</th>
                       <th>Pages</th>
@@ -163,6 +164,7 @@ export default function StatistiquesPage() {
                     {sessions.map((s) => (
                       <tr key={s.id}>
                         <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.ip ?? "—"}</td>
+                        <td>{s.ipCountry ?? "—"}</td>
                         <td>{s.device ?? "—"}</td>
                         <td>{s.browser ?? "—"}</td>
                         <td>{s.pageViews}</td>
