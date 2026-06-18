@@ -253,6 +253,51 @@ export const uploadIntents = pgTable(
   }),
 );
 
+/* ───────────────────────── analytics_sessions (audience) ─────────────────────────
+   Une ligne par visiteur (client_id stable, le même UUID que presence).
+   active_sec = temps passé sur le site ; listen_sec = temps d'écoute total.
+   ⚖️ Contient l'IP (donnée personnelle, Loi 25) — prévoir mention + rétention. */
+
+export const analyticsSessions = pgTable(
+  "analytics_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: text("client_id").notNull(),
+    ip: text("ip"),
+    ipCountry: text("ip_country"),
+    userAgent: text("user_agent"),
+    device: text("device"),
+    browser: text("browser"),
+    firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+    activeSec: integer("active_sec").notNull().default(0),
+    listenSec: integer("listen_sec").notNull().default(0),
+    pageViews: integer("page_views").notNull().default(0),
+  },
+  (t) => ({
+    clientIdx: uniqueIndex("analytics_sessions_client_idx").on(t.clientId),
+    lastSeenIdx: index("analytics_sessions_last_seen_idx").on(t.lastSeen),
+  }),
+);
+
+/* ───────────────────────── analytics_show_listen (temps par émission) ─────────────────────────
+   Agrégat par (émission, visiteur) → permet total ET moyenne par auditeur. */
+
+export const analyticsShowListen = pgTable(
+  "analytics_show_listen",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    showTitle: text("show_title").notNull(),
+    clientId: text("client_id").notNull(),
+    listenSec: integer("listen_sec").notNull().default(0),
+    lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("analytics_show_listen_pair_idx").on(t.showTitle, t.clientId),
+    showIdx: index("analytics_show_listen_show_idx").on(t.showTitle),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({
@@ -303,3 +348,4 @@ export type Episode = typeof episodes.$inferSelect;
 export type Mix = typeof mixes.$inferSelect;
 export type Role = (typeof userRole.enumValues)[number];
 export type SlotTag = (typeof slotTag.enumValues)[number];
+export type AnalyticsSession = typeof analyticsSessions.$inferSelect;

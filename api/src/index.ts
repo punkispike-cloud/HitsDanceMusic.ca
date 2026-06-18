@@ -15,6 +15,8 @@ import { authRoutes } from "./routes/auth.js";
 import { publicRoutes } from "./routes/public.js";
 import { adminRoutes } from "./routes/admin.js";
 import { uploadRoutes } from "./routes/uploads.js";
+import { trackRoutes } from "./routes/track.js";
+import { analyticsAdminRoutes } from "./routes/analytics-admin.js";
 import { pingDb, closeDb } from "./db/client.js";
 import type { AppBindings } from "./types.js";
 
@@ -35,13 +37,15 @@ app.route("/", healthRoutes);
 app.use("/auth/*", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
 app.route("/auth", authRoutes);
 
-// Lecture publique
+// Lecture publique + ingestion analytics (beacons anonymes)
 app.route("/v1", publicRoutes);
+app.route("/v1", trackRoutes);
 
 // Admin — auth obligatoire sur tout /v1/admin
 app.use("/v1/admin/*", requireAuth);
 app.route("/v1/admin", adminRoutes);
 app.route("/v1/admin/uploads", uploadRoutes);
+app.route("/v1/admin/analytics", analyticsAdminRoutes);
 
 // Démarrage
 const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
