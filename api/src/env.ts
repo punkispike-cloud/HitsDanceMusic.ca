@@ -37,13 +37,25 @@ if (isProd && WEAK_SECRETS.includes(JWT_SECRET)) {
   process.exit(1);
 }
 
-const ALLOWED_ORIGINS = optional(
-  "ALLOWED_ORIGINS",
-  "https://hitsdancemusic.ca,https://www.hitsdancemusic.ca,https://admin.hitsdancemusic.ca",
-)
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+// Origines toujours autorisées (domaines de prod connus), FUSIONNÉES avec la
+// variable ALLOWED_ORIGINS. Garantit que l'admin et le site fonctionnent même
+// si la variable d'env est incomplète. Domaines spécifiques (pas de wildcard)
+// → reste sûr. À nettoyer quand des domaines custom seront en place.
+const BUILTIN_ORIGINS = [
+  "https://hitsdancemusic.ca",
+  "https://www.hitsdancemusic.ca",
+  "https://zucchini-charisma-production-3a67.up.railway.app", // admin (Railway)
+];
+
+const ALLOWED_ORIGINS = [
+  ...new Set([
+    ...BUILTIN_ORIGINS,
+    ...optional("ALLOWED_ORIGINS", "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  ]),
+];
 
 if (ALLOWED_ORIGINS.includes("*")) {
   console.warn("[api] ⚠️  ALLOWED_ORIGINS contient '*' — à NE PAS utiliser en production.");
