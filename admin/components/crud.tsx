@@ -4,8 +4,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "./toast";
 import { Modal, Field, Spinner, Empty, ConfirmDelete } from "./ui";
+import { ImageUpload } from "./image-upload";
 
-export type FieldType = "text" | "textarea" | "number" | "checkbox" | "select";
+export type FieldType = "text" | "textarea" | "number" | "checkbox" | "select" | "image";
 
 export interface FieldConfig {
   name: string;
@@ -44,6 +45,9 @@ interface CrudPageProps<T extends { id: string }> {
   /** Actions personnalisées par ligne (ex. téléversement audio). reload
       permet de rafraîchir la liste après l'action. */
   extraActions?: (row: T, reload: () => Promise<void>) => ReactNode;
+  /** Post-traite le payload avant envoi (ex. regrouper des champs plats en
+      objet `socials`). */
+  transformPayload?: (payload: Record<string, unknown>, values: FormValues) => Record<string, unknown>;
 }
 
 function emptyForm(fields: FieldConfig[]): FormValues {
@@ -123,7 +127,8 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
     }
     setSaving(true);
     try {
-      const payload = buildPayload(fields, values);
+      let payload = buildPayload(fields, values);
+      if (props.transformPayload) payload = props.transformPayload(payload, values);
       if (editing === "new") {
         await api.post(endpoint, payload);
         toast("Créé ✓", "ok");
@@ -283,6 +288,30 @@ function renderField(
         </div>
         {f.hint && <span className="hint">{f.hint}</span>}
       </div>
+    );
+  }
+  if (f.type === "image") {
+    const url = (val as string) ?? "";
+    return (
+      <Field label={f.label} hint={f.hint} key={f.name}>
+        {url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt="aperçu"
+            style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover", marginBottom: 8, border: "1px solid var(--line-2)" }}
+          />
+        )}
+        <input
+          type="text"
+          value={url}
+          placeholder={f.placeholder || "URL de la photo ou téléverser →"}
+          onChange={(e) => set(f.name, e.target.value)}
+        />
+        <div style={{ marginTop: 8 }}>
+          <ImageUpload onUploaded={(u) => set(f.name, u)} />
+        </div>
+      </Field>
     );
   }
   return (
