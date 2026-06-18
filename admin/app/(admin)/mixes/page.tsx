@@ -1,0 +1,94 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Spinner } from "@/components/ui";
+import type { Artist, Mix } from "@/lib/types";
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Brouillon" },
+  { value: "published", label: "Publié" },
+  { value: "archived", label: "Archivé" },
+];
+
+const columns: Column<Mix>[] = [
+  { key: "title", label: "Titre" },
+  { key: "genre", label: "Genre", render: (r) => r.genre ?? "—" },
+  {
+    key: "audioUrl",
+    label: "Audio",
+    render: (r) => (r.audioUrl ? "🎵 prêt" : <span className="muted">à téléverser</span>),
+  },
+  {
+    key: "status",
+    label: "Statut",
+    render: (r) => (
+      <span>
+        <span className={`status-dot status-${r.status}`} />
+        {STATUS_OPTIONS.find((s) => s.value === r.status)?.label}
+      </span>
+    ),
+  },
+];
+
+export default function MixesPage() {
+  const { user } = useAuth();
+  const [artists, setArtists] = useState<Artist[] | null>(null);
+
+  useEffect(() => {
+    api.get<Artist[]>("/v1/admin/artists").then(setArtists).catch(() => setArtists([]));
+  }, []);
+
+  if (!artists) return <Spinner />;
+  const isAdmin = user?.role === "superadmin";
+  const owns = (r: Mix) => isAdmin || (user?.artistId != null && r.artistId === user.artistId);
+
+  const fields: FieldConfig[] = [
+    { name: "title", label: "Titre", type: "text", required: true },
+    ...(isAdmin
+      ? [
+          {
+            name: "artistId",
+            label: "Animateur / DJ",
+            type: "select" as const,
+            required: true,
+            options: artists.map((a) => ({ value: a.id, label: a.name })),
+          },
+        ]
+      : []),
+    { name: "genre", label: "Genre", type: "text", half: true, placeholder: "house, disco…" },
+    { name: "status", label: "Statut", type: "select", half: true, options: STATUS_OPTIONS, default: "draft" },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "coverUrl", label: "URL pochette", type: "text" },
+    { name: "publishedAt", label: "Date publication (ISO)", type: "text", placeholder: "2026-06-18T12:00:00Z" },
+  ];
+
+  return (
+    <div>
+      <CrudPage<Mix>
+        title="Mixes / DJ sets"
+        endpoint="/v1/admin/mixes"
+        columns={columns}
+        fields={fields}
+        canCreate={isAdmin || user?.role === "animateur"}
+        canEdit={owns}
+        canDelete={owns}
+        rowLabel={(r) => r.title}
+        toForm={(r) => ({
+          title: r.title,
+          artistId: r.artistId,
+          genre: r.genre ?? "",
+          status: r.status,
+          description: r.description ?? "",
+          coverUrl: r.coverUrl ?? "",
+          publishedAt: r.publishedAt ?? "",
+        })}
+      />
+      <p className="muted" style={{ marginTop: 16, fontSize: "0.85rem" }}>
+        💡 Téléversement audio + tracklist détaillée : branchés à l&apos;étape finale (S3).
+      </p>
+    </div>
+  );
+}

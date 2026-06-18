@@ -5,3 +5,16 @@ fix-palette.ps1
 fix-palette.py
 *.md
 node_modules
+
+# Services backend déployés séparément — ne pas les embarquer dans l'image web (nginx)
+api
+admin
+presence
+
+# Outils de build / dev inutiles dans l'image statique
+scripts
+tests
+.claude
+.vscode
+*.ps1
+*.py
