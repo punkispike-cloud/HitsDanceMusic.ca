@@ -30,6 +30,7 @@ import { shareCurrent } from "./share.js";
 import { bindConnectivity } from "./connectivity.js";
 import { injectJsonLd } from "./seo.js";
 import { annotateTalentCards } from "./animateurs.js";
+import { loadContentFromApi } from "./content.js";
 import { renderCountdown } from "./countdown.js";
 import { startStatsTracking, renderStatsPage } from "./stats.js";
 import { injectFavButtons, injectFavFilter } from "./favorites.js";
@@ -210,6 +211,11 @@ function initIdle() {
   bindConnectivity();
   injectJsonLd();
   annotateTalentCards();
+  // Branche animateurs/émissions sur l'API (visuel identique, fallback HTML).
+  // Re-rend puis ré-annote les cartes animateurs avec leur prochain passage.
+  void loadContentFromApi().then((touchedTalent) => {
+    if (touchedTalent) annotateTalentCards();
+  });
   renderCountdown();
   bgInterval(renderCountdown, 30_000);
 
