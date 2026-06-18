@@ -9,6 +9,32 @@ import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 // Bornes anti-abus : un beacon ne peut pas ajouter plus que l'intervalle prévu.
 const MAX_SECONDS_PER_BEACON = 60;
 
+// Géo-IP best-effort : une seule tentative par visiteur et par process.
+const _geoAttempted = new Set<string>();
+const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
+
+async function resolveCountry(ip: string, clientId: string): Promise<void> {
+  if (!ip || PRIVATE_IP.test(ip)) return;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,city`, {
+      signal: ctrl.signal,
+    }).finally(() => clearTimeout(t));
+    if (!r.ok) return;
+    const data = (await r.json()) as { country?: string; city?: string };
+    const parts = [data?.city, data?.country].filter((s): s is string => typeof s === "string" && !!s);
+    if (parts.length) {
+      await db
+        .update(analyticsSessions)
+        .set({ ipCountry: parts.join(", ").slice(0, 120) })
+        .where(eq(analyticsSessions.clientId, clientId));
+    }
+  } catch {
+    /* best effort — on ne bloque jamais l'ingestion */
+  }
+}
+
 function clampSec(n: unknown): number {
   const v = Math.floor(Number(n) || 0);
   if (v <= 0) return 0;
@@ -74,6 +100,12 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
         pageViews: sql`${analyticsSessions.pageViews} + ${pageAdd}`,
       },
     });
+
+  // Géo-IP : une tentative par visiteur (asynchrone, n'attend pas).
+  if (!_geoAttempted.has(clientId)) {
+    _geoAttempted.add(clientId);
+    void resolveCountry(ip, clientId);
+  }
 
   // Temps d'écoute par émission (agrégat par paire émission/visiteur).
   if (listenAdd > 0 && input.showTitle) {
