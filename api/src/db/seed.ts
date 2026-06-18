@@ -158,10 +158,23 @@ async function main() {
   console.log("[seed] démarrage…");
   // Sanity : la DB répond ?
   await db.execute(sql`SELECT 1`);
+
+  // Le superadmin est toujours garanti (création idempotente).
   await seedSuperadmin();
-  const artistIdBySlug = await seedArtists();
-  await seedShows(artistIdBySlug);
-  await seedSchedule(artistIdBySlug);
+
+  // Le contenu (animateurs / émissions / grille) n'est seedé QUE si la base
+  // est vierge. Sur une base déjà peuplée, on ne touche à rien → les éditions
+  // faites depuis l'admin sont préservées même si ce script tourne à chaque
+  // déploiement (preDeployCommand). Bootstrap une fois, jamais d'écrasement.
+  const existing = await db.select({ id: artists.id }).from(artists).limit(1);
+  if (existing.length > 0) {
+    console.log("[seed] contenu déjà présent — skip animateurs/émissions/grille (éditions admin préservées).");
+  } else {
+    const artistIdBySlug = await seedArtists();
+    await seedShows(artistIdBySlug);
+    await seedSchedule(artistIdBySlug);
+  }
+
   console.log("[seed] terminé ✓");
   await pool.end();
 }
