@@ -1,6 +1,10 @@
 # Hits Dance Music — La radio
 
-Site statique (HTML / CSS / JS) pour la landing page et quelques pages satellites. Aucun backend : le lecteur lit directement le flux SHOUTcast.
+> 📌 **Le projet a évolué en plateforme complète** (site + API + admin + Postgres sur Railway).
+> **Pour reprendre le travail / comprendre où on en est : voir [ETAT-DU-PROJET.md](ETAT-DU-PROJET.md).**
+> Détails : [api/README.md](api/README.md) · [admin/README.md](admin/README.md) · [DEPLOY-RAILWAY.md](DEPLOY-RAILWAY.md).
+
+Site statique (HTML / CSS / JS) pour la landing page et quelques pages satellites. Le site lit désormais son contenu (grille, animateurs, émissions) depuis l'API et envoie des données d'audience ; il garde un fallback statique si l'API est injoignable.
 
 ## Fichiers principaux
 
