@@ -1,9 +1,12 @@
-/* Grille hebdo 2026 + slot helpers + génération table + export .ics. */
+/* Grille hebdo 2026 + slot helpers + génération table + export .ics.
+   La grille hardcodée ci-dessous sert de FALLBACK : au chargement, on tente
+   de la remplacer par les données de l'API (éditables depuis l'admin). */
 
 import { $, $$, escapeHtml } from "./util.js";
 import { toast } from "./toast.js";
 import { getMontrealParts, toMinutes, DAY_NAMES } from "./time.js";
 import { state } from "./state.js";
+import { API_BASE } from "./api-config.js";
 
 export const SLOT_TAGS = {
   morning:   { color: "#e8b84b", label: "Morning" },
@@ -91,6 +94,30 @@ export const SCHEDULE = {
     ["22:00","24:00","Les nuits Best DJ's live internationaux BeatRadioWorld","BeatRadioWorld","night"],
   ],
 };
+
+/* Remplace la grille hardcodée par celle de l'API si disponible (même forme :
+   { "0": [[from,to,title,host,tag], ...], ... }). Silencieux en cas d'échec
+   → on garde le fallback. Retourne true si la grille a été mise à jour. */
+export async function loadScheduleFromApi() {
+  try {
+    const r = await fetch(`${API_BASE}/v1/schedule`, { mode: "cors", cache: "no-store" });
+    if (!r.ok) return false;
+    const data = await r.json();
+    if (!data || typeof data !== "object") return false;
+    let updated = false;
+    for (let d = 0; d <= 6; d++) {
+      const rows = data[d] ?? data[String(d)];
+      if (Array.isArray(rows) && rows.length) {
+        // Validation légère : chaque ligne = tuple de 5 chaînes.
+        const clean = rows.filter((t) => Array.isArray(t) && t.length >= 5);
+        if (clean.length) { SCHEDULE[d] = clean; updated = true; }
+      }
+    }
+    return updated;
+  } catch {
+    return false;
+  }
+}
 
 export function getCurrentSlot(date = new Date()) {
   const { day, hour, minute } = getMontrealParts(date);

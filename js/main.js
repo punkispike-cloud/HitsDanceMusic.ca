@@ -23,7 +23,7 @@ import {
 import { bindNav, markActiveNav, smoothScrollToHashOnIndex, bindResetGeo, bindMoreMenu, setResetGeoHook } from "./nav.js";
 import { wireInstallButtons } from "./install-pwa.js";
 import { bindContactForm } from "./contact-form.js";
-import { buildScheduleTable, downloadIcs } from "./schedule.js";
+import { buildScheduleTable, downloadIcs, loadScheduleFromApi } from "./schedule.js";
 import { renderHistory, toggleHistory, injectHistorySearch } from "./history-drawer.js";
 import { shareCurrent } from "./share.js";
 
@@ -44,6 +44,7 @@ import { initUiExtras, initPhase2UX } from "./ui-extras.js";
 import { initMultiTabSync } from "./multi-tab.js";
 
 import { initPresence } from "./presence.js";
+import { initAnalytics } from "./analytics.js";
 import { registerSW } from "./sw-register.js";
 
 import { bindKeyboard, setKeyboardHooks } from "./keyboard.js";
@@ -166,6 +167,13 @@ function initCritical() {
   bindResetGeo();
   bindContactForm();
   buildScheduleTable();
+  // Tente de remplacer la grille hardcodée par celle de l'API (admin-éditable).
+  // Rendu instantané avec le fallback ci-dessus, puis re-render si l'API répond.
+  void loadScheduleFromApi().then((updated) => {
+    if (!updated) return;
+    buildScheduleTable();
+    renderOnAir();
+  });
   $("#downloadIcs")?.addEventListener("click", (e) => { e.preventDefault(); downloadIcs(); });
   $("#openHistoryBtn")?.addEventListener("click", (e) => { e.preventDefault(); toggleHistory(true); });
   renderHistory();
@@ -248,9 +256,10 @@ function initIdle() {
     togglePip:    () => void togglePip(),
   });
 
-  // Service worker (PWA shell) + Compteur live (WS)
+  // Service worker (PWA shell) + Compteur live (WS) + Analytics d'audience
   registerSW();
   initPresence();
+  initAnalytics();
 }
 
 function boot() {
