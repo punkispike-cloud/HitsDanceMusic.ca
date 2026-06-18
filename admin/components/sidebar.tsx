@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 
 const LINKS: { href: string; label: string; minRole?: "superadmin" }[] = [
   { href: "/dashboard", label: "Tableau de bord" },
+  { href: "/statistiques", label: "Statistiques" },
   { href: "/grille", label: "Grille horaire" },
   { href: "/animateurs", label: "Animateurs" },
   { href: "/emissions", label: "Émissions" },

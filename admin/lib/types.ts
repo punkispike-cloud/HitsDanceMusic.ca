@@ -99,6 +99,47 @@ export interface AdminUser {
   lastLoginAt: string | null;
 }
 
+export interface AnalyticsOverview {
+  totalSessions: number;
+  live: number;
+  today: number;
+  pageViews: number;
+  totalActiveSec: number;
+  totalListenSec: number;
+  avgActiveSec: number;
+  avgListenSec: number;
+}
+
+export interface AnalyticsShow {
+  showTitle: string;
+  totalListenSec: number;
+  listeners: number;
+  avgListenSec: number;
+}
+
+export interface AnalyticsSession {
+  id: string;
+  clientId: string;
+  ip: string | null;
+  ipCountry: string | null;
+  userAgent: string | null;
+  device: string | null;
+  browser: string | null;
+  firstSeen: string;
+  lastSeen: string;
+  activeSec: number;
+  listenSec: number;
+  pageViews: number;
+}
+
+export function formatDuration(sec: number): string {
+  if (!sec || sec < 60) return `${Math.max(0, Math.floor(sec))} s`;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h === 0) return `${m} min`;
+  return `${h} h ${String(m).padStart(2, "0")}`;
+}
+
 export const SLOT_TAGS: { value: SlotTag; label: string; color: string }[] = [
   { value: "morning", label: "Morning", color: "var(--tag-morning)" },
   { value: "hitlist", label: "Hit List", color: "var(--tag-hitlist)" },
