@@ -18,9 +18,40 @@ async function fetchJson(path) {
   }
 }
 
+/* N'autorise que les URLs http(s) (évite javascript: et autres schémas). */
+function safeUrl(u) {
+  try {
+    const url = new URL(u);
+    return url.protocol === "https:" || url.protocol === "http:" ? u : null;
+  } catch {
+    return null;
+  }
+}
+
+const SOCIAL_LABELS = [
+  ["instagram", "Instagram"],
+  ["facebook", "Facebook"],
+  ["tiktok", "TikTok"],
+  ["youtube", "YouTube"],
+  ["website", "Site"],
+];
+
+function socialsHtml(socials) {
+  if (!socials || typeof socials !== "object") return "";
+  const links = SOCIAL_LABELS
+    .map(([k, label]) => [safeUrl(socials[k]), label])
+    .filter(([url]) => url)
+    .map(([url, label]) =>
+      `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="font-size:.78rem;font-weight:700;color:#e8b84b;text-decoration:none">${label}</a>`);
+  if (!links.length) return "";
+  return `<p class="talent-socials" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;justify-content:center">${links.join("")}</p>`;
+}
+
 function talentCardHtml(a) {
-  const avatar = a.photoUrl
-    ? `<div class="avatar has-photo"><img src="${escapeHtml(a.photoUrl)}" alt="${escapeHtml(a.name)}" loading="lazy" /></div>`
+  const photo = a.photoUrl && safeUrl(a.photoUrl) ? a.photoUrl
+    : (a.photoUrl && !/^https?:/i.test(a.photoUrl) ? a.photoUrl : null); // chemins relatifs (assets/...) ok
+  const avatar = photo
+    ? `<div class="avatar has-photo"><img src="${escapeHtml(photo)}" alt="${escapeHtml(a.name)}" loading="lazy" /></div>`
     : `<div class="avatar">${escapeHtml(a.initials || a.name.slice(0, 2))}</div>`;
   return `<article class="talent-card">
       ${avatar}
@@ -28,6 +59,7 @@ function talentCardHtml(a) {
       ${a.showTitle ? `<strong>${escapeHtml(a.showTitle)}</strong>` : ""}
       ${a.scheduleText ? `<span>${escapeHtml(a.scheduleText)}</span>` : ""}
       ${a.bio ? `<small>${escapeHtml(a.bio)}</small>` : ""}
+      ${socialsHtml(a.socials)}
     </article>`;
 }
 
