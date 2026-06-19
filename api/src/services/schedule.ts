@@ -2,7 +2,7 @@
    { "0": [[from, to, title, host, tag], ...], ... "6": [...] }
    où from/to sont "HH:MM" (et "24:00" pour minuit fin de journée). */
 
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { scheduleSlots, type ScheduleSlot } from "../db/schema.js";
 import { fromMinutes } from "../lib/validation.js";
@@ -40,6 +40,36 @@ export async function getCurrentSlot(now = new Date()): Promise<ScheduleSlot | n
     if (r.dayOfWeek === parts.day && nowMin >= r.startMin && nowMin < r.endMin) return r;
   }
   return null;
+}
+
+/** Prochains passages d'un animateur (via le VRAI lien artist_id de la grille,
+   pas un matching de chaînes). Renvoie les N prochains créneaux de la semaine. */
+export async function getUpcomingSlotsForArtist(artistId: string, limit = 6) {
+  const rows = await db
+    .select()
+    .from(scheduleSlots)
+    .where(eq(scheduleSlots.artistId, artistId))
+    .orderBy(asc(scheduleSlots.dayOfWeek), asc(scheduleSlots.startMin));
+  if (!rows.length) return [];
+  const { day, hour, minute } = montrealParts(new Date());
+  const nowMin = hour * 60 + minute;
+  const out: { day: number; from: string; to: string; title: string; tag: string }[] = [];
+  for (let off = 0; off < 7 && out.length < limit; off++) {
+    const d = (day + off) % 7;
+    for (const r of rows) {
+      if (r.dayOfWeek !== d) continue;
+      if (off === 0 && r.startMin <= nowMin) continue;
+      out.push({
+        day: d,
+        from: fromMinutes(r.startMin),
+        to: r.endMin === 1440 ? "00:00" : fromMinutes(r.endMin),
+        title: r.title,
+        tag: r.tag,
+      });
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
 }
 
 /** Jour/heure/minute pour le fuseau America/Toronto (= Montréal). */

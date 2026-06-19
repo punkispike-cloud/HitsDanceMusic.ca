@@ -18,6 +18,7 @@ import { uploadRoutes } from "./routes/uploads.js";
 import { trackRoutes } from "./routes/track.js";
 import { analyticsAdminRoutes } from "./routes/analytics-admin.js";
 import { pingDb, closeDb } from "./db/client.js";
+import { startMaintenance } from "./services/maintenance.js";
 import type { AppBindings } from "./types.js";
 
 const app = new Hono<AppBindings>();
@@ -53,6 +54,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
   console.log(`[api] écoute sur :${info.port} (env=${env.NODE_ENV})`);
   console.log(`[api] origines autorisées : ${env.ALLOWED_ORIGINS.join(", ")}`);
   console.log(`[api] DB : ${ok ? "connectée ✓" : "INJOIGNABLE ✗"}`);
+  startMaintenance();
 });
 
 // Arrêt gracieux

@@ -6,7 +6,7 @@ import { eq, asc, and } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { artists, shows, episodes, mixes } from "../db/schema.js";
 import { notFound } from "../lib/errors.js";
-import { getScheduleShape, getCurrentSlot } from "../services/schedule.js";
+import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist } from "../services/schedule.js";
 import { fromMinutes } from "../lib/validation.js";
 
 export const publicRoutes = new Hono();
@@ -48,7 +48,16 @@ publicRoutes.get("/artists/:slug", async (c) => {
     where: and(eq(artists.slug, c.req.param("slug")), eq(artists.isPublished, true)),
   });
   if (!row) throw notFound("Animateur introuvable");
-  return c.json(row);
+  // Fiche enrichie : ses émissions + ses prochains passages, via les FK réelles.
+  const [artistShows, upcoming] = await Promise.all([
+    db
+      .select()
+      .from(shows)
+      .where(and(eq(shows.artistId, row.id), eq(shows.isPublished, true)))
+      .orderBy(asc(shows.sortOrder), asc(shows.title)),
+    getUpcomingSlotsForArtist(row.id),
+  ]);
+  return c.json({ ...row, shows: artistShows, upcoming });
 });
 
 /* GET /v1/shows — émissions publiées. */
