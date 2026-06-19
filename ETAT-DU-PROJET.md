@@ -191,10 +191,10 @@ Le code est prêt ; il manque la config AWS :
   « changer mot de passe » dans l'admin — l'endpoint API existe (`POST /auth/change-password`).
 - Mention **Loi 25** dans la politique de confidentialité (collecte d'IP).
 
-### E. Bugs frontend connus (non corrigés)
-- `js/util.js:39` `clampString` : `/[ -]+/g` transforme les tirets en espaces → casse « Artiste - Titre ».
-- `js/util.js:43` `clampLyrics` : plage `[ --]` supprime les espaces des paroles.
-- `nginx.conf` proxy `/np` : `proxy_cache_valid` sans zone `proxy_cache` → cache inopérant.
+### E. Bugs frontend
+- ✅ **CORRIGÉ** — `nginx.conf` proxy `/np` : ajout de la zone `proxy_cache_path np_cache` + `proxy_cache` (le `proxy_cache_valid` était inerte sans zone).
+- ⚠️ Faux positifs (NE PAS recorriger) : `clampString`/`clampLyrics` (`js/util.js`) sont **corrects** — leurs regexes `/[\x00-\x1F\x7F]+/g` strippent les caractères de contrôle et préservent tirets/espaces/newlines (l'affichage masquait les caractères de contrôle).
+- Mineur (faible impact) : `js/player.js` `#liveTrackHint` n'est pas retiré après récupération des métadonnées.
 
 ### F. Optionnel
 - Domaines custom `api.hitsdancemusic.ca` + `admin.hitsdancemusic.ca` (résout les cookies tiers proprement).
