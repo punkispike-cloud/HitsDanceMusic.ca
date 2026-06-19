@@ -80,6 +80,25 @@ export const env = {
   SEED_ADMIN_EMAIL: optional("SEED_ADMIN_EMAIL", ""),
   SEED_ADMIN_PASSWORD: optional("SEED_ADMIN_PASSWORD", ""),
 
+  // URL publique du site (liens RSS, partage, emails). Sans slash final requis.
+  PUBLIC_SITE_URL: optional("PUBLIC_SITE_URL", "https://hitsdancemusic.ca"),
+
+  // Rétention analytics (Loi 25) : purge des sessions/écoutes plus vieilles que N jours.
+  ANALYTICS_RETENTION_DAYS: intOpt("ANALYTICS_RETENTION_DAYS", 180),
+
+  // Sentry (monitoring d'erreurs) — inactif tant que le DSN n'est pas fourni.
+  SENTRY_DSN: optional("SENTRY_DSN", ""),
+
+  // Resend (emails transactionnels) — inactif tant que la clé n'est pas fournie.
+  RESEND_API_KEY: optional("RESEND_API_KEY", ""),
+  EMAIL_FROM: optional("EMAIL_FROM", "Hits Dance Music <no-reply@hitsdancemusic.ca>"),
+  ADMIN_BASE_URL: optional("ADMIN_BASE_URL", "https://zucchini-charisma-production-3a67.up.railway.app"),
+
+  // Web Push (VAPID) — généré une fois (npm run vapid). Inactif si absent.
+  VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY", ""),
+  VAPID_PRIVATE_KEY: optional("VAPID_PRIVATE_KEY", ""),
+  VAPID_SUBJECT: optional("VAPID_SUBJECT", "mailto:admin@hitsdancemusic.ca"),
+
   // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés
   S3_REGION: optional("S3_REGION", ""),
   S3_BUCKET: optional("S3_BUCKET", ""),
@@ -92,4 +111,19 @@ export const env = {
 /** Le stockage S3 est-il configuré ? (gate les routes d'upload) */
 export function isS3Configured(): boolean {
   return Boolean(env.S3_REGION && env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
+}
+
+/** Sentry actif ? (sinon les erreurs restent en console — comportement actuel) */
+export function isSentryConfigured(): boolean {
+  return Boolean(env.SENTRY_DSN);
+}
+
+/** Resend (emails) actif ? */
+export function isResendConfigured(): boolean {
+  return Boolean(env.RESEND_API_KEY);
+}
+
+/** Web Push (VAPID) actif ? */
+export function isPushConfigured(): boolean {
+  return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
 }

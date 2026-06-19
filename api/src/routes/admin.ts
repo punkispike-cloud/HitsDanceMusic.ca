@@ -4,7 +4,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, ilike, or, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import {
   artists,
@@ -18,9 +18,22 @@ import { slugify, slotTagSchema, registerSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
 import { badRequest, notFound, conflict, forbidden } from "../lib/errors.js";
 import { requireRole, requireOwnershipOrAdmin, assertCanActAs } from "../middleware/rbac.js";
+import { createAuthToken } from "../services/auth-tokens.js";
+import { sendEmail, inviteEmailHtml } from "../services/email.js";
+import { env, isResendConfigured } from "../env.js";
+import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
 
 export const adminRoutes = new Hono<AppBindings>();
+
+/* Borne de pagination commune aux listes (défaut large : le CRUD admin
+   attend un tableau ; la recherche `q` réduit le volume côté serveur). */
+function listLimit(c: { req: { query: (k: string) => string | undefined } }): number {
+  return Math.min(1000, Math.max(1, Number(c.req.query("limit")) || 1000));
+}
+function listOffset(c: { req: { query: (k: string) => string | undefined } }): number {
+  return Math.max(0, Number(c.req.query("offset")) || 0);
+}
 
 /* ───────── Owner loaders (pour requireOwnershipOrAdmin) ───────── */
 const loadShowOwner = async (id: string) =>
@@ -48,7 +61,19 @@ const artistInput = z.object({
 });
 
 adminRoutes.get("/artists", async (c) => {
-  return c.json(await db.select().from(artists).orderBy(artists.sortOrder));
+  const q = c.req.query("q")?.trim();
+  const where: SQL | undefined = q
+    ? or(ilike(artists.name, `%${q}%`), ilike(artists.slug, `%${q}%`))
+    : undefined;
+  return c.json(
+    await db
+      .select()
+      .from(artists)
+      .where(where)
+      .orderBy(artists.sortOrder)
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
 });
 
 adminRoutes.post("/artists", requireRole("superadmin"), async (c) => {
@@ -104,7 +129,13 @@ const showInput = z.object({
 });
 
 adminRoutes.get("/shows", async (c) => {
-  return c.json(await db.select().from(shows).orderBy(shows.sortOrder));
+  const q = c.req.query("q")?.trim();
+  const where: SQL | undefined = q
+    ? or(ilike(shows.title, `%${q}%`), ilike(shows.slug, `%${q}%`))
+    : undefined;
+  return c.json(
+    await db.select().from(shows).where(where).orderBy(shows.sortOrder).limit(listLimit(c)).offset(listOffset(c)),
+  );
 });
 
 adminRoutes.post("/shows", requireRole("superadmin", "animateur"), async (c) => {
@@ -214,7 +245,11 @@ const episodeInput = z.object({
 });
 
 adminRoutes.get("/episodes", async (c) => {
-  return c.json(await db.select().from(episodes).orderBy(episodes.createdAt));
+  const q = c.req.query("q")?.trim();
+  const where: SQL | undefined = q ? ilike(episodes.title, `%${q}%`) : undefined;
+  return c.json(
+    await db.select().from(episodes).where(where).orderBy(episodes.createdAt).limit(listLimit(c)).offset(listOffset(c)),
+  );
 });
 
 adminRoutes.post("/episodes", requireRole("superadmin", "animateur"), async (c) => {
@@ -272,7 +307,13 @@ const mixInput = z.object({
 });
 
 adminRoutes.get("/mixes", async (c) => {
-  return c.json(await db.select().from(mixes).orderBy(mixes.createdAt));
+  const q = c.req.query("q")?.trim();
+  const where: SQL | undefined = q
+    ? or(ilike(mixes.title, `%${q}%`), ilike(mixes.genre, `%${q}%`))
+    : undefined;
+  return c.json(
+    await db.select().from(mixes).where(where).orderBy(mixes.createdAt).limit(listLimit(c)).offset(listOffset(c)),
+  );
 });
 
 adminRoutes.post("/mixes", requireRole("superadmin", "animateur"), async (c) => {
@@ -337,25 +378,76 @@ function publicUser(u: typeof users.$inferSelect) {
 }
 
 adminRoutes.get("/users", requireRole("superadmin"), async (c) => {
-  const rows = await db.select().from(users).orderBy(users.createdAt);
+  const q = c.req.query("q")?.trim();
+  const where: SQL | undefined = q
+    ? or(ilike(users.email, `%${q}%`), ilike(users.displayName, `%${q}%`))
+    : undefined;
+  const rows = await db
+    .select()
+    .from(users)
+    .where(where)
+    .orderBy(users.createdAt)
+    .limit(listLimit(c))
+    .offset(listOffset(c));
   return c.json(rows.map(publicUser));
 });
 
+// Création de compte : mot de passe explicite OU invitation par email
+// (password omis → compte inactif + lien « définir le mot de passe »).
+const userCreateSchema = registerSchema
+  .extend({
+    password: registerSchema.shape.password.optional(),
+    invite: z.boolean().optional(),
+  });
+
 adminRoutes.post("/users", requireRole("superadmin"), async (c) => {
-  const body = registerSchema.parse(await c.req.json());
+  const body = userCreateSchema.parse(await c.req.json());
   if (await db.query.users.findFirst({ where: eq(users.email, body.email) }))
     throw conflict("Email déjà utilisé");
+
+  const byInvite = body.invite === true || !body.password;
+  // Sans mot de passe : on en pose un aléatoire (impossible à deviner) et le
+  // compte reste inactif tant que l'invitation n'est pas acceptée.
+  const rawPassword = body.password ?? randomBytes(24).toString("base64url");
+
   const [row] = await db
     .insert(users)
     .values({
       email: body.email,
-      passwordHash: await hashPassword(body.password),
+      passwordHash: await hashPassword(rawPassword),
       displayName: body.displayName,
       role: body.role,
       artistId: body.artistId ?? null,
+      isActive: !byInvite,
     })
     .returning();
-  return c.json(publicUser(row!), 201);
+
+  let invited = false;
+  if (byInvite) {
+    const token = await createAuthToken(row!.id, "invite", 48 * 60 * 60); // 48 h
+    const link = `${env.ADMIN_BASE_URL.replace(/\/$/, "")}/set-password?token=${token}`;
+    invited = await sendEmail({
+      to: row!.email,
+      subject: "Ton accès à la console Hits Dance Music",
+      html: inviteEmailHtml(row!.displayName, link),
+    });
+  }
+
+  return c.json({ ...publicUser(row!), invited, emailConfigured: isResendConfigured() }, 201);
+});
+
+/* POST /users/:id/invite — (re)génère et envoie un lien d'invitation. */
+adminRoutes.post("/users/:id/invite", requireRole("superadmin"), async (c) => {
+  const user = await db.query.users.findFirst({ where: eq(users.id, c.req.param("id")) });
+  if (!user) throw notFound("Utilisateur introuvable");
+  const token = await createAuthToken(user.id, "invite", 48 * 60 * 60);
+  const link = `${env.ADMIN_BASE_URL.replace(/\/$/, "")}/set-password?token=${token}`;
+  const invited = await sendEmail({
+    to: user.email,
+    subject: "Ton accès à la console Hits Dance Music",
+    html: inviteEmailHtml(user.displayName, link),
+  });
+  return c.json({ ok: true, invited, emailConfigured: isResendConfigured() });
 });
 
 adminRoutes.patch("/users/:id", requireRole("superadmin"), async (c) => {

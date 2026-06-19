@@ -9,7 +9,13 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { users } from "../db/schema.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
-import { loginSchema, registerSchema, changePasswordSchema } from "../lib/validation.js";
+import {
+  loginSchema,
+  registerSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  setPasswordSchema,
+} from "../lib/validation.js";
 import { badRequest, unauthorized, conflict } from "../lib/errors.js";
 import { env } from "../env.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -21,6 +27,8 @@ import {
   revokeAllForUser,
   type TokenPair,
 } from "../services/auth.js";
+import { createAuthToken, consumeAuthToken } from "../services/auth-tokens.js";
+import { sendEmail, resetEmailHtml } from "../services/email.js";
 import type { AppBindings } from "../types.js";
 
 const REFRESH_COOKIE = "hr_refresh";
@@ -112,6 +120,37 @@ authRoutes.post("/logout", async (c) => {
     }
   }
   deleteCookie(c, REFRESH_COOKIE, { path: "/auth" });
+  return c.json({ ok: true });
+});
+
+/* POST /auth/forgot-password — envoie un lien de réinitialisation.
+   Réponse toujours { ok:true } (ne révèle pas si l'email existe). */
+authRoutes.post("/forgot-password", async (c) => {
+  const { email } = forgotPasswordSchema.parse(await c.req.json());
+  const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+  if (user && user.isActive) {
+    const raw = await createAuthToken(user.id, "reset", 60 * 60); // 1 h
+    const link = `${env.ADMIN_BASE_URL.replace(/\/$/, "")}/set-password?token=${raw}`;
+    await sendEmail({
+      to: user.email,
+      subject: "Réinitialisation de ton mot de passe — Hits Dance Music",
+      html: resetEmailHtml(link),
+    });
+  }
+  return c.json({ ok: true });
+});
+
+/* POST /auth/set-password — consomme un jeton (invite ou reset) et fixe le mdp.
+   Révoque toutes les sessions existantes. */
+authRoutes.post("/set-password", async (c) => {
+  const { token, password } = setPasswordSchema.parse(await c.req.json());
+  const userId = await consumeAuthToken(token);
+  if (!userId) throw badRequest("Lien invalide ou expiré", "invalid_token");
+  await db
+    .update(users)
+    .set({ passwordHash: await hashPassword(password), isActive: true, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+  await revokeAllForUser(userId);
   return c.json({ ok: true });
 });
 

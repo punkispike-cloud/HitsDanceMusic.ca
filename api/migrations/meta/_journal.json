@@ -15,6 +15,20 @@
       "when": 1781820704511,
       "tag": "0001_fixed_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781839010082,
+      "tag": "0002_old_goblin_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781840148606,
+      "tag": "0003_naive_the_santerians",
+      "breakpoints": true
     }
   ]
 }

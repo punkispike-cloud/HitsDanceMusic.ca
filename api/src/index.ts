@@ -17,9 +17,21 @@ import { adminRoutes } from "./routes/admin.js";
 import { uploadRoutes } from "./routes/uploads.js";
 import { trackRoutes } from "./routes/track.js";
 import { analyticsAdminRoutes } from "./routes/analytics-admin.js";
+import { rssRoutes } from "./routes/rss.js";
+import { shareRoutes } from "./routes/share.js";
+import { pushRoutes } from "./routes/push.js";
+import { pushAdminRoutes } from "./routes/push-admin.js";
+import { auditAdminRoutes } from "./routes/audit-admin.js";
+import { auditMiddleware } from "./middleware/audit.js";
 import { pingDb, closeDb } from "./db/client.js";
 import { startMaintenance } from "./services/maintenance.js";
+import { initMonitoring } from "./services/monitoring.js";
+import { initPush } from "./services/push.js";
+import { startReminders } from "./services/reminders.js";
 import type { AppBindings } from "./types.js";
+
+// Monitoring d'abord (capture les erreurs dès le boot, si SENTRY_DSN présent).
+initMonitoring();
 
 const app = new Hono<AppBindings>();
 
@@ -41,12 +53,18 @@ app.route("/auth", authRoutes);
 // Lecture publique + ingestion analytics (beacons anonymes)
 app.route("/v1", publicRoutes);
 app.route("/v1", trackRoutes);
+app.route("/v1", rssRoutes); // GET /v1/rss/:showSlug
+app.route("/v1", shareRoutes); // GET /v1/share/...
+app.route("/v1", pushRoutes); // abonnement Web Push (public)
 
-// Admin — auth obligatoire sur tout /v1/admin
+// Admin — auth obligatoire + journal d'audit sur tout /v1/admin
 app.use("/v1/admin/*", requireAuth);
+app.use("/v1/admin/*", auditMiddleware);
 app.route("/v1/admin", adminRoutes);
 app.route("/v1/admin/uploads", uploadRoutes);
 app.route("/v1/admin/analytics", analyticsAdminRoutes);
+app.route("/v1/admin/audit", auditAdminRoutes);
+app.route("/v1/admin/push", pushAdminRoutes);
 
 // Démarrage
 const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
@@ -55,6 +73,8 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
   console.log(`[api] origines autorisées : ${env.ALLOWED_ORIGINS.join(", ")}`);
   console.log(`[api] DB : ${ok ? "connectée ✓" : "INJOIGNABLE ✗"}`);
   startMaintenance();
+  initPush();
+  startReminders();
 });
 
 // Arrêt gracieux

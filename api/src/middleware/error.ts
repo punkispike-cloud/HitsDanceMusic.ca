@@ -5,6 +5,7 @@ import type { Context } from "hono";
 import { ZodError } from "zod";
 import { AppError } from "../lib/errors.js";
 import { env } from "../env.js";
+import { captureError } from "../services/monitoring.js";
 
 export function onError(err: Error, c: Context): Response {
   if (err instanceof AppError) {
@@ -23,6 +24,7 @@ export function onError(err: Error, c: Context): Response {
     );
   }
   console.error("[api] unhandled error", err);
+  captureError(err, { path: c.req.path, method: c.req.method });
   return c.json(
     {
       error: {

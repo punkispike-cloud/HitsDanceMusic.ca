@@ -298,6 +298,77 @@ export const analyticsShowListen = pgTable(
   }),
 );
 
+/* ───────────────────────── push_subscriptions (rappels d'émission) ─────────────────────────
+   Abonnement Web Push (PushSubscription du navigateur). showSlug null = tous
+   les rappels ; sinon limité à une émission. client_id = même UUID que presence/analytics. */
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    clientId: text("client_id"),
+    showSlug: text("show_slug"), // null = tous les rappels
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
+  },
+  (t) => ({
+    endpointIdx: uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint),
+    showIdx: index("push_subscriptions_show_idx").on(t.showSlug),
+  }),
+);
+
+/* ───────────────────────── auth_tokens (reset mdp + invitation) ─────────────────────────
+   Jeton à usage unique, haché en DB (jamais le brut). purpose distingue
+   « invite » (1er mot de passe) de « reset » (mot de passe oublié). */
+
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    purpose: text("purpose").notNull(), // invite | reset
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    hashIdx: uniqueIndex("auth_tokens_hash_idx").on(t.tokenHash),
+    userIdx: index("auth_tokens_user_idx").on(t.userId),
+  }),
+);
+
+/* ───────────────────────── audit_log (traçabilité admin) ─────────────────────────
+   Une ligne par mutation admin (create/update/delete). On fige un instantané
+   de l'acteur (email/nom) pour que la trace survive à la suppression du compte. */
+
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id"), // pas de FK : la trace doit survivre à la suppression
+    actorEmail: text("actor_email"),
+    actorName: text("actor_name"),
+    actorRole: text("actor_role"),
+    action: text("action").notNull(), // create | update | delete
+    entity: text("entity").notNull(), // artists | shows | schedule-slots | episodes | mixes | users
+    entityId: text("entity_id"),
+    summary: jsonb("summary").notNull().default(sql`'{}'::jsonb`),
+    ip: text("ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    createdIdx: index("audit_log_created_idx").on(t.createdAt),
+    entityIdx: index("audit_log_entity_idx").on(t.entity, t.entityId),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({
@@ -349,3 +420,6 @@ export type Mix = typeof mixes.$inferSelect;
 export type Role = (typeof userRole.enumValues)[number];
 export type SlotTag = (typeof slotTag.enumValues)[number];
 export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type AuditLogRow = typeof auditLog.$inferSelect;
+export type AuthToken = typeof authTokens.$inferSelect;

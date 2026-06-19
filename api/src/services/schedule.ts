@@ -73,7 +73,7 @@ export async function getUpcomingSlotsForArtist(artistId: string, limit = 6) {
 }
 
 /** Jour/heure/minute pour le fuseau America/Toronto (= Montréal). */
-function montrealParts(date: Date): { day: number; hour: number; minute: number } {
+export function montrealParts(date: Date): { day: number; hour: number; minute: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Toronto",
     weekday: "short",

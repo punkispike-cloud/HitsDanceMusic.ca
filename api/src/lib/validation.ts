@@ -42,6 +42,15 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+export const setPasswordSchema = z.object({
+  token: z.string().min(10).max(200),
+  password: passwordSchema,
+});
+
 /** Slugifie un titre : minuscules, accents retirés, non-alphanum → tirets. */
 export function slugify(input: string): string {
   return input
