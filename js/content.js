@@ -54,7 +54,7 @@ function talentCardHtml(a) {
   const avatar = photo
     ? `<div class="avatar has-photo"><img src="${escapeHtml(photo)}" alt="${escapeHtml(a.name)}" loading="lazy" /></div>`
     : `<div class="avatar">${escapeHtml(a.initials || a.name.slice(0, 2))}</div>`;
-  return `<article class="talent-card" tabindex="0" role="button" aria-label="Voir le profil de ${escapeHtml(a.name)}">
+  return `<article class="talent-card" data-slug="${escapeHtml(a.slug || "")}" tabindex="0" role="button" aria-label="Voir le profil de ${escapeHtml(a.name)}">
       ${avatar}
       <p>${escapeHtml(a.name)}</p>
       ${a.showTitle ? `<strong>${escapeHtml(a.showTitle)}</strong>` : ""}
@@ -82,11 +82,11 @@ export async function loadContentFromApi() {
   const showGrid = document.querySelector(".show-detail-grid");
   if (!talentGrid && !showGrid) return false;
 
-  // On récupère aussi les émissions dès qu'il y a des animateurs (pour la fiche
-  // détaillée « ses émissions »), même sur les pages sans grille d'émissions.
+  // Les émissions ne sont chargées que pour la grille d'émissions ; la fiche
+  // détaillée d'un animateur récupère SES émissions via /v1/artists/:slug.
   const [artists, shows] = await Promise.all([
     talentGrid || showGrid ? fetchJson("/v1/artists") : null,
-    talentGrid || showGrid ? fetchJson("/v1/shows") : null,
+    showGrid ? fetchJson("/v1/shows") : null,
   ]);
 
   let touchedTalent = false;
@@ -96,8 +96,8 @@ export async function loadContentFromApi() {
     const origin = talentGrid.querySelectorAll(".talent-card").length || artists.length;
     const list = isExtended ? artists : artists.slice(0, origin);
     talentGrid.innerHTML = list.map(talentCardHtml).join("");
-    // Rend les cartes cliquables → fiche profil (mapping par position = `list`).
-    wireTalentCards(talentGrid, list, Array.isArray(shows) ? shows : []);
+    // Rend les cartes cliquables → fiche profil (par data-slug, fetch détaillé).
+    wireTalentCards(talentGrid, list);
     touchedTalent = true;
   }
 
