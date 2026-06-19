@@ -33,6 +33,29 @@ Ajoutées sans modifier le visuel des pages existantes (le live garde son lien) 
 > Migrations DB **0002** (push_subscriptions, audit_log) et **0003** (auth_tokens)
 > s'appliquent automatiquement au déploiement. Dépendances ajoutées : `@sentry/node`, `web-push`.
 
+### ▶️ Reprise demain sur Mac — checklist
+
+1. **Récupérer le code** : `git pull origin main` (tout est poussé, branche `main`, dernier commit `3fbc0f2`).
+2. **Réinstaller les deps** (nouvelles libs ajoutées) :
+   ```bash
+   cd api && npm install      # @sentry/node, web-push, @types/web-push
+   cd ../admin && npm install
+   ```
+3. **Vérifier que tout build** : `cd api && npm run typecheck && npm test && npm run build` ; `cd ../admin && npm run build`.
+4. **(Optionnel) activer les 3 fonctions gated** — variables sur le service `api` (Railway) :
+   - Sentry : `SENTRY_DSN`
+   - Emails (invitations/reset) : `RESEND_API_KEY` + `EMAIL_FROM` (domaine vérifié chez Resend)
+   - Web Push (rappels) : générer avec `cd api && npm run vapid` → coller `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`
+   - Puis configurer le **CORS du bucket S3** + variables `S3_*` pour activer l'upload audio (sinon pas de podcasts à jouer).
+5. **Sécurité (toujours à faire)** : roter le mot de passe **Postgres** + le **`JWT_SECRET`** (exposés dans le chat).
+6. **« Reveal » du projet (quand tu voudras)** — rendre visibles sur le SITE LIVE les 3 ajouts gardés sur les pages neuves :
+   - lien « Podcasts » dans la nav partagée (`_partials/header-tools.html` ou la `<nav>` de chaque page) ;
+   - badge live : ajouter `<div id="liveBadge" hidden></div>` près du player sur `index.html` ;
+   - lien « Confidentialité » dans le footer partagé.
+   > Tant que ce n'est pas fait, `podcasts.html` / `confidentialite.html` existent mais ne sont liées nulle part depuis le site live (« projet secret »).
+
+**État au 2026-06-19 (soir)** : 10 améliorations construites, committées, poussées, déployées. Frontend live INCHANGÉ (vérifié : aucune page existante modifiée). Reste = activer les clés + reveal + sécurité.
+
 ---
 
 ## 1. Ce qu'est devenu le projet
