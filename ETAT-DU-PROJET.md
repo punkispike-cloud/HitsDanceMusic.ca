@@ -182,8 +182,11 @@ Le code est prêt ; il manque la config AWS :
 - une page/section qui liste `/v1/episodes` et `/v1/mixes`
 - ajouter le domaine S3/CDN à la CSP `media-src` de `nginx.conf`
 
-### C. Pages détaillées par animateur
-`/animateurs/[slug]` avec grande photo, bio, émissions, mixes (idée discutée).
+### C. ✅ FAIT — Fiche animateur détaillée
+Clic sur une carte `.talent-card` → modal profil (grande photo, bio, réseaux,
+ses émissions, prochains passages calculés depuis la grille). Fichiers :
+`js/animateur-detail.js`, `styles/29-animateur-detail.css`, câblé dans `js/content.js`.
+(Évolution possible : vraies pages `/animateurs/[slug]` pour le SEO.)
 
 ### D. Sécurité
 - **Roter le mot de passe Postgres** (exposé pendant la mise en place).
