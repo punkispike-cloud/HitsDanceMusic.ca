@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API (typecheck · test · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  admin:
+    name: Admin (typecheck · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://patient-endurance-production-21c8.up.railway.app
+
+  frontend:
+    name: Site statique (hash SW · syntaxe JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Échoue si le hash du service worker n'a pas été régénéré après une modif.
+      - name: Vérifier le hash du service worker
+        run: node scripts/build-sw.mjs --check
+      # Vérifie que chaque module ES parse (attrape les erreurs de syntaxe).
+      - name: Vérifier la syntaxe des modules JS
+        run: |
+          set -e
+          for f in js/*.js; do node --check "$f"; done
