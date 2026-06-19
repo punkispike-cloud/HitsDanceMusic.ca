@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/toast";
 import { Spinner, Empty } from "@/components/ui";
 import type { AdminUser, Artist } from "@/lib/types";
 
@@ -34,7 +35,22 @@ const columns: Column<AdminUser>[] = [
 
 export default function UtilisateursPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [artists, setArtists] = useState<Artist[] | null>(null);
+
+  const sendInvite = async (id: string) => {
+    try {
+      const res = await api.post<{ invited: boolean; emailConfigured: boolean }>(
+        `/v1/admin/users/${id}/invite`,
+      );
+      if (res.invited) toast("Invitation envoyée ✓", "ok");
+      else if (!res.emailConfigured)
+        toast("Email non configuré (Resend) — lien non envoyé.", "warn");
+      else toast("Envoi impossible.", "error");
+    } catch (e) {
+      toast((e as ApiError).message, "error");
+    }
+  };
 
   useEffect(() => {
     api.get<Artist[]>("/v1/admin/artists").then(setArtists).catch(() => setArtists([]));
@@ -79,7 +95,14 @@ export default function UtilisateursPage() {
       name: "password",
       label: "Mot de passe (≥ 12 car.)",
       type: "text",
-      hint: "Requis à la création. Laisser vide en édition ne change pas le mot de passe.",
+      hint: "Laisser vide pour envoyer plutôt une invitation par email (le membre choisit son mot de passe).",
+    },
+    {
+      name: "invite",
+      label: "Envoyer une invitation par email",
+      type: "checkbox",
+      default: true,
+      hint: "Crée le compte inactif et envoie un lien « définir mon mot de passe » (nécessite Resend configuré).",
     },
     { name: "isActive", label: "Compte actif", type: "checkbox", default: true },
   ];
@@ -92,12 +115,18 @@ export default function UtilisateursPage() {
       fields={fields}
       rowLabel={(r) => r.email}
       canDelete={(r) => r.id !== user.id}
+      extraActions={(row) => (
+        <button className="btn btn-sm btn-ghost" onClick={() => void sendInvite(row.id)}>
+          Inviter
+        </button>
+      )}
       toForm={(r) => ({
         displayName: r.displayName,
         email: r.email,
         role: r.role,
         artistId: r.artistId ?? "",
         password: "",
+        invite: false,
         isActive: r.isActive,
       })}
     />

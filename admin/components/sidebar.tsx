@@ -12,7 +12,10 @@ const LINKS: { href: string; label: string; minRole?: "superadmin" }[] = [
   { href: "/emissions", label: "Émissions" },
   { href: "/podcasts", label: "Podcasts" },
   { href: "/mixes", label: "Mixes" },
+  { href: "/notifications", label: "Notifications", minRole: "superadmin" },
   { href: "/utilisateurs", label: "Utilisateurs", minRole: "superadmin" },
+  { href: "/journal", label: "Journal d'audit", minRole: "superadmin" },
+  { href: "/compte", label: "Mon compte" },
 ];
 
 export function Sidebar() {

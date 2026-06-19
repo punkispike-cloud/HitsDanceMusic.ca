@@ -94,11 +94,33 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   return data as T;
 }
 
+/** Télécharge un fichier authentifié (ex. export CSV) et déclenche la sauvegarde. */
+async function download(path: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  let res = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
+  if (res.status === 401 && (await tryRefresh())) {
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    res = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
+  }
+  if (!res.ok) throw new ApiError(res.status, "download_error", "Téléchargement impossible");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  download,
 };
 
 export const API_BASE = BASE;

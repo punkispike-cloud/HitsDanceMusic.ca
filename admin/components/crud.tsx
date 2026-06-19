@@ -89,6 +89,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
 
   const toast = useToast();
   const [rows, setRows] = useState<T[] | null>(null);
+  const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<T | "new" | null>(null);
   const [values, setValues] = useState<FormValues>({});
   const [saving, setSaving] = useState(false);
@@ -145,6 +146,12 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
     }
   };
 
+  // Recherche instantanée côté client (sur le libellé de ligne).
+  const visibleRows =
+    rows && query.trim()
+      ? rows.filter((r) => rowLabel(r).toLowerCase().includes(query.trim().toLowerCase()))
+      : rows;
+
   const doDelete = async () => {
     if (!deleting) return;
     try {
@@ -162,17 +169,30 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
     <div>
       <div className="page-head">
         <h1>{title}</h1>
-        {canCreate && (
-          <button className="btn btn-primary" onClick={openNew}>
-            + Nouveau
-          </button>
-        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {rows && rows.length > 0 && (
+            <input
+              type="search"
+              value={query}
+              placeholder="Rechercher…"
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ width: 200 }}
+            />
+          )}
+          {canCreate && (
+            <button className="btn btn-primary" onClick={openNew}>
+              + Nouveau
+            </button>
+          )}
+        </div>
       </div>
 
       {rows === null ? (
         <Spinner />
       ) : rows.length === 0 ? (
         <Empty label="Aucune entrée pour l'instant." />
+      ) : visibleRows && visibleRows.length === 0 ? (
+        <Empty label={`Aucun résultat pour « ${query} ».`} />
       ) : (
         <div className="table-wrap">
           <table className="data">
@@ -185,7 +205,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {(visibleRows ?? []).map((row) => (
                 <tr key={row.id}>
                   {columns.map((c) => (
                     <td key={c.key}>

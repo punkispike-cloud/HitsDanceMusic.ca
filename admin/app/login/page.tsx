@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Field } from "@/components/ui";
 
 export default function LoginPage() {
@@ -13,11 +13,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
 
   // Déjà connecté → dashboard
   useEffect(() => {
     if (ready && user) router.replace("/dashboard");
   }, [ready, user, router]);
+
+  const forgot = async () => {
+    setError("");
+    setNotice("");
+    if (!email) return setError("Entre ton email d'abord.");
+    try {
+      await api.post("/auth/forgot-password", { email });
+      setNotice("Si un compte existe, un lien de réinitialisation vient d'être envoyé.");
+    } catch {
+      setNotice("Si un compte existe, un lien de réinitialisation vient d'être envoyé.");
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,10 +76,15 @@ export default function LoginPage() {
             />
           </Field>
           {error && <p className="error-text">{error}</p>}
+          {notice && <p style={{ color: "var(--ok)", fontSize: "0.85rem" }}>{notice}</p>}
           <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} disabled={busy}>
             {busy ? "Connexion…" : "Se connecter"}
           </button>
         </form>
+        <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12, width: "100%" }}
+          onClick={() => void forgot()}>
+          Mot de passe oublié ?
+        </button>
       </div>
     </div>
   );

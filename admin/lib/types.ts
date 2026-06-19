@@ -132,6 +132,40 @@ export interface AnalyticsSession {
   pageViews: number;
 }
 
+export interface AnalyticsPoint {
+  day: string;
+  sessions: number;
+  listen_sec: number;
+  active_sec: number;
+  page_views: number;
+}
+
+export interface AuditEntry {
+  id: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  actorName: string | null;
+  actorRole: string | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  ip: string | null;
+  createdAt: string;
+}
+
+export interface AuditResponse {
+  rows: AuditEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PushStats {
+  enabled: boolean;
+  total: number;
+  global: number;
+}
+
 export function formatDuration(sec: number): string {
   if (!sec || sec < 60) return `${Math.max(0, Math.floor(sec))} s`;
   const h = Math.floor(sec / 3600);
