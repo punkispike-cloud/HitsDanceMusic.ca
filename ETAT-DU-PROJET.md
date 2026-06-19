@@ -1,7 +1,37 @@
 # État du projet — Hits Dance Music (reprise sur Mac)
 
 > Document de reprise : tout ce qu'il faut pour continuer le travail.
-> Dernière mise à jour : 2026-06-18. Branche : `main` (déploiement auto Railway).
+> Dernière mise à jour : 2026-06-19. Branche : `main` (déploiement auto Railway).
+
+---
+
+## 0. Nouveautés 2026-06-19 — 10 améliorations (frontend public gelé)
+
+Ajoutées sans modifier le visuel des pages existantes (le live garde son lien) :
+
+1. **Player podcasts/mixes** — nouvelle page `podcasts.html` (lecteur à la demande).
+2. **Flux RSS** — `GET /v1/rss/:showSlug` (compatible Apple Podcasts/Spotify).
+3. **Badge live « à venir »** — *code prêt côté serveur (`/v1/schedule/now`), câblage front en attente de ton feu vert (touche une page gelée).*
+4. **Rappels Web Push** — abonnement depuis `podcasts.html`, rappels auto 10 min avant l'émission.
+5. **Partage Open Graph** — `GET /v1/share/{artist,show,episode,mix}/:slug` (beaux aperçus de liens).
+6. **Sentry** — monitoring d'erreurs (api).
+7. **Analytics avancé** — graphe écoute/jour (7/30/90 j) + export CSV (sessions/émissions).
+8. **Journal d'audit** — page admin `/journal` (qui a modifié quoi, quand, IP).
+9. **Invitations & reset mot de passe** — par email + page `/compte` (changer son mdp) + page publique `/set-password`.
+10. **Recherche + pagination** — barre de recherche admin + `?q=&limit=&offset=` sur l'API.
+
+**À activer par variable d'env (sinon inactif, comme S3)** — sur le service `api` :
+
+| Fonction | Variables | Note |
+|---|---|---|
+| Sentry (#6) | `SENTRY_DSN` | crée un projet Sentry, colle le DSN |
+| Emails (#9) | `RESEND_API_KEY`, `EMAIL_FROM` | compte Resend + domaine vérifié |
+| Web Push (#4) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | générer : `cd api && npm run vapid` |
+| Liens (#2,#5,#9) | `PUBLIC_SITE_URL`, `ADMIN_BASE_URL` | déjà des défauts corrects |
+| Rétention Loi 25 | `ANALYTICS_RETENTION_DAYS` | défaut 180 j (purge auto des IP) |
+
+> Migrations DB **0002** (push_subscriptions, audit_log) et **0003** (auth_tokens)
+> s'appliquent automatiquement au déploiement. Dépendances ajoutées : `@sentry/node`, `web-push`.
 
 ---
 

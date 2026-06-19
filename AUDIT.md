@@ -10,6 +10,32 @@ exigeante.
 
 ---
 
+## 🆕 Mise à jour 2026-06-19 — 10 améliorations livrées
+
+Construites en gardant le **frontend public visuellement gelé** (pages existantes
+inchangées ; le live garde son lien). Tout ce qui dépend d'un service externe est
+**activé par variable d'env** (même principe que S3) :
+
+| # | Amélioration | État | Activation |
+|---|---|---|---|
+| 1 | Player podcasts/mixes public | ✅ `podcasts.html` (page additive) | — |
+| 2 | Flux RSS podcasts | ✅ `GET /v1/rss/:showSlug` | — |
+| 3 | Badge live « en ondes / à venir » | ⏳ à câbler (touche page gelée) | décision user |
+| 4 | Rappels Web Push | ✅ table + abo + rappels auto | `VAPID_*` (`npm run vapid`) |
+| 5 | Cartes de partage Open Graph | ✅ `GET /v1/share/...` | — |
+| 6 | Sentry (monitoring) | ✅ branché | `SENTRY_DSN` |
+| 7 | Analytics avancé (séries + export CSV) | ✅ graphe + export | — |
+| 8 | Journal d'audit admin | ✅ middleware + page `/journal` | — |
+| 9 | Invitations email + reset mdp | ✅ + page change-password | `RESEND_API_KEY` |
+| 10 | Recherche + pagination | ✅ admin (q/limit/offset) + barre | — |
+
+Couvre les anciens points : **B1** (Sentry), **C2** (rétention analytics, `ANALYTICS_RETENTION_DAYS`),
+**C4** (pagination), **D1** (player), **D2/D3** (invitations + reset), **D4** (séries/export),
+**D5** (RSS), **D7** (audit log). **A4 (Loi 25)** : rétention + purge faites ✅ ;
+reste la **mention de confidentialité** (touche une page gelée → à décider).
+
+---
+
 ## A. Sécurité
 
 | # | Sév. | Constat | Action |
