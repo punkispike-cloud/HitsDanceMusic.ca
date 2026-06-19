@@ -54,7 +54,7 @@ reste la **mention de confidentialité** (touche une page gelée → à décider
 | B1 | 🔴 | **Aucun monitoring d'erreurs** : les erreurs prod finissent dans `console.log` → perdues. | Brancher Sentry (gratuit) sur api + admin. |
 | B2 | 🔴 | **Pas de staging, déploiement direct en prod sur `main`**, sans review ni branch protection. Un commit cassé part en prod. | Env de preview Railway + protection de branche + PRs. |
 | B3 | ✅ | ~~CI inexistante~~ → **GitHub Actions ajouté** (typecheck/test/build api+admin, hash SW, syntaxe JS). | Fait. |
-| B4 | 🟠 | **Tests quasi inexistants** (1 seul). RBAC/auth promis dans le plan, jamais testés. | Tests d'intégration auth + RBAC + ingest. |
+| B4 | ✅ | ~~Tests quasi inexistants (1 seul)~~ → **27 tests** : JWT (altération/expiration/issuer/secret étranger), RBAC (requireRole/requireMinRole/ownership, tous les rôles), validation (slug, email, mdp ≥12, set-password). | Fait (couche sécurité). Reste optionnel : intégration DB réelle (rotation refresh) avec Postgres en CI. |
 | B5 | ✅ | ~~Tables à croissance illimitée (refresh_tokens, upload_intents)~~ → **job de purge** (`services/maintenance.ts`). | Fait (analytics encore à traiter, voir C2). |
 | B6 | 🟡 | **Pas de backup Postgres vérifié/documenté**. | Activer + tester une restauration. |
 
