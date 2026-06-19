@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Podcasts & mixes à la demande — Hits Dance Music. Réécoute les émissions et les DJ sets quand tu veux." />
+    <meta property="og:title" content="Podcasts & Mixes | Hits Dance Music" />
+    <meta property="og:description" content="Réécoute les podcasts et les mixes des DJs de Hits Dance Music, à la demande." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hitsdancemusic.ca/podcasts.html" />
+    <meta property="og:locale" content="fr_CA" />
+    <meta property="og:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Podcasts & Mixes | Hits Dance Music" />
+    <meta name="twitter:description" content="Réécoute les podcasts et les mixes des DJs de Hits Dance Music, à la demande." />
+    <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
+    <meta name="theme-color" content="#0f0f12" />
+    <script src="assets/theme-init.js"></script>
+    <title>Podcasts & Mixes | Hits Dance Music</title>
+    <link rel="canonical" href="https://hitsdancemusic.ca/podcasts.html" />
+    <!--#include name="head-icons"-->
+    <link rel="modulepreload" href="js/main.js" />
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hits Dance Music" />
+    <meta name="hr-presence-url" content="wss://hitsdancemusicca-production.up.railway.app/ws/presence" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+<!--#endinclude-->
+  </head>
+  <body>
+    <a class="skip-link" href="#page-main">Aller au contenu</a>
+    <header class="site-header solid" id="top">
+      <a class="brand" href="index.html" aria-label="Hits Dance Music — La radio">
+        <img class="brand-mark brand-mark--final" src="assets/logo-final.webp" alt="Hits Dance Music — La radio" width="64" height="64" decoding="async" fetchpriority="high" />
+      </a>
+      <nav class="main-nav" id="primary-nav" aria-label="Navigation principale">
+        <a href="index.html">Accueil</a>
+        <a href="index.html#animateurs">Animateurs</a>
+        <a href="index.html#horaire">Horaire</a>
+        <a href="index.html#emissions">Émissions</a>
+        <a href="animateurs.html">Équipe</a>
+      </nav>
+      <!--#include name="presence-badge"-->
+<!-- presence-badge retiré du visuel (compteur masqué) -->
+<!--#endinclude-->
+      <!--#include name="header-tools"-->
+      <div class="header-tools">
+        <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <div class="more-menu-wrap">
+          <button id="moreMenuBtn" class="header-tool" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" aria-label="Plus d'actions — contact et dédicaces" title="Contact &amp; dédicaces">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+            </svg>
+          </button>
+          <div id="moreMenu" class="more-menu" role="menu" hidden>
+            <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
+            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
+            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
+            <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
+            <button type="button" role="menuitem" id="resetGeoBtn"><span aria-hidden="true">📍</span> Réinitialiser ma localisation</button>
+          </div>
+        </div>
+      </div>
+<!--#endinclude-->
+    </header>
+
+    <main class="page-main" id="page-main">
+      <div class="listen-strip" role="region" aria-label="Écouter la radio en direct">
+        <a class="listen-strip-link" href="index.html?play=1#player">
+          <span class="listen-strip-dot" aria-hidden="true"></span>
+          Écouter le direct
+        </a>
+      </div>
+      <section class="page-hero compact">
+        <p class="eyebrow"><span></span> À la demande</p>
+        <h1>Podcasts &amp; Mixes</h1>
+        <p>
+          Réécoute les émissions et les DJ sets quand tu veux. Active les rappels pour ne plus rien manquer en direct.
+        </p>
+        <div class="schedule-actions">
+          <button type="button" id="pushOptIn" class="push-optin" hidden>🔔 Recevoir les rappels d'émission</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow"><span></span> Podcasts</p>
+        <h2>Émissions à réécouter</h2>
+        <div class="od-grid podcast-grid">
+          <p class="od-empty">Chargement…</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow"><span></span> Mixes</p>
+        <h2>DJ sets &amp; mixes</h2>
+        <div class="od-grid mix-grid">
+          <p class="od-empty">Chargement…</p>
+        </div>
+      </section>
+
+      <section class="info-band">
+        <div>
+          <p class="eyebrow"><span></span> Voir aussi</p>
+          <h2>Grille complète &amp; équipe</h2>
+          <p>
+            Consulte la <a class="text-link" href="horaire.html">grille horaire 2026</a> ou la
+            page <a class="text-link" href="animateurs.html">DJs &amp; animateurs</a> pour rencontrer l'équipe.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© 2026 Hits Dance Music — La radio</span>
+      <span><a href="contact.html">Proposer une émission</a></span>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

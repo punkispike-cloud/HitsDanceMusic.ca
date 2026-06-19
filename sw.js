@@ -1,11 +1,12 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-5183c961809c";
+const CACHE = "hitradio-cfcf159289b4";
 const SHELL = [
   "./",
   "./index.html",
   "./animateurs.html",
   "./emissions.html",
+  "./podcasts.html",
   "./horaire.html",
   "./contact.html",
   "./404.html",
@@ -41,6 +42,7 @@ const SHELL = [
   "./styles/27-theme-light.css",
   "./styles/28-player-2026.css",
   "./styles/29-animateur-detail.css",
+  "./styles/30-podcasts.css",
   "./manifest.webmanifest",
   "./assets/favicon.svg",
   "./assets/icon-192.png",
@@ -52,6 +54,8 @@ const SHELL = [
   "./js/api-config.js",
   "./js/analytics.js",
   "./js/content.js",
+  "./js/podcasts-page.js",
+  "./js/push-subscribe.js",
   "./js/animateur-detail.js",
   "./js/util.js",
   "./js/store.js",
@@ -116,6 +120,34 @@ self.addEventListener("activate", (e) => {
         ch.close();
       } catch { /* noop */ }
     }
+  })());
+});
+
+/* Web Push : affiche la notification de rappel d'émission. */
+self.addEventListener("push", (event) => {
+  let data = { title: "Hits Dance Music", body: "", url: "/" };
+  try { if (event.data) data = { ...data, ...event.data.json() }; } catch { /* payload non-JSON */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      tag: data.tag || "hitradio",
+      icon: "./assets/icon-192.png",
+      badge: "./assets/icon-192.png",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+/* Clic sur la notification : focus un onglet existant ou ouvre l'URL. */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const c of all) {
+      if ("focus" in c) { try { await c.focus(); return; } catch { /* noop */ } }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow(target);
   })());
 });
 
