@@ -33,6 +33,7 @@ import { annotateTalentCards } from "./animateurs.js";
 import { loadContentFromApi } from "./content.js";
 import { initPodcastsPage } from "./podcasts-page.js";
 import { initPushOptIn } from "./push-subscribe.js";
+import { initLiveBadge } from "./live-badge.js";
 import { renderCountdown } from "./countdown.js";
 import { startStatsTracking, renderStatsPage } from "./stats.js";
 import { injectFavButtons, injectFavFilter } from "./favorites.js";
@@ -222,6 +223,7 @@ function initIdle() {
   // est présent) + bouton d'abonnement aux rappels (no-op si #pushOptIn absent).
   void initPodcastsPage();
   void initPushOptIn();
+  void initLiveBadge();
   renderCountdown();
   bgInterval(renderCountdown, 30_000);
 
