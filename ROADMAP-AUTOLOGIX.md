@@ -29,7 +29,7 @@
 | 1 | Productisation : rendre le code **clonable** | ✅ fait |
 | 2 | Onboarding **turnkey** : créer un client vite | ✅ fait |
 | 3 | Gestion **centralisée** (côté opérateur) | ⬜ à faire |
-| 4 | **Self-service** client (gérer son propre site) | ⬜ à faire |
+| 4 | Périmètre client (contenu) vs **IP visuel Autologix** | 🔁 recadrée |
 | 5 | **Multi-tenant** + portail Autologix | ⬜ (à ~5 clients) |
 | 6 | **Commercial** / go-to-market | ⬜ (hors repo) |
 
@@ -88,21 +88,29 @@
 - 🔑 *Décision* : tableau de bord = page web dédiée, ou simple script CLI qui
   affiche le statut ? (CLI d'abord, web ensuite.)
 
-## Phase 4 — Self-service client (l'utilisateur gère SON site) ⬜
+## Phase 4 — Périmètre client vs IP Autologix (RECADRÉE 2026-06-19) ⬜
 
-> **Pour QUI** : pour les CLIENTS — et ça **réduit ta charge de support**. Le client
-> change son nom, ses couleurs, son logo, ses coordonnées **lui-même**, sans toi.
+> **DÉCISION STRATÉGIQUE** : Autologix **conserve la propriété intellectuelle de la
+> création et du visuel** de chaque radio. Le client ne modifie **pas** son
+> apparence — c'est l'actif d'Autologix (moat + dépendance = récurrent). On sépare
+> donc nettement ce qui est **au client** de ce qui reste **à Autologix**.
 
-- [ ] Admin → page **« Réglages du site »** : nom affiché, description, contact
-      (tél / courriel / réseaux), couleurs d'accent — éditables par le client.
-- [ ] **Upload logo / favicon** depuis l'admin (vers S3).
-- [ ] Le client = **superadmin de SA radio** (rôles déjà en place, à cadrer).
-- [ ] **Aide / guide** intégré dans l'admin (premiers pas).
-- 🔑 *Décision d'architecture clé* : aujourd'hui la marque est **figée au build**
-  (`brand/<client>.json` → injecté). Pour que le client l'édite en direct, il faut
-  passer ces réglages au **runtime** (table `site_settings` servie par l'API, lue
-  par le front). Choix : **tout runtime** (souple, plus de dev) **ou hybride**
-  (couleurs/contact runtime ; nom/domaine restent au build). → à trancher avant Phase 4.
+**Au client (self-service) — CONTENU & opérationnel :**
+- [x] Animateurs, émissions, grille, podcasts, mixes (déjà via l'admin ✅)
+- [x] Statistiques d'audience, notifications, son mot de passe (déjà ✅)
+- [ ] (option) Coordonnées / réseaux sociaux (données opérationnelles, pas créatives)
+
+**À Autologix (contrôlé par l'opérateur) — CRÉATION & VISUEL = IP :**
+- [ ] Le visuel reste **figé au build** (`brand/<client>.json`) — non exposé au client
+- [ ] (option) **Panneau opérateur** pour ajuster le visuel d'un client sans rebuild
+      manuel (réservé Autologix, pas le client)
+- [ ] ⚖️ **Clause de PI au contrat** : Autologix détient le design/visuel ; le client
+      a une **licence d'utilisation** tant qu'il est abonné → **Phase 6 (légal)**
+
+> Conséquence : la grosse archi « réglages runtime éditables par le client » n'est
+> **plus nécessaire**. Le self-service client se limite au **contenu** (déjà fait).
+> Ce qui prend de la valeur, c'est plutôt la **Phase 3** (toi, opérateur, qui
+> contrôles et gères tous les visuels/clients d'un seul endroit).
 
 ## Phase 5 — Multi-tenant + portail Autologix ⬜ (à ~5 clients)
 
