@@ -12,13 +12,18 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-let registry;
-try {
-  registry = JSON.parse(await readFile(join(root, "brand", "clients.json"), "utf-8"));
-} catch {
-  console.error("✗ brand/clients.json introuvable ou invalide.");
+async function loadRegistry() {
+  for (const f of ["clients.json", "clients.example.json"]) {
+    try {
+      return JSON.parse(await readFile(join(root, "brand", f), "utf-8"));
+    } catch {
+      /* essaie le suivant */
+    }
+  }
+  console.error("✗ Aucun registre (brand/clients.json ni clients.example.json).");
   process.exit(1);
 }
+const registry = await loadRegistry();
 
 const clients = (registry.clients || []).filter((c) => c.status === "active" && c.domains?.api);
 if (!clients.length) {

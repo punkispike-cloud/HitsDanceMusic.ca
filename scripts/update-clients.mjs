@@ -12,7 +12,14 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const registry = JSON.parse(await readFile(join(root, "brand", "clients.json"), "utf-8"));
+async function loadRegistry() {
+  for (const f of ["clients.json", "clients.example.json"]) {
+    try { return JSON.parse(await readFile(join(root, "brand", f), "utf-8")); } catch { /* suivant */ }
+  }
+  console.error("✗ Aucun registre client.");
+  process.exit(1);
+}
+const registry = await loadRegistry();
 const clients = (registry.clients || []).filter((c) => c.status === "active");
 
 console.log(`\n🔄 Propagation d'une mise à jour plateforme à ${clients.length} client(s)\n`);

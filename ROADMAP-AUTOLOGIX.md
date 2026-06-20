@@ -1,4 +1,8 @@
-# 🗺️ Roadmap Autologix — Plateforme Radio-as-a-Service
+# 🗺️ Roadmap — Plateforme Radio-as-a-Service
+
+> 📝 « Autologix » n'est qu'un **nom de travail** dans ce document — le nom final
+> de l'entreprise/marque reste **à choisir** (ce ne sera pas « Autologix »).
+> Dans les documents commerciaux, le placeholder est `[ENTREPRISE]`.
 
 > **But** : tout outiller pour qu'Autologix **crée, déploie et gère** des sites de
 > radio complets pour ses clients — facile pour nous (l'opérateur) ET pour les
@@ -14,13 +18,13 @@
 
 ## 📍 TU ES ICI
 
-> **Phases 1, 2 et 3 outillées** : le code est clonable, l'onboarding est outillé,
-> et la gestion centralisée du parc existe (registre + statut + MAJ mutualisées +
-> bible `OPERATIONS.md`). Site live Hits Dance **inchangé**. Phase 4 **recadrée**
-> (visuel = IP Autologix ; le client gère son contenu, déjà fait).
-> **Reste surtout des actions 🔒 toi** : activer Sentry/backups par client, et le
-> **légal/commercial** (Phase 6 : contrat PI + licences + prix). Le code de
-> l'« usine » est, lui, **complet et opérationnel**.
+> **Phases 1-2-3 outillées, 4 recadrée, 6 en gabarits.** Le code de l'« usine »
+> (cloner + onboarder + gérer le parc) est **complet et opérationnel** ; le pack
+> commercial/légal est **rédigé** (`_private/`, à valider par avocat·e). Site live
+> Hits Dance **inchangé**. **Il ne reste que des décisions/actions 🔒 à TOI** :
+> choisir le nom, faire valider les contrats, activer Sentry/backups, roter les
+> secrets — puis **trouver le 1er vrai client**. La seule phase code restante est
+> la 5 (multi-tenant), **différée à ~5 clients**.
 
 ---
 
@@ -34,7 +38,7 @@
 | 3 | Gestion **centralisée** (côté opérateur) | ✅ outillée |
 | 4 | Périmètre client (contenu) vs **IP visuel Autologix** | 🔁 recadrée |
 | 5 | **Multi-tenant** + portail Autologix | ⬜ (à ~5 clients) |
-| 6 | **Commercial** / go-to-market | ⬜ (hors repo) |
+| 6 | **Commercial** / go-to-market | 🔁 gabarits prêts |
 
 ---
 
@@ -125,13 +129,19 @@
 - 🔑 *Quand* : seulement à ~5 clients réguliers. Avant, « 1 instance par client »
   (Phases 1-3) est plus simple et plus sûr (une panne ≠ tout le monde tombe).
 
-## Phase 6 — Commercial / go-to-market ⬜ (documents privés, hors repo)
+## Phase 6 — Commercial / go-to-market 🔁 gabarits prêts (dossier privé `_private/`)
 
-> **Pour QUI** : pour vendre. Tenu **hors du dépôt client** (prix, marges).
+> **Pour QUI** : pour vendre. Tenu **hors du dépôt** (prix, contrats) → `_private/`
+> (gitignoré). Nom d'entreprise en placeholder `[ENTREPRISE]` (pas « Autologix »).
 
-- [ ] Page de vente + **démo live = Hits Dance Music** (« regarde ce que je fais »).
-- [ ] Grille de prix par palier d'auditeurs (build one-time + mensuel + add-ons).
-- [ ] Acquisition ciblée : DJ, radios communautaires, OBNL, festivals QC francophones.
+- [x] **Contrat client** (`_private/CONTRAT-CLIENT.md`) — PI (visuel = au Prestataire,
+      licence d'usage au Client), licences musicales, données, paiement, résiliation.
+- [x] **Attestation licences** (`_private/ATTESTATION-LICENCES.md`) — SOCAN + Ré:Sonne.
+- [x] **Grille de prix** (`_private/GRILLE-PRIX.md`) — build + mensuel/palier + add-ons + point mort.
+- [x] **Page de vente** (`_private/PAGE-DE-VENTE.md`) — argumentaire, démo = Hits Dance, FAQ.
+- [ ] 🔒 **Validation juridique** des gabarits (avocat·e QC) — avant 1er vrai client
+- [ ] 🔒 **Choisir le nom** d'entreprise/marque (remplacer `[ENTREPRISE]`)
+- [ ] 🔒 Acquisition : DJ, radios communautaires, OBNL, festivals QC francophones
 
 ---
 

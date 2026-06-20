@@ -9,3 +9,7 @@ desktop.ini
 .vscode/
 .idea/
 .claude/
+
+# Documents privés Autologix (prix, contrats, business) — NE JAMAIS pousser
+_private/
+brand/clients.json
