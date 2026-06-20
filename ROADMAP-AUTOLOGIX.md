@@ -69,30 +69,75 @@
 
 ## Phase 3 — Gestion centralisée (opérateur) ⬜
 
-- [ ] Registre des clients (`brand/clients.json` : slug, domaines, projet Railway, statut)
-- [ ] Mises à jour mutualisées : déployer un correctif à TOUS les clients proprement
-- [ ] Monitoring centralisé (Sentry par projet + page statut up/down)
-- [ ] Sauvegardes Postgres vérifiées + procédure de restauration testée
-- [ ] (option) Mini tableau de bord opérateur (santé de tous les sites)
+> **Pour QUI** : pour TOI. Gérer tous les clients d'un seul endroit, sans te
+> connecter à 10 panneaux Railway. C'est ce qui rend « 10 clients » tenable.
+
+- [ ] **Registre des clients** : `brand/clients.json` (slug, nom, domaines, projet
+      Railway, palier, statut actif/suspendu, date de mise en service). La source
+      de vérité de « qui sont mes clients ».
+- [ ] **Mises à jour mutualisées** : un process pour redéployer le MÊME code corrigé
+      à tous les clients sans toucher à leurs configs (script + checklist).
+- [ ] **Monitoring centralisé** : Sentry par projet + une page/script « statut »
+      qui ping chaque `/health` et liste up/down + audience.
+- [ ] **Sauvegardes** Postgres par client + **procédure de restauration testée**
+      (pas juste « activé », mais « j'ai déjà restauré une fois »).
+- [ ] (option) **Mini tableau de bord opérateur** : 1 page qui liste tous les sites,
+      leur santé, leur audience, la dernière mise à jour.
+- 🔑 *Décision* : tableau de bord = page web dédiée, ou simple script CLI qui
+  affiche le statut ? (CLI d'abord, web ensuite.)
 
 ## Phase 4 — Self-service client (l'utilisateur gère SON site) ⬜
 
-- [ ] Admin : page « Réglages du site » (nom, contact, réseaux, couleurs) éditables par le client
-- [ ] Upload du logo / favicon depuis l'admin
-- [ ] Le client = superadmin de SA radio (rôles affinés)
-- [ ] Aide / guide intégré dans l'admin
+> **Pour QUI** : pour les CLIENTS — et ça **réduit ta charge de support**. Le client
+> change son nom, ses couleurs, son logo, ses coordonnées **lui-même**, sans toi.
+
+- [ ] Admin → page **« Réglages du site »** : nom affiché, description, contact
+      (tél / courriel / réseaux), couleurs d'accent — éditables par le client.
+- [ ] **Upload logo / favicon** depuis l'admin (vers S3).
+- [ ] Le client = **superadmin de SA radio** (rôles déjà en place, à cadrer).
+- [ ] **Aide / guide** intégré dans l'admin (premiers pas).
+- 🔑 *Décision d'architecture clé* : aujourd'hui la marque est **figée au build**
+  (`brand/<client>.json` → injecté). Pour que le client l'édite en direct, il faut
+  passer ces réglages au **runtime** (table `site_settings` servie par l'API, lue
+  par le front). Choix : **tout runtime** (souple, plus de dev) **ou hybride**
+  (couleurs/contact runtime ; nom/domaine restent au build). → à trancher avant Phase 4.
 
 ## Phase 5 — Multi-tenant + portail Autologix ⬜ (à ~5 clients)
 
-- [ ] Cloison par `radio_id` (1 plateforme, N radios dans la même base)
-- [ ] Portail Autologix : créer / configurer / suspendre un client en quelques clics
-- [ ] Facturation intégrée (Stripe) reliée aux paliers
+> **Pour QUI** : pour TOI (passage à l'échelle). Une seule plateforme héberge N
+> radios au lieu d'un déploiement par client → coût ops quasi fixe.
+
+- [ ] **Cloison des données par `radio_id`** (chaque requête sait quelle radio ;
+      isolation stricte entre clients).
+- [ ] **Portail Autologix** : créer/configurer/suspendre un client via un formulaire
+      (plus de déploiement Railway manuel par client).
+- [ ] **Facturation Stripe** reliée aux paliers (abonnement + add-ons).
+- 🔑 *Quand* : seulement à ~5 clients réguliers. Avant, « 1 instance par client »
+  (Phases 1-3) est plus simple et plus sûr (une panne ≠ tout le monde tombe).
 
 ## Phase 6 — Commercial / go-to-market ⬜ (documents privés, hors repo)
 
-- [ ] Page de vente + démo (Hits Dance Music)
-- [ ] Grille de prix par palier d'auditeurs (build + mensuel + add-ons)
-- [ ] Acquisition : DJ, radios communautaires, OBNL, festivals QC
+> **Pour QUI** : pour vendre. Tenu **hors du dépôt client** (prix, marges).
+
+- [ ] Page de vente + **démo live = Hits Dance Music** (« regarde ce que je fais »).
+- [ ] Grille de prix par palier d'auditeurs (build one-time + mensuel + add-ons).
+- [ ] Acquisition ciblée : DJ, radios communautaires, OBNL, festivals QC francophones.
+
+---
+
+## Dépendances entre phases (l'ordre logique)
+
+```
+0 ✅ → 1 🔄 → 2 ──┬──► 3  (gérer suppose pouvoir onboarder)
+                  ├──► 4  (self-service ; dépend de la décision build/runtime)
+                  └──► 5  (multi-tenant ; à ~5 clients)
+6 (commercial) peut avancer EN PARALLÈLE dès qu'il y a une démo (= maintenant).
+```
+
+- **1 → 2** sont des **prérequis** : pas de gestion ni de clients sans clonage + onboarding.
+- **3** dès que tu as ≥ 2 clients.
+- **4** = le plus gros gain « confort utilisateur » ; nécessite la décision build vs runtime.
+- **5** = pivot à l'échelle, plus tard.
 
 ---
 
