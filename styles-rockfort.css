@@ -1,0 +1,188 @@
+/* ============================================================
+   ROCKFORT — thème bespoke (rock vintage / Fender old-school)
+   Chargé APRÈS styles.css : redéfinit la mise en page, la typo,
+   les textures et le hero. Le player et la grille (moteur) sont
+   réutilisés mais reskinnés « façade d'ampli à lampes ».
+   ============================================================ */
+
+:root {
+  --rf-amp: #14100b;          /* noir chaud d'ampli */
+  --rf-amp-2: #1d160e;
+  --rf-tweed: #2a2017;        /* tweed brun */
+  --rf-cream: #f3e6c8;        /* crème vintage / lettrage */
+  --rf-amber: #cf9b3f;        /* lueur lampe / butterscotch */
+  --rf-amber-2: #e6b85c;
+  --rf-oxblood: #6e1f1a;      /* grille d'ampli oxblood */
+  --rf-line: rgba(243, 230, 200, 0.14);
+  --rf-display: "Anton", Impact, sans-serif;
+  --rf-head: "Oswald", "Arial Narrow", sans-serif;
+}
+
+/* ---- Fond global : tweed + grain + vignette chaude ---- */
+body {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(207,155,63,0.10), transparent 60%),
+    radial-gradient(140% 120% at 50% 120%, rgba(110,31,26,0.18), transparent 60%),
+    var(--rf-amp);
+  color: var(--rf-cream);
+  font-family: "Inter", system-ui, sans-serif;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: var(--grain-svg);
+  background-size: 260px;
+  opacity: 0.06; mix-blend-mode: overlay;
+}
+#main, .site-header, .site-footer { position: relative; z-index: 1; }
+
+/* ---- Header : barre laiton vintage ---- */
+.site-header {
+  background: linear-gradient(180deg, rgba(29,22,14,0.96), rgba(20,16,11,0.92));
+  border-bottom: 2px solid var(--rf-amber);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+}
+.main-nav a { font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; color: var(--rf-cream); }
+.main-nav a:hover { color: var(--rf-amber-2); }
+
+/* Marque texte (au lieu du logo Hits) */
+.rf-brand {
+  display: inline-flex; align-items: baseline; gap: 6px; text-decoration: none;
+}
+.rf-brand b {
+  font-family: var(--rf-display);
+  font-size: 1.7rem; letter-spacing: 0.04em; color: var(--rf-cream);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.6);
+}
+.rf-brand b span { color: var(--rf-amber); }
+
+/* ============================================================
+   HERO — affiche de concert vintage
+   ============================================================ */
+.rf-hero {
+  position: relative;
+  min-height: 86vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+  padding: clamp(28px, 6vw, 90px) clamp(20px, 6vw, 90px) 60px;
+  overflow: hidden;
+}
+/* Soleil couchant / sunburst derrière le titre */
+.rf-hero::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    repeating-conic-gradient(from 0deg at 28% 42%,
+      rgba(207,155,63,0.10) 0deg 6deg, transparent 6deg 12deg);
+  -webkit-mask-image: radial-gradient(60% 60% at 28% 42%, #000 0%, transparent 70%);
+          mask-image: radial-gradient(60% 60% at 28% 42%, #000 0%, transparent 70%);
+  opacity: 0.7;
+}
+.rf-hero > * { position: relative; z-index: 1; }
+
+.rf-hero-left { max-width: 620px; }
+.rf-kicker {
+  font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.34em;
+  font-weight: 600; font-size: 0.82rem; color: var(--rf-amber-2);
+  display: inline-flex; align-items: center; gap: 10px; margin: 0 0 14px;
+}
+.rf-kicker::before { content: ""; width: 26px; height: 2px; background: var(--rf-amber); }
+
+.rf-title {
+  font-family: var(--rf-display);
+  font-size: clamp(4.2rem, 13vw, 10rem);
+  line-height: 0.84; margin: 0; letter-spacing: 0.01em;
+  color: var(--rf-cream);
+  text-shadow: 0 4px 0 var(--rf-oxblood), 0 6px 18px rgba(0,0,0,0.6);
+}
+.rf-title em {
+  display: block; font-style: normal; color: var(--rf-amber);
+  -webkit-text-stroke: 1px rgba(0,0,0,0.25);
+}
+.rf-tagline {
+  font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.12em;
+  font-size: clamp(1rem, 2.4vw, 1.4rem); color: var(--rf-cream);
+  margin: 22px 0 6px; opacity: 0.9;
+}
+.rf-sub { color: rgba(243,230,200,0.7); max-width: 46ch; line-height: 1.6; }
+
+.rf-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.rf-chip {
+  font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.14em;
+  font-size: 0.74rem; font-weight: 600;
+  padding: 8px 14px; border: 1px solid var(--rf-line); border-radius: 2px;
+  color: var(--rf-cream); background: rgba(0,0,0,0.25);
+}
+.rf-chip.live { border-color: var(--rf-amber); color: var(--rf-amp); background: var(--rf-amber); }
+
+/* ============================================================
+   PLAYER — façade d'ampli à lampes (réutilise #player)
+   ============================================================ */
+#player.player-panel {
+  background:
+    linear-gradient(180deg, rgba(42,32,23,0.96), rgba(20,16,11,0.98));
+  border: 1px solid var(--rf-amber);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(243,230,200,0.15),
+    0 0 0 6px rgba(20,16,11,0.6),
+    0 26px 60px rgba(0,0,0,0.6);
+  position: relative;
+}
+/* Grille d'ampli (texture de toile oxblood) en haut du player */
+#player.player-panel::before {
+  content: ""; display: block; height: 90px; margin: -2px -2px 10px;
+  border-radius: 6px 6px 0 0;
+  background:
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.25) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(-45deg, rgba(110,31,26,0.55) 0 3px, transparent 3px 6px),
+    var(--rf-oxblood);
+  border-bottom: 2px solid rgba(0,0,0,0.5);
+}
+.player-station-name { font-family: var(--rf-head) !important; text-transform: uppercase; letter-spacing: 0.14em; color: var(--rf-cream) !important; }
+.player-live-badge { background: var(--rf-amber) !important; color: var(--rf-amp) !important; font-family: var(--rf-head); }
+.player-onair-title { font-family: var(--rf-head) !important; color: var(--rf-cream) !important; letter-spacing: 0.02em; }
+.play-button { background: radial-gradient(circle at 35% 30%, var(--rf-amber-2), var(--rf-amber) 55%, #8a5e1c) !important; border: 2px solid #5e3f12 !important; box-shadow: 0 0 22px rgba(207,155,63,0.45) !important; }
+.player-status-sub, .player-onair-host { color: rgba(243,230,200,0.6) !important; }
+.player-equalizer span { background: var(--rf-amber) !important; }
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.rf-strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 1px;
+  background: var(--rf-line); border-block: 1px solid var(--rf-line); margin-top: 10px;
+}
+.rf-strip > div { background: var(--rf-amp-2); padding: 26px 24px; }
+.rf-strip b { font-family: var(--rf-display); font-size: 1.8rem; color: var(--rf-amber-2); display: block; }
+.rf-strip span.k { font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.72rem; color: rgba(243,230,200,0.55); }
+.rf-strip p { margin: 6px 0 0; color: rgba(243,230,200,0.7); font-size: 0.9rem; }
+
+.rf-section { padding: clamp(40px, 7vw, 88px) clamp(20px, 6vw, 90px); }
+.rf-section h2 { font-family: var(--rf-display); font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: 0.02em; margin: 0 0 6px; color: var(--rf-cream); }
+.rf-eyebrow { font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.28em; font-size: 0.76rem; color: var(--rf-amber-2); margin: 0 0 8px; }
+.rf-section--tweed { background: linear-gradient(180deg, rgba(42,32,23,0.5), transparent); border-block: 1px solid var(--rf-line); }
+
+/* Cartes animateurs réutilisées (.talent-grid) — look vintage */
+.talent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 18px; margin-top: 24px; }
+.talent-card {
+  background: var(--rf-amp-2); border: 1px solid var(--rf-line); border-radius: 4px;
+  padding: 20px; text-align: center; transition: border-color .2s, transform .2s;
+}
+.talent-card:hover { border-color: var(--rf-amber); transform: translateY(-3px); }
+.talent-card .avatar { border: 2px solid var(--rf-amber); }
+.talent-card p { font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.08em; }
+.talent-card strong { color: var(--rf-amber-2); }
+
+/* Grille horaire réutilisée (#scheduleFull) — accents ambre */
+#scheduleFull .sched-day-title, #scheduleFull h3 { font-family: var(--rf-head) !important; text-transform: uppercase; letter-spacing: 0.1em; color: var(--rf-amber-2) !important; }
+
+/* Footer */
+.site-footer { background: var(--rf-amp-2); border-top: 2px solid var(--rf-amber); font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.14em; color: rgba(243,230,200,0.6); }
+
+@media (max-width: 880px) {
+  .rf-hero { grid-template-columns: 1fr; min-height: auto; }
+}
