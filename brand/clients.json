@@ -1,0 +1,26 @@
+{
+  "_comment": "Registre des clients Autologix (source de vérité). Lu par scripts/status.mjs et update-clients.mjs. Si des clients obtiennent un accès au dépôt, déplacer ce fichier hors du repo (gitignore) — il liste tes clients.",
+  "clients": [
+    {
+      "slug": "hitsdance",
+      "name": "Hits Dance Music",
+      "status": "active",
+      "role": "client #0 / vitrine",
+      "branch": "main",
+      "railwayProject": "Hits Dance Music",
+      "tier": "vitrine",
+      "domains": {
+        "site": "https://hitsdancemusic.ca",
+        "api": "https://patient-endurance-production-21c8.up.railway.app",
+        "admin": "https://zucchini-charisma-production-3a67.up.railway.app"
+      },
+      "licenses": {
+        "attested": false,
+        "socan": false,
+        "resonne": false,
+        "note": "Vitrine — attestation à confirmer avant exploitation commerciale."
+      },
+      "commissioned": "2026-06-18"
+    }
+  ]
+}

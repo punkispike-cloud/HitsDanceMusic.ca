@@ -14,10 +14,13 @@
 
 ## 📍 TU ES ICI
 
-> **Phases 1 et 2 terminées** : le code est clonable ET l'onboarding est outillé
-> (scaffold + runbook + vérif déploiement). Site live Hits Dance **inchangé**
-> (vérifié). L'« usine à radios » est opérationnelle. Prochain : **Phase 3**
-> (gestion centralisée) ou **Phase 4** (self-service client) — au choix.
+> **Phases 1, 2 et 3 outillées** : le code est clonable, l'onboarding est outillé,
+> et la gestion centralisée du parc existe (registre + statut + MAJ mutualisées +
+> bible `OPERATIONS.md`). Site live Hits Dance **inchangé**. Phase 4 **recadrée**
+> (visuel = IP Autologix ; le client gère son contenu, déjà fait).
+> **Reste surtout des actions 🔒 toi** : activer Sentry/backups par client, et le
+> **légal/commercial** (Phase 6 : contrat PI + licences + prix). Le code de
+> l'« usine » est, lui, **complet et opérationnel**.
 
 ---
 
@@ -28,7 +31,7 @@
 | 0 | Plateforme pour 1 radio (Hits Dance Music) | ✅ fait |
 | 1 | Productisation : rendre le code **clonable** | ✅ fait |
 | 2 | Onboarding **turnkey** : créer un client vite | ✅ fait |
-| 3 | Gestion **centralisée** (côté opérateur) | ⬜ à faire |
+| 3 | Gestion **centralisée** (côté opérateur) | ✅ outillée |
 | 4 | Périmètre client (contenu) vs **IP visuel Autologix** | 🔁 recadrée |
 | 5 | **Multi-tenant** + portail Autologix | ⬜ (à ~5 clients) |
 | 6 | **Commercial** / go-to-market | ⬜ (hors repo) |
@@ -69,24 +72,21 @@
 - [x] ⚖️ Attestation licences intégrée à la collecte + à la checklist
 - [x] Objectif **< 1 journée** outillé (scaffold + build + deploy + vérif)
 
-## Phase 3 — Gestion centralisée (opérateur) ⬜
+## Phase 3 — Gestion centralisée (opérateur) ✅ outillée
 
 > **Pour QUI** : pour TOI. Gérer tous les clients d'un seul endroit, sans te
 > connecter à 10 panneaux Railway. C'est ce qui rend « 10 clients » tenable.
 
-- [ ] **Registre des clients** : `brand/clients.json` (slug, nom, domaines, projet
-      Railway, palier, statut actif/suspendu, date de mise en service). La source
-      de vérité de « qui sont mes clients ».
-- [ ] **Mises à jour mutualisées** : un process pour redéployer le MÊME code corrigé
-      à tous les clients sans toucher à leurs configs (script + checklist).
-- [ ] **Monitoring centralisé** : Sentry par projet + une page/script « statut »
-      qui ping chaque `/health` et liste up/down + audience.
-- [ ] **Sauvegardes** Postgres par client + **procédure de restauration testée**
-      (pas juste « activé », mais « j'ai déjà restauré une fois »).
-- [ ] (option) **Mini tableau de bord opérateur** : 1 page qui liste tous les sites,
-      leur santé, leur audience, la dernière mise à jour.
-- 🔑 *Décision* : tableau de bord = page web dédiée, ou simple script CLI qui
-  affiche le statut ? (CLI d'abord, web ensuite.)
+- [x] **Registre des clients** : `brand/clients.json` (slug, domaines, branche,
+      projet Railway, palier, statut, **licences**, date). Source de vérité.
+- [x] **Statut du parc** : `scripts/status.mjs` (ping `/health` de chaque client →
+      🟢/🔴 + DB + temps + rappel licences). = le tableau de bord opérateur (CLI).
+- [x] **Mises à jour mutualisées** : `scripts/update-clients.mjs` (guide les commandes
+      par client) + `OPERATIONS.md` (le process).
+- [x] **Monitoring** documenté : Sentry **par projet** (DSN distinct) — gated, à activer 🔒
+- [ ] **Sauvegardes** Postgres + **restauration testée** — 🔒 action Railway (toi)
+- [ ] (plus tard) Tableau de bord opérateur **web** (la version CLI suffit pour démarrer)
+- 📓 Bible opérateur : `OPERATIONS.md`
 
 ## Phase 4 — Périmètre client vs IP Autologix (RECADRÉE 2026-06-19) ⬜
 
