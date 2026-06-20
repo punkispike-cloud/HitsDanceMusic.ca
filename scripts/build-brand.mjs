@@ -9,6 +9,13 @@
  * La baseline = brand/hitsdance.json. Donc BRAND=hitsdance (défaut) est un
  * NO-OP : la sortie reste identique au site actuel (garde-fou de non-régression).
  *
+ * ⚠️ RÈGLE : un build client part TOUJOURS d'un arbre propre = la baseline
+ * hitsdance (les remplacements vont de baseline → client). Pour REBÂTIR un client
+ * après un changement de config, d'abord restaurer la baseline :
+ *     git checkout main -- .        # remet les fichiers de sortie à la baseline
+ *     BRAND=<client> node scripts/build-all.mjs
+ * (Sinon une valeur déjà remplacée par un build précédent reste figée.)
+ *
  * Usage :
  *   node scripts/build-brand.mjs                 # applique BRAND (défaut hitsdance)
  *   BRAND=demo node scripts/build-brand.mjs      # bâtit la marque "demo"

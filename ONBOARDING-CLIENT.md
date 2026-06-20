@@ -55,6 +55,13 @@ BRAND=radiosoleil node scripts/build-all.mjs
 Injecte la marque (HTML, manifest, nginx, couleurs, flux) + copie les assets.
 > ⚠️ Ne **pas** committer ce build sur `main` (qui reste la baseline Hits Dance).
 > Utiliser une **branche par client** ou un dépôt/checkout dédié.
+>
+> ⚠️ **Rebâtir après un changement de config** : repartir d'un arbre propre, sinon
+> les valeurs déjà remplacées restent figées :
+> ```bash
+> git checkout main -- .                       # restaure la baseline
+> BRAND=radiosoleil node scripts/build-all.mjs # rebâtit proprement
+> ```
 
 ---
 
