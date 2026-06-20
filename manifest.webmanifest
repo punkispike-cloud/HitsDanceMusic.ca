@@ -1,7 +1,7 @@
 {
-  "name": "Hits Dance Music",
-  "short_name": "Hits Dance Music",
-  "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+  "name": "Rockfort",
+  "short_name": "Rockfort",
+  "description": "Rock en ligne — classiques, hard et indé, 24/7.",
   "id": "/",
   "start_url": "./index.html?utm_source=pwa",
   "scope": "./",
@@ -9,7 +9,7 @@
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0a0a0a",
-  "theme_color": "#0f0f12",
+  "theme_color": "#161210",
   "lang": "fr-CA",
   "categories": ["music", "entertainment"],
   "icons": [
