@@ -125,6 +125,32 @@
 
 ---
 
+## 🎚️ Couche transversale — Expertise radio & musique
+
+> Une plateforme logicielle ne suffit pas : une **radio** a des exigences métier.
+> Le principe : **toute cette complexité est cachée** ; l'utilisateur ne voit que
+> de la simplicité. Ces items irriguent toutes les phases.
+
+- [ ] **⚖️ Licences musicales (P0 légal)** — diffuser de la musique au Canada exige
+      des licences : **SOCAN** (auteurs/éditeurs) + **Ré:Sonne** (artistes/labels),
+      tarifs webcasting de la Commission du droit d'auteur. **Décision à cadrer** :
+      chaque radio cliente détient SES licences (Autologix exige une attestation à
+      l'onboarding) — comme on a traité la Loi 25. Risque réel à ne pas ignorer.
+- [ ] **📻 Diffusion & AutoDJ** — le flux audio (live + rotation auto quand pas
+      d'animateur) est aujourd'hui chez **AsuraHosting**. À cadrer dans l'offre :
+      qualité, failover, multi-bitrate, mount points. Le « cœur radio ».
+- [ ] **🌍 Portée / découverte** — le gros levier d'audience qu'un host pro offre :
+      listing **TuneIn, Radio Garden, Apple/Google**, **enceintes connectées**
+      (Alexa/Google), **voiture** (CarPlay/Android Auto), flux RSS (déjà fait).
+- [ ] **❤️ Engagement auditeur** — demandes de chansons & **dédicaces** (à moitié là),
+      votes, historique des titres, « j'aime ». Fidélise et fait revenir.
+- [ ] **💵 Monétisation outillée** — insertion programmée de **pubs/jingles**,
+      créneaux commandites, page de stats pour les annonceurs (l'audience se vend).
+- [ ] **🎙️ Outils animateur** — direct vs automatisé, voice-tracking, planning
+      d'émissions pré-enregistrées qui passent à heure fixe.
+
+---
+
 ## Dépendances entre phases (l'ordre logique)
 
 ```
