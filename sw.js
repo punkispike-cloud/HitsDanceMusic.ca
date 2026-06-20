@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-84e3d41609c6";
+const CACHE = "hitradio-d84f433e197c";
 const SHELL = [
   "./",
   "./index.html",

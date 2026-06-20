@@ -233,8 +233,12 @@
   .talent-card:hover, .header-tool:hover, .more-menu a:hover { transform: none; }
 }
 
-/* Anti pull-to-refresh pendant lecture */
-body.is-playing-radio { overscroll-behavior-y: contain; }
+/* Anti pull-to-refresh pendant lecture.
+   ⚠️ Cibler <html>, PAS <body> : comme `html, body { overflow-x: hidden }`
+   fait du <body> son propre conteneur de scroll, y poser overscroll-behavior
+   GÈLE tout le défilement molette/tactile de la page (reproduit + vérifié au
+   Playwright). Sur <html> ça bloque bien le pull-to-refresh sans rien casser. */
+html:has(body.is-playing-radio) { overscroll-behavior-y: contain; }
 
 /* Footer mobile */
 @media (max-width: 560px) {
