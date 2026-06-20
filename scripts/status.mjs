@@ -2,52 +2,23 @@
  * Lit brand/clients.json et ping le /health de chaque client actif → tableau
  * up/down + DB + temps de réponse. La vue « santé de tout mon parc » en 1 commande.
  *
+ * Vue VISUELLE équivalente : `node scripts/console.mjs` (cockpit web local).
+ *
  * Usage :
  *   node scripts/status.mjs
  */
 
-import { readFile } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { loadRegistry, pingHealth, isPingable } from "./lib/parc.mjs";
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
-
-async function loadRegistry() {
-  for (const f of ["clients.json", "clients.example.json"]) {
-    try {
-      return JSON.parse(await readFile(join(root, "brand", f), "utf-8"));
-    } catch {
-      /* essaie le suivant */
-    }
-  }
-  console.error("✗ Aucun registre (brand/clients.json ni clients.example.json).");
+const registry = await loadRegistry().catch((e) => {
+  console.error(`✗ ${e.message}`);
   process.exit(1);
-}
-const registry = await loadRegistry();
+});
 
-const clients = (registry.clients || []).filter((c) => c.status === "active" && c.domains?.api);
+const clients = (registry.clients || []).filter(isPingable);
 if (!clients.length) {
   console.log("Aucun client actif avec une API dans le registre.");
   process.exit(0);
-}
-
-const TIMEOUT = 12_000;
-async function pingHealth(api) {
-  const url = `${api.replace(/\/$/, "")}/health`;
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT);
-  const started = Date.now();
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    const ms = Date.now() - started;
-    let json = null;
-    try { json = JSON.parse(await r.text()); } catch { /* non-JSON */ }
-    return { up: r.status === 200 && json?.ok === true, db: json?.db === true, ms };
-  } catch {
-    return { up: false, db: false, ms: Date.now() - started };
-  } finally {
-    clearTimeout(t);
-  }
 }
 
 console.log(`\n📡 Statut du parc Autologix — ${new Date().toLocaleString("fr-CA")}\n`);

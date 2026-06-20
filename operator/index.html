@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Centre de contrôle — Autologix</title>
+    <link rel="stylesheet" href="console.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><span aria-hidden="true">🎛️</span> <b>Autologix</b><span class="sep">·</span><span class="muted">Centre de contrôle</span></div>
+      <div class="topbar-tools">
+        <span class="local-badge" title="Tourne uniquement sur ta machine">🔒 local</span>
+        <span id="lastUpdate" class="muted">—</span>
+        <button id="refreshBtn" type="button" class="btn">↻ Rafraîchir</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpis" id="kpis" aria-label="Indicateurs du parc">
+        <!-- rempli par app.js -->
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Parc de radios</h2>
+          <span class="muted" id="parcCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="parc">
+            <thead>
+              <tr>
+                <th>Radio</th>
+                <th>État</th>
+                <th>DB</th>
+                <th>Latence</th>
+                <th>Palier</th>
+                <th>Licences</th>
+                <th>Mise en service</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="parcBody">
+              <tr><td colspan="8" class="muted">Chargement du parc…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Onboarder une nouvelle radio</h2>
+          <span class="muted">5 étapes · ~quelques heures</span>
+        </div>
+        <ol class="onboard">
+          <li>
+            <b>Créer la config + assets du client</b>
+            <code>node scripts/new-client.mjs &lt;slug&gt; "Nom de la radio"</code>
+            <span class="hint">Remplir <em>brand/&lt;slug&gt;.json</em> (couleurs, flux, domaines) et déposer le logo.</span>
+          </li>
+          <li>
+            <b>Bâtir son site (sur sa branche)</b>
+            <code>BRAND=&lt;slug&gt; node scripts/build-all.mjs</code>
+            <span class="hint">Optionnel : préparer un seed de départ (<em>api/src/db/seed-&lt;slug&gt;.ts</em> + <em>seeds.ts</em>) pour booter sa grille.</span>
+          </li>
+          <li>
+            <b>Déployer l'instance Railway</b>
+            <span class="hint">Nouveau projet : Postgres + <em>api</em> + <em>web</em> + <em>admin</em>. Variables : <em>JWT_SECRET</em> unique, <em>ALLOWED_ORIGINS</em>, <em>SEED_BRAND=&lt;slug&gt;</em>. (Voir ONBOARDING-CLIENT.md.)</span>
+          </li>
+          <li>
+            <b>Vérifier le déploiement</b>
+            <code>node scripts/verify-deploy.mjs https://&lt;api-du-client&gt;</code>
+            <span class="hint">Doit afficher 4 ✅ (API/DB, grille, animateurs, push).</span>
+          </li>
+          <li>
+            <b>Enregistrer le client</b>
+            <span class="hint">Ajouter l'entrée dans <em>brand/clients.json</em> (status, domaines, palier, ⚖️ attestation licences) → il apparaît ici.</span>
+          </li>
+        </ol>
+      </section>
+
+      <footer class="foot">
+        <span class="muted">Modèle « une instance par client » · Le portail multi-tenant viendra vers ~5 clients.</span>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 {
-  "_comment": "Registre des clients Autologix (source de vérité). Lu par scripts/status.mjs et update-clients.mjs. Si des clients obtiennent un accès au dépôt, déplacer ce fichier hors du repo (gitignore) — il liste tes clients.",
+  "_comment": "Registre des clients Autologix (source de vérité). Lu par scripts/status.mjs, scripts/console.mjs et update-clients.mjs. Si des clients obtiennent un accès au dépôt, déplacer ce fichier hors du repo (gitignore) — il liste tes clients. Champ status : active | provisioning | paused (seuls les 'active' avec une api sont pingués). Champ billing optionnel ({ mrr, status, nextInvoice }) : renseigné dans le vrai clients.json (privé), jamais ici — le cockpit n'affiche le revenu que si un montant numérique existe.",
   "clients": [
     {
       "slug": "hitsdance",
@@ -20,7 +20,38 @@
         "resonne": false,
         "note": "Vitrine — attestation à confirmer avant exploitation commerciale."
       },
+      "billing": {
+        "mrr": null,
+        "status": "vitrine",
+        "nextInvoice": null
+      },
       "commissioned": "2026-06-18"
+    },
+    {
+      "slug": "rockradio",
+      "name": "Rockfort",
+      "status": "provisioning",
+      "role": "client #1 / radio rock",
+      "branch": "client/rockradio",
+      "railwayProject": "(à créer)",
+      "tier": "starter",
+      "domains": {
+        "site": "",
+        "api": "",
+        "admin": ""
+      },
+      "licenses": {
+        "attested": true,
+        "socan": true,
+        "resonne": true,
+        "note": "Démo — radio fictive (exemple de cycle de vie)."
+      },
+      "billing": {
+        "mrr": null,
+        "status": "trial",
+        "nextInvoice": null
+      },
+      "commissioned": null
     }
   ]
 }

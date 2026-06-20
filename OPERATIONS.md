@@ -29,6 +29,28 @@ temps de réponse, et rappel des **licences non attestées**. À lancer chaque m
 
 ---
 
+## 2b. Centre de contrôle — le cockpit visuel
+
+🧰 `node scripts/console.mjs` → ouvre **`http://127.0.0.1:4477`**
+
+La version **visuelle** de `status.mjs` : un tableau de bord web où tu vois tout ton
+parc d'un coup d'œil et **gères chaque radio depuis le même endroit**.
+
+- **KPIs** : nb de radios · en ligne / hors ligne · licences à confirmer · (revenu
+  mensuel **seulement** si un montant `billing.mrr` est renseigné dans `clients.json`).
+- **Tableau du parc** : état (santé live), DB, latence, palier, licences, mise en
+  service, et **actions** par radio (ouvrir le *site*, l'*admin*, les *stats*, copier
+  la commande `verify-deploy`).
+- **Cycle de vie** : `active` (pingée), `provisioning` (déployée pas encore), `paused`.
+- **Panneau onboarding** : les 5 étapes/commandes pour monter une nouvelle radio.
+
+> 🔒 **Local uniquement** : le serveur n'écoute que sur `127.0.0.1`, ne fait aucune
+> écriture et n'expose aucun secret (le registre ne contient que des domaines publics).
+> Port custom : `node scripts/console.mjs --port 5000`. (Un portail déployé — consultable
+> du téléphone — = ajouter auth + hébergement, étape ultérieure.)
+
+---
+
 ## 3. Mises à jour mutualisées — corriger 1 fois, livrer à tous
 
 Le code est **partagé** ; chaque client a sa **branche** + son **projet Railway**.
@@ -76,6 +98,7 @@ Pour propager un correctif :
 node scripts/new-client.mjs <slug> "Nom"      # créer un client
 BRAND=<slug> node scripts/build-all.mjs       # bâtir son site
 node scripts/verify-deploy.mjs <api-url>      # vérifier un déploiement
-node scripts/status.mjs                       # statut de tout le parc
+node scripts/status.mjs                       # statut du parc (CLI)
+node scripts/console.mjs                      # centre de contrôle (cockpit web local)
 node scripts/update-clients.mjs               # propager une mise à jour
 ```
