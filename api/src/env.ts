@@ -79,6 +79,9 @@ export const env = {
 
   SEED_ADMIN_EMAIL: optional("SEED_ADMIN_EMAIL", ""),
   SEED_ADMIN_PASSWORD: optional("SEED_ADMIN_PASSWORD", ""),
+  // Marque seedée : "hitsdance" → contenu démo Hits Dance. Tout autre valeur
+  // (= nouveau client) → DB de contenu vierge, à remplir via l'admin.
+  SEED_BRAND: optional("SEED_BRAND", "hitsdance"),
 
   // URL publique du site (liens RSS, partage, emails). Sans slash final requis.
   PUBLIC_SITE_URL: optional("PUBLIC_SITE_URL", "https://hitsdancemusic.ca"),

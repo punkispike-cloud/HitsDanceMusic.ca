@@ -169,6 +169,10 @@ async function main() {
   const existing = await db.select({ id: artists.id }).from(artists).limit(1);
   if (existing.length > 0) {
     console.log("[seed] contenu déjà présent — skip animateurs/émissions/grille (éditions admin préservées).");
+  } else if (env.SEED_BRAND !== "hitsdance") {
+    // Nouveau client : on ne seede PAS le contenu Hits Dance. La radio démarre
+    // vierge et l'équipe saisit ses animateurs/émissions/grille via l'admin.
+    console.log(`[seed] marque "${env.SEED_BRAND}" — contenu Hits Dance non seedé (saisie via l'admin).`);
   } else {
     const artistIdBySlug = await seedArtists();
     await seedShows(artistIdBySlug);

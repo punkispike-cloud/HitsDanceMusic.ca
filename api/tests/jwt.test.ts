@@ -25,8 +25,14 @@ test("access token : aller-retour sign → verify conserve les claims", async ()
 
 test("access token : signature altérée → rejet (null)", async () => {
   const token = await signAccessToken(claims);
-  // Corrompt le dernier caractère de la signature.
-  const tampered = token.slice(0, -1) + (token.at(-1) === "A" ? "B" : "A");
+  // Corrompt le PREMIER caractère de la signature : ses 6 bits sont toujours
+  // significatifs (contrairement au dernier char, dont des bits sont du padding
+  // → un flip y serait parfois sans effet sur les octets décodés).
+  const parts = token.split(".");
+  const sig = parts[2]!;
+  parts[2] = (sig[0] === "A" ? "B" : "A") + sig.slice(1);
+  const tampered = parts.join(".");
+  assert.notEqual(tampered, token);
   assert.equal(await verifyAccessToken(tampered), null);
 });
 

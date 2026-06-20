@@ -51,9 +51,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # Échoue si le hash du service worker n'a pas été régénéré après une modif.
-      - name: Vérifier le hash du service worker
-        run: node scripts/build-sw.mjs --check
+      # Échoue si la marque, les partials ou le hash SW ne sont pas à jour
+      # (build-brand → build-html → build-sw doivent avoir tourné après une modif).
+      - name: Vérifier le pipeline de build (marque · partials · hash SW)
+        run: node scripts/build-all.mjs --check
       # Vérifie que chaque module ES parse (attrape les erreurs de syntaxe).
       - name: Vérifier la syntaxe des modules JS
         run: |

@@ -1,0 +1,28 @@
+{
+  "slug": "hitsdance",
+  "name": "Hits Dance Music",
+  "shortName": "Hits Dance Music",
+  "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+  "domain": "hitsdancemusic.ca",
+  "colors": {
+    "accent": "#c8102e",
+    "accentBright": "#e8192e",
+    "accentGlowRgb": "220, 20, 48",
+    "amber": "#e8192e",
+    "amberSoft": "#ff3349",
+    "themeColor": "#0f0f12",
+    "bgColor": "#0a0a0a"
+  },
+  "stream": {
+    "url": "https://cast5.asurahosting.com/proxy/hitsdanc/stream",
+    "panel": "https://cast5.asurahosting.com/start/hitsdanc/"
+  },
+  "urls": {
+    "api": "https://patient-endurance-production-21c8.up.railway.app",
+    "presenceWss": "wss://hitsdancemusicca-production.up.railway.app/ws/presence"
+  },
+  "contact": {
+    "phone": "14182612886",
+    "email": ""
+  }
+}

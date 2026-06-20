@@ -5,9 +5,12 @@ import { fetchWithTimeout, clampString, isTrustedImageUrl, NET_TIMEOUTS } from "
 import { store, STORAGE } from "./store.js";
 import { state } from "./state.js";
 import { SLOT_TAGS } from "./schedule.js";
+import { BRAND } from "./brand.generated.js";
 
-export const STREAM_URL = "https://cast5.asurahosting.com/proxy/hitsdanc/stream";
-export const PANEL_URL = "https://cast5.asurahosting.com/start/hitsdanc/";
+// Flux audio de la marque active (généré par build-brand). Pour Hits Dance
+// Music, valeurs identiques à avant → aucun changement de comportement.
+export const STREAM_URL = BRAND.stream.url;
+export const PANEL_URL = BRAND.stream.panel;
 
 // Now-playing : uniquement /np, le flux SHOUTcast 7.html proxifié par
 // nginx (cf. location /np dans nginx.conf) qui ajoute l'en-tête CORS.

@@ -33,3 +33,6 @@
 @import url("styles/28-player-2026.css");
 @import url("styles/29-animateur-detail.css");
 @import url("styles/30-podcasts.css");
+/* Couleurs de la marque (généré par build-brand) — importé en dernier pour
+   surcharger les variables d'accent de 00-base.css selon le client. */
+@import url("styles/brand.css");
