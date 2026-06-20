@@ -1,0 +1,27 @@
+{
+  "slug": "rockradio",
+  "name": "Rockfort",
+  "shortName": "Rockfort",
+  "description": "Rock en ligne — classiques, hard et indé, 24/7.",
+  "domain": "rockfort.example",
+  "colors": {
+    "accent": "#ff6b00",
+    "accentBright": "#ff8a33",
+    "accentGlowRgb": "255, 107, 0",
+    "amber": "#ff8a33",
+    "amberSoft": "#ffae66",
+    "themeColor": "#161210",
+    "bgColor": "#0a0a0a"
+  },
+  "stream": {
+    "url": "https://CHANGEME/stream",
+    "panel": "https://CHANGEME/panel/",
+    "host": "CHANGEME",
+    "nowPlayingProxy": "https://CHANGEME/7.html"
+  },
+  "urls": {
+    "api": "https://CHANGEME-api.up.railway.app",
+    "presenceWss": "wss://CHANGEME-presence.up.railway.app/ws/presence"
+  },
+  "contact": { "phone": "CHANGEME", "email": "" }
+}
