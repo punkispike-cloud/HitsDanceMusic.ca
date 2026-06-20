@@ -6,24 +6,24 @@
    ============================================================ */
 
 :root {
-  --rf-amp: #14100b;          /* noir chaud d'ampli */
-  --rf-amp-2: #1d160e;
-  --rf-tweed: #2a2017;        /* tweed brun */
-  --rf-cream: #f3e6c8;        /* crème vintage / lettrage */
-  --rf-amber: #cf9b3f;        /* lueur lampe / butterscotch */
-  --rf-amber-2: #e6b85c;
-  --rf-oxblood: #6e1f1a;      /* grille d'ampli oxblood */
-  --rf-line: rgba(243, 230, 200, 0.14);
+  --rf-amp: #0b0a09;          /* near-black, à peine chaud */
+  --rf-amp-2: #141210;
+  --rf-tweed: #201a14;
+  --rf-cream: #f4ead2;        /* crème vintage / lettrage */
+  --rf-amber: #e3a73a;        /* ambre franc (lampe) */
+  --rf-amber-2: #f6c659;      /* highlight doré */
+  --rf-oxblood: #7a1f17;      /* grille d'ampli (réservé au player) */
+  --rf-line: rgba(244, 234, 210, 0.12);
   --rf-display: "Anton", Impact, sans-serif;
   --rf-head: "Oswald", "Arial Narrow", sans-serif;
 }
 
-/* ---- Fond global : tweed + grain + vignette chaude ---- */
+/* ---- Fond global : noir profond + halo ambre ciblé (moins de brun) ---- */
 body {
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(207,155,63,0.10), transparent 60%),
-    radial-gradient(140% 120% at 50% 120%, rgba(110,31,26,0.18), transparent 60%),
-    var(--rf-amp);
+    radial-gradient(85% 48% at 50% -6%, rgba(227,167,58,0.13), transparent 62%),
+    linear-gradient(180deg, #100d0a 0%, var(--rf-amp) 38%, #060504 100%);
+  background-attachment: fixed;
   color: var(--rf-cream);
   font-family: "Inter", system-ui, sans-serif;
 }
@@ -31,16 +31,17 @@ body::before {
   content: "";
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background-image: var(--grain-svg);
-  background-size: 260px;
-  opacity: 0.06; mix-blend-mode: overlay;
+  background-size: 300px;
+  opacity: 0.04; mix-blend-mode: overlay;
 }
 #main, .site-header, .site-footer { position: relative; z-index: 1; }
 
 /* ---- Header : barre laiton vintage ---- */
 .site-header {
-  background: linear-gradient(180deg, rgba(29,22,14,0.96), rgba(20,16,11,0.92));
+  background: linear-gradient(180deg, rgba(20,18,16,0.96), rgba(11,10,9,0.92));
   border-bottom: 2px solid var(--rf-amber);
   box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 .main-nav a { font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; color: var(--rf-cream); }
@@ -62,28 +63,34 @@ body::before {
    ============================================================ */
 .rf-hero {
   position: relative;
-  min-height: 86vh;
+  min-height: clamp(540px, 74vh, 800px);
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 40px;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(24px, 4vw, 56px);
   align-items: center;
-  padding: clamp(28px, 6vw, 90px) clamp(20px, 6vw, 90px) 60px;
+  padding: clamp(36px, 5vw, 72px) clamp(20px, 6vw, 90px);
   overflow: hidden;
 }
-/* Soleil couchant / sunburst derrière le titre */
+/* Soleil couchant / sunburst dramatique derrière le titre */
 .rf-hero::before {
   content: "";
   position: absolute; inset: 0; z-index: 0;
   background:
-    repeating-conic-gradient(from 0deg at 28% 42%,
-      rgba(207,155,63,0.10) 0deg 6deg, transparent 6deg 12deg);
-  -webkit-mask-image: radial-gradient(60% 60% at 28% 42%, #000 0%, transparent 70%);
-          mask-image: radial-gradient(60% 60% at 28% 42%, #000 0%, transparent 70%);
-  opacity: 0.7;
+    radial-gradient(closest-side, rgba(227,167,58,0.28), rgba(227,167,58,0.06) 55%, transparent 72%) 26% 46% / 70% 92% no-repeat,
+    repeating-conic-gradient(from 0deg at 26% 46%,
+      rgba(246,198,89,0.16) 0deg 4.5deg, transparent 4.5deg 9deg);
+  -webkit-mask-image: radial-gradient(60% 66% at 26% 46%, #000 0%, transparent 74%);
+          mask-image: radial-gradient(60% 66% at 26% 46%, #000 0%, transparent 74%);
+  opacity: 0.95;
+}
+/* Vignette douce pour cadrer */
+.rf-hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  box-shadow: inset 0 -120px 120px -60px rgba(0,0,0,0.7), inset 0 80px 90px -60px rgba(0,0,0,0.5);
 }
 .rf-hero > * { position: relative; z-index: 1; }
 
-.rf-hero-left { max-width: 620px; }
+.rf-hero-left { max-width: 640px; }
 .rf-kicker {
   font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.34em;
   font-weight: 600; font-size: 0.82rem; color: var(--rf-amber-2);
@@ -93,14 +100,14 @@ body::before {
 
 .rf-title {
   font-family: var(--rf-display);
-  font-size: clamp(4.2rem, 13vw, 10rem);
-  line-height: 0.84; margin: 0; letter-spacing: 0.01em;
+  font-size: clamp(4.8rem, 15vw, 12rem);
+  line-height: 0.78; margin: 0; letter-spacing: 0.004em;
   color: var(--rf-cream);
-  text-shadow: 0 4px 0 var(--rf-oxblood), 0 6px 18px rgba(0,0,0,0.6);
+  text-shadow: 0 3px 0 #000, 0 5px 0 var(--rf-oxblood), 0 12px 28px rgba(0,0,0,0.7);
 }
 .rf-title em {
-  display: block; font-style: normal; color: var(--rf-amber);
-  -webkit-text-stroke: 1px rgba(0,0,0,0.25);
+  display: block; font-style: normal; color: var(--rf-amber-2);
+  text-shadow: 0 3px 0 #000, 0 5px 0 #5e1812, 0 0 36px rgba(246,198,89,0.38);
 }
 .rf-tagline {
   font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.12em;
@@ -184,5 +191,6 @@ body::before {
 .site-footer { background: var(--rf-amp-2); border-top: 2px solid var(--rf-amber); font-family: var(--rf-head); text-transform: uppercase; letter-spacing: 0.14em; color: rgba(243,230,200,0.6); }
 
 @media (max-width: 880px) {
-  .rf-hero { grid-template-columns: 1fr; min-height: auto; }
+  .rf-hero { grid-template-columns: 1fr; min-height: 0; padding-block: 40px 32px; }
+  .rf-title { font-size: clamp(4rem, 22vw, 8rem); }
 }
