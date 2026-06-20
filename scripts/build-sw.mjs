@@ -30,13 +30,25 @@ if (!shellMatch) {
 const shellEntries = [...shellMatch[1].matchAll(/"\.\/([^"]+)"/g)].map((m) => m[1]).filter(Boolean);
 console.log(`[build-sw] ${shellEntries.length} ressources dans le SHELL`);
 
+// Extensions texte : on normalise les fins de ligne (CRLF → LF) AVANT de hacher
+// pour que le hash soit identique quel que soit le checkout (Windows CRLF vs
+// Linux/CI LF). Sinon le hash committé depuis Windows ne matche pas la CI.
+const TEXT_EXT = new Set([
+  ".html", ".css", ".js", ".mjs", ".json", ".webmanifest", ".svg", ".txt", ".map",
+]);
+function isText(rel) {
+  const dot = rel.lastIndexOf(".");
+  return dot >= 0 && TEXT_EXT.has(rel.slice(dot).toLowerCase());
+}
+
 // Hasher chaque fichier dans l'ordre stable
 const hash = createHash("sha256");
 let missing = 0;
 for (const rel of shellEntries) {
   const fp = join(root, rel);
   try {
-    const buf = await readFile(fp);
+    let buf = await readFile(fp);
+    if (isText(rel)) buf = Buffer.from(buf.toString("utf-8").replace(/\r\n/g, "\n"), "utf-8");
     hash.update(rel);
     hash.update("\0");
     hash.update(buf);
