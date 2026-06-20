@@ -1,15 +1,15 @@
 {
   "name": "Rockfort",
   "short_name": "Rockfort",
-  "description": "Rock en ligne — classiques, hard et indé, 24/7.",
+  "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé, 24/7.",
   "id": "/",
   "start_url": "./index.html?utm_source=pwa",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#0a0a0a",
-  "theme_color": "#161210",
+  "background_color": "#0b0908",
+  "theme_color": "#14100b",
   "lang": "fr-CA",
   "categories": ["music", "entertainment"],
   "icons": [
