@@ -42,7 +42,7 @@ function injectTicker() {
   t.setAttribute("aria-live", "off");
   t.innerHTML = `<div class="hr-ticker-track" id="hrTickerTrack">
     <span class="hr-ticker-dot" aria-hidden="true"></span>
-    <span class="hr-ticker-text">EN DIRECT — Hits Dance Music · La radio</span>
+    <span class="hr-ticker-text">EN DIRECT — ROCKFORT · Le rock comme dans l'temps</span>
   </div>`;
   header.parentElement.insertBefore(t, header.nextSibling);
   refreshTicker();
