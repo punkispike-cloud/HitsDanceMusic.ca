@@ -14,9 +14,10 @@
 
 ## 📍 TU ES ICI
 
-> **Fin de Phase 1** (productisation du code = clonable). Site live Hits Dance
-> **inchangé** (vérifié). Prochain : **finir Phase 1** (copie auto des assets) puis
-> **Phase 2** (onboarding turnkey).
+> **Phases 1 et 2 terminées** : le code est clonable ET l'onboarding est outillé
+> (scaffold + runbook + vérif déploiement). Site live Hits Dance **inchangé**
+> (vérifié). L'« usine à radios » est opérationnelle. Prochain : **Phase 3**
+> (gestion centralisée) ou **Phase 4** (self-service client) — au choix.
 
 ---
 
@@ -25,8 +26,8 @@
 | Phase | Objectif | Statut |
 |---|---|---|
 | 0 | Plateforme pour 1 radio (Hits Dance Music) | ✅ fait |
-| 1 | Productisation : rendre le code **clonable** | 🔄 ~95 % |
-| 2 | Onboarding **turnkey** : créer un client vite | ⬜ à faire |
+| 1 | Productisation : rendre le code **clonable** | ✅ fait |
+| 2 | Onboarding **turnkey** : créer un client vite | ✅ fait |
 | 3 | Gestion **centralisée** (côté opérateur) | ⬜ à faire |
 | 4 | **Self-service** client (gérer son propre site) | ⬜ à faire |
 | 5 | **Multi-tenant** + portail Autologix | ⬜ (à ~5 clients) |
@@ -56,16 +57,17 @@
 - [x] Seed paramétrable `SEED_BRAND` (nouveau client = DB vierge)
 - [x] Garde-fou : `BRAND=hitsdance` = no-op (site live identique au pixel) — **vérifié**
 - [x] Robustesse : hash SW insensible CRLF/LF, test JWT flaky corrigé
-- [ ] **Copie auto des assets** par client (`brand/<client>/assets/` → `assets/`) ← prochain
-- [ ] `/np` (proxy now-playing nginx) paramétrable par client
+- [x] **Copie auto des assets** par client (`brand/<client>/assets/` → `assets/`)
+- [x] `/np` (proxy now-playing nginx) paramétrable par client (`stream.host` + `nowPlayingProxy`)
 
-## Phase 2 — Onboarding turnkey ⬜
+## Phase 2 — Onboarding turnkey ✅
 
-- [ ] `scripts/new-client.mjs <slug> "Nom"` : scaffold `brand/<slug>.json` + dossier assets
-- [ ] `ONBOARDING-CLIENT.md` : runbook détaillé pas-à-pas (config → build → deploy → livraison)
-- [ ] Checklist + modèle de variables d'env Railway par client
-- [ ] `scripts/verify-deploy.mjs` : santé (`/health`), `/v1/schedule`, login admin
-- [ ] Objectif mesurable : **brancher un client en < 1 journée**
+- [x] `scripts/new-client.mjs <slug> "Nom"` : scaffold `brand/<slug>.json` + dossier assets
+- [x] `ONBOARDING-CLIENT.md` : runbook détaillé pas-à-pas (collecte → build → deploy → livraison)
+- [x] Checklist + modèle de variables d'env Railway par client (dont `SEED_BRAND`)
+- [x] `scripts/verify-deploy.mjs` : santé (`/health`, `/v1/schedule`, `/v1/artists`, push)
+- [x] ⚖️ Attestation licences intégrée à la collecte + à la checklist
+- [x] Objectif **< 1 journée** outillé (scaffold + build + deploy + vérif)
 
 ## Phase 3 — Gestion centralisée (opérateur) ⬜
 
@@ -131,11 +133,11 @@
 > Le principe : **toute cette complexité est cachée** ; l'utilisateur ne voit que
 > de la simplicité. Ces items irriguent toutes les phases.
 
-- [ ] **⚖️ Licences musicales (P0 légal)** — diffuser de la musique au Canada exige
-      des licences : **SOCAN** (auteurs/éditeurs) + **Ré:Sonne** (artistes/labels),
-      tarifs webcasting de la Commission du droit d'auteur. **Décision à cadrer** :
-      chaque radio cliente détient SES licences (Autologix exige une attestation à
-      l'onboarding) — comme on a traité la Loi 25. Risque réel à ne pas ignorer.
+- [x] **⚖️ Licences musicales (P0 légal) — DÉCIDÉ (2026-06-19)** : **le client détient
+      SES licences** SOCAN (auteurs/éditeurs) + Ré:Sonne (artistes/labels). Autologix
+      **exige une attestation signée à l'onboarding** (case à cocher + champ dans le
+      registre client) et n'héberge pas de diffusion non licenciée. → à intégrer dans
+      `ONBOARDING-CLIENT.md` (Phase 2) et le registre clients (Phase 3).
 - [ ] **📻 Diffusion & AutoDJ** — le flux audio (live + rotation auto quand pas
       d'animateur) est aujourd'hui chez **AsuraHosting**. À cadrer dans l'offre :
       qualité, failover, multi-bitrate, mount points. Le « cœur radio ».

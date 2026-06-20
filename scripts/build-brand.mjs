@@ -15,7 +15,7 @@
  *   node scripts/build-brand.mjs --check         # exit 1 si quelque chose changerait
  */
 
-import { readFile, writeFile, readdir } from "node:fs/promises";
+import { readFile, writeFile, readdir, cp, access } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -67,6 +67,9 @@ function pairs(from, to) {
     [from.description, to.description],
     [from.urls.presenceWss, to.urls.presenceWss],
     [from.urls.api, to.urls.api],
+    // Flux / now-playing (nginx) : proxy complet d'abord, puis l'hôte seul.
+    [from.stream?.nowPlayingProxy, to.stream?.nowPlayingProxy],
+    [from.stream?.host, to.stream?.host],
     [from.domain, to.domain],
     [from.contact.phone, to.contact.phone],
     [from.colors.themeColor, to.colors.themeColor],
@@ -125,4 +128,22 @@ if (checkMode && diffs > 0) {
   console.error(`[build-brand] ${diffs} fichier(s) hors sync — relance sans --check`);
   process.exit(1);
 }
+
+/* ---- Assets du client → assets/ ---- */
+// Si le client a un dossier brand/<slug>/assets/ (logo, favicon, icônes…), on en
+// copie le contenu dans assets/. hitsdance n'a pas ce dossier → no-op (les assets
+// actuels restent en place). Ignoré en --check (binaires, hors hash texte).
+const clientAssets = join(root, "brand", active.slug, "assets");
+let copied = 0;
+if (!checkMode) {
+  try {
+    await access(clientAssets);
+    await cp(clientAssets, join(root, "assets"), { recursive: true, force: true });
+    copied = (await readdir(clientAssets)).length;
+    console.log(`[build-brand] ✓ ${copied} asset(s) copiés depuis brand/${active.slug}/assets/`);
+  } catch {
+    /* pas de dossier d'assets client → on garde les assets en place */
+  }
+}
+
 console.log(`[build-brand] OK (${diffs} fichier·s ${checkMode ? "à régénérer" : "écrits"})`);

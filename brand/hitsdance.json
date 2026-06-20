@@ -15,7 +15,9 @@
   },
   "stream": {
     "url": "https://cast5.asurahosting.com/proxy/hitsdanc/stream",
-    "panel": "https://cast5.asurahosting.com/start/hitsdanc/"
+    "panel": "https://cast5.asurahosting.com/start/hitsdanc/",
+    "host": "cast5.asurahosting.com",
+    "nowPlayingProxy": "https://cast5.asurahosting.com/proxy/hitsdanc/7.html"
   },
   "urls": {
     "api": "https://patient-endurance-production-21c8.up.railway.app",
