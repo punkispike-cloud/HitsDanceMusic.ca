@@ -46,7 +46,7 @@ au clonage. À centraliser dans **une config unique par client**.
 | Flux audio | `js/now-playing.js` (`STREAM_URL`, `PANEL_URL`) | 2 constantes | config / env |
 | URLs infra (API/admin/présence) | `js/api-config.js` + balises `<meta>` HTML | ~16 fichiers | variables d'env |
 | Téléphone / courriel / réseaux | HTML + `_partials/` | plusieurs | `site.config` |
-| Contenu initial (animateurs, émissions, grille) | `api/src/db/seed-data.ts` | jeu complet | seed paramétrable par client |
+| Contenu initial (animateurs, émissions, grille) | `api/src/db/seed-data.ts` | jeu complet | ✅ seed par client (`seeds.ts` → bundle `SEED_BRAND`), éditable dans l'admin |
 
 ---
 

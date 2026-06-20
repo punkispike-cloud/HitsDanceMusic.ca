@@ -75,7 +75,7 @@ Injecte la marque (HTML, manifest, nginx, couleurs, flux) + copie les assets.
    DATABASE_URL    = ${{Postgres.DATABASE_URL}}
    JWT_SECRET      = <openssl rand -base64 48>   (UNIQUE par client)
    ALLOWED_ORIGINS = https://<domaine-site>,https://<domaine-admin>
-   SEED_BRAND      = radiosoleil        ← DB de contenu VIERGE (pas Hits Dance)
+   SEED_BRAND      = radiosoleil        ← contenu de DÉPART du client (jamais Hits Dance)
    SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD = bootstrap du superadmin client
    NODE_ENV        = production
    PUBLIC_SITE_URL / ADMIN_BASE_URL = domaines du client
@@ -87,8 +87,18 @@ Injecte la marque (HTML, manifest, nginx, couleurs, flux) + copie les assets.
 5. **Generate Domain** (ou domaine custom) pour `web`, `api`, `admin`.
 
 > L'API applique migrations + seed automatiquement au déploiement
-> (`preDeployCommand`). Comme `SEED_BRAND≠hitsdance`, **aucun contenu Hits Dance**
-> n'est seedé — le client part d'une base vierge.
+> (`preDeployCommand`). Le contenu Hits Dance n'est **jamais** seedé chez un client.
+>
+> **Seed de départ (optionnel)** — si un bundle existe pour la marque dans
+> `api/src/db/seeds.ts` (ex. `rockradio` → `seed-rockradio.ts`), la radio **boote
+> avec SA grille / SES animateurs / SES émissions**, que l'équipe n'a plus qu'à
+> ajuster dans l'admin (au lieu de tout taper). Sans bundle, la base démarre
+> vierge. Dans les deux cas le seed initial ne s'applique qu'à une **base vierge** :
+> les éditions faites ensuite dans l'admin ne sont **jamais écrasées**, même si le
+> seed retourne à chaque déploiement.
+>
+> → Pour préparer un seed de départ : créer `api/src/db/seed-<slug>.ts` (4 exports :
+> artists, shows, schedule, hostToArtistSlug) et l'enregistrer dans `seeds.ts`.
 
 ---
 

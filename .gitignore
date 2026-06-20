@@ -13,3 +13,6 @@ desktop.ini
 # Documents privés Autologix (prix, contrats, business) — NE JAMAIS pousser
 _private/
 brand/clients.json
+
+# Worktree d'aperçu client (branche client/rockradio)
+.preview-rock/

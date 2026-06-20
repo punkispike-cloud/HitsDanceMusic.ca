@@ -9,12 +9,8 @@ import { users, artists, shows, scheduleSlots } from "./schema.js";
 import { hashPassword } from "../lib/password.js";
 import { toMinutes } from "../lib/validation.js";
 import { env } from "../env.js";
-import {
-  SEED_ARTISTS,
-  SEED_SHOWS,
-  SCHEDULE,
-  HOST_TO_ARTIST_SLUG,
-} from "./seed-data.js";
+import type { SeedArtist, SeedShow, ScheduleRow } from "./seed-data.js";
+import { loadSeedBundle } from "./seeds.js";
 
 async function seedSuperadmin() {
   if (!env.SEED_ADMIN_EMAIL || !env.SEED_ADMIN_PASSWORD) {
@@ -40,9 +36,9 @@ async function seedSuperadmin() {
   console.log(`[seed] superadmin créé : ${env.SEED_ADMIN_EMAIL}`);
 }
 
-async function seedArtists(): Promise<Map<string, string>> {
+async function seedArtists(seedArtistList: SeedArtist[]): Promise<Map<string, string>> {
   const bySlug = new Map<string, string>();
-  for (const a of SEED_ARTISTS) {
+  for (const a of seedArtistList) {
     const [row] = await db
       .insert(artists)
       .values({
@@ -71,12 +67,12 @@ async function seedArtists(): Promise<Map<string, string>> {
       .returning();
     bySlug.set(a.slug, row!.id);
   }
-  console.log(`[seed] ${SEED_ARTISTS.length} animateurs upsertés.`);
+  console.log(`[seed] ${seedArtistList.length} animateurs upsertés.`);
   return bySlug;
 }
 
-async function seedShows(artistIdBySlug: Map<string, string>) {
-  for (const s of SEED_SHOWS) {
+async function seedShows(seedShowList: SeedShow[], artistIdBySlug: Map<string, string>) {
+  for (const s of seedShowList) {
     const slug = slugifyTitle(s.title);
     const artistId = s.artistSlug ? artistIdBySlug.get(s.artistSlug) ?? null : null;
     await db
@@ -105,10 +101,14 @@ async function seedShows(artistIdBySlug: Map<string, string>) {
         },
       });
   }
-  console.log(`[seed] ${SEED_SHOWS.length} émissions upsertées.`);
+  console.log(`[seed] ${seedShowList.length} émissions upsertées.`);
 }
 
-async function seedSchedule(artistIdBySlug: Map<string, string>) {
+async function seedSchedule(
+  schedule: Record<number, ScheduleRow[]>,
+  hostToArtistSlug: Record<string, string | null>,
+  artistIdBySlug: Map<string, string>,
+) {
   // Index titre d'émission → id (best-effort pour lier les créneaux).
   const showRows = await db.select({ id: shows.id, title: shows.title }).from(shows);
   const showIdByTitle = new Map(showRows.map((r) => [r.title.toLowerCase(), r.id]));
@@ -116,14 +116,14 @@ async function seedSchedule(artistIdBySlug: Map<string, string>) {
   await db.delete(scheduleSlots);
   let count = 0;
   for (let day = 0; day <= 6; day++) {
-    for (const [from, to, title, host, tag] of SCHEDULE[day] ?? []) {
+    for (const [from, to, title, host, tag] of schedule[day] ?? []) {
       const startMin = toMinutes(from);
       const endMin = to === "24:00" ? 1440 : toMinutes(to);
       if (startMin == null || endMin == null) {
         console.warn(`[seed] créneau ignoré (heure invalide) : ${day} ${from}-${to}`);
         continue;
       }
-      const artistSlug = HOST_TO_ARTIST_SLUG[host];
+      const artistSlug = hostToArtistSlug[host];
       const artistId = artistSlug ? artistIdBySlug.get(artistSlug) ?? null : null;
       const showId = showIdByTitle.get(title.toLowerCase()) ?? null;
       await db.insert(scheduleSlots).values({
@@ -167,16 +167,18 @@ async function main() {
   // faites depuis l'admin sont préservées même si ce script tourne à chaque
   // déploiement (preDeployCommand). Bootstrap une fois, jamais d'écrasement.
   const existing = await db.select({ id: artists.id }).from(artists).limit(1);
+  const bundle = loadSeedBundle(env.SEED_BRAND);
   if (existing.length > 0) {
     console.log("[seed] contenu déjà présent — skip animateurs/émissions/grille (éditions admin préservées).");
-  } else if (env.SEED_BRAND !== "hitsdance") {
-    // Nouveau client : on ne seede PAS le contenu Hits Dance. La radio démarre
-    // vierge et l'équipe saisit ses animateurs/émissions/grille via l'admin.
-    console.log(`[seed] marque "${env.SEED_BRAND}" — contenu Hits Dance non seedé (saisie via l'admin).`);
+  } else if (!bundle) {
+    // Marque sans seed de départ : la radio démarre vierge et l'équipe saisit
+    // ses animateurs / émissions / grille via l'admin.
+    console.log(`[seed] marque "${env.SEED_BRAND}" — aucun seed de départ, contenu à saisir via l'admin.`);
   } else {
-    const artistIdBySlug = await seedArtists();
-    await seedShows(artistIdBySlug);
-    await seedSchedule(artistIdBySlug);
+    console.log(`[seed] marque "${env.SEED_BRAND}" — seed de départ appliqué (éditable ensuite via l'admin).`);
+    const artistIdBySlug = await seedArtists(bundle.artists);
+    await seedShows(bundle.shows, artistIdBySlug);
+    await seedSchedule(bundle.schedule, bundle.hostToArtistSlug, artistIdBySlug);
   }
 
   console.log("[seed] terminé ✓");
