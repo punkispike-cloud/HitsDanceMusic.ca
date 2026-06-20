@@ -2,16 +2,16 @@
   "slug": "rockradio",
   "name": "Rockfort",
   "shortName": "Rockfort",
-  "description": "Rock en ligne — classiques, hard et indé, 24/7.",
+  "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé, 24/7.",
   "domain": "rockfort.example",
   "colors": {
-    "accent": "#ff6b00",
-    "accentBright": "#ff8a33",
-    "accentGlowRgb": "255, 107, 0",
-    "amber": "#ff8a33",
-    "amberSoft": "#ffae66",
-    "themeColor": "#161210",
-    "bgColor": "#0a0a0a"
+    "accent": "#cf9b3f",
+    "accentBright": "#e6b85c",
+    "accentGlowRgb": "207, 155, 63",
+    "amber": "#e6b85c",
+    "amberSoft": "#f2d18a",
+    "themeColor": "#14100b",
+    "bgColor": "#0b0908"
   },
   "stream": {
     "url": "https://CHANGEME/stream",
