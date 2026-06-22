@@ -93,6 +93,25 @@ analyticsAdminRoutes.get("/timeseries", async (c) => {
   return c.json(result.rows);
 });
 
+/* GET /v1/admin/analytics/geo — points agrégés par ville (lat/lon) pour la carte
+   des visiteurs. N'expose PAS l'IP → accessible à tout admin authentifié. */
+analyticsAdminRoutes.get("/geo", async (c) => {
+  const result = await db.execute(sql`
+    SELECT ip_lat AS lat,
+           ip_lon AS lon,
+           ip_country AS label,
+           count(*)::int AS sessions,
+           bool_or(${analyticsSessions.lastSeen} > now() - interval '60 seconds') AS live,
+           max(${analyticsSessions.lastSeen}) AS last_seen
+    FROM analytics_sessions
+    WHERE ip_lat IS NOT NULL AND ip_lon IS NOT NULL
+    GROUP BY ip_lat, ip_lon, ip_country
+    ORDER BY sessions DESC
+    LIMIT 500
+  `);
+  return c.json(result.rows);
+});
+
 /* GET /v1/admin/analytics/sessions — détail des visiteurs (IP, navigateur…).
    Superadmin uniquement (expose des données personnelles). */
 analyticsAdminRoutes.get("/sessions", requireRole("superadmin"), async (c) => {

@@ -28,20 +28,37 @@ async function fetchGeoJson(url: string): Promise<Record<string, unknown> | null
   }
 }
 
-/** Résout { ville, pays } via des fournisseurs gratuits HTTPS sans clé.
-    geojs.io en premier (ville + pays), freeipapi.com en repli.
+type GeoResult = { city?: string; country?: string; lat?: number; lon?: number };
+
+function toNum(v: unknown): number | undefined {
+  const n = typeof v === "string" ? parseFloat(v) : typeof v === "number" ? v : NaN;
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** Résout { ville, pays, lat, lon } via des fournisseurs gratuits HTTPS sans clé.
+    geojs.io en premier, freeipapi.com en repli.
     (ipwho.is a fermé son offre gratuite → 403 "CORS not supported on Free plan".) */
-async function lookupGeo(ip: string): Promise<{ city?: string; country?: string } | null> {
+async function lookupGeo(ip: string): Promise<GeoResult | null> {
   const enc = encodeURIComponent(ip);
-  // 1) geojs.io → { city, country }
+  // 1) geojs.io → { city, country, latitude, longitude } (chaînes)
   const g = await fetchGeoJson(`https://get.geojs.io/v1/ip/geo/${enc}.json`);
   if (g && (g.city || g.country)) {
-    return { city: g.city as string | undefined, country: g.country as string | undefined };
+    return {
+      city: g.city as string | undefined,
+      country: g.country as string | undefined,
+      lat: toNum(g.latitude),
+      lon: toNum(g.longitude),
+    };
   }
-  // 2) repli : freeipapi.com → { cityName, countryName }
+  // 2) repli : freeipapi.com → { cityName, countryName, latitude, longitude } (nombres)
   const f = await fetchGeoJson(`https://freeipapi.com/api/json/${enc}`);
   if (f && (f.cityName || f.countryName)) {
-    return { city: f.cityName as string | undefined, country: f.countryName as string | undefined };
+    return {
+      city: f.cityName as string | undefined,
+      country: f.countryName as string | undefined,
+      lat: toNum(f.latitude),
+      lon: toNum(f.longitude),
+    };
   }
   return null;
 }
@@ -50,14 +67,18 @@ async function resolveCountry(ip: string, clientId: string): Promise<void> {
   if (!ip || PRIVATE_IP.test(ip)) return;
   try {
     const geo = await lookupGeo(ip);
-    const parts = [geo?.city, geo?.country].filter(
+    if (!geo) return;
+    const parts = [geo.city, geo.country].filter(
       (s): s is string => typeof s === "string" && !!s,
     );
-    if (parts.length) {
-      await db
-        .update(analyticsSessions)
-        .set({ ipCountry: parts.join(", ").slice(0, 120) })
-        .where(eq(analyticsSessions.clientId, clientId));
+    const patch: { ipCountry?: string; ipLat?: number; ipLon?: number } = {};
+    if (parts.length) patch.ipCountry = parts.join(", ").slice(0, 120);
+    if (geo.lat !== undefined && geo.lon !== undefined) {
+      patch.ipLat = geo.lat;
+      patch.ipLon = geo.lon;
+    }
+    if (Object.keys(patch).length) {
+      await db.update(analyticsSessions).set(patch).where(eq(analyticsSessions.clientId, clientId));
     }
   } catch {
     /* best effort — on ne bloque jamais l'ingestion */
