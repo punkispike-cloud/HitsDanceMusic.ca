@@ -80,13 +80,15 @@ Pour propager un correctif :
 - 🔑 **Tester une restauration au moins une fois** (un backup jamais restauré n'est
   pas un backup). Documenter le temps de restauration.
 - Rétention analytics (Loi 25) : purge auto à `ANALYTICS_RETENTION_DAYS` (défaut 180 j).
+- 📓 Procédure pas-à-pas : **`SECURITE-ROTATION.md` §4**.
 
 ---
 
 ## 6. Sécurité par client
 
 - `JWT_SECRET` **unique** par client (jamais partagé).
-- Rotation des secrets si exposition.
+- Rotation des secrets si exposition → **runbook ordonné : `SECURITE-ROTATION.md`**
+  (générer en local, jamais coller un secret dans un chat).
 - Chaque client a son superadmin ; lui faire changer son mot de passe à la livraison.
 - ⚖️ **Attestation de licences** archivée dans le registre avant exploitation.
 

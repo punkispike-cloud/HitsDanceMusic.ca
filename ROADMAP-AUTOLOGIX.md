@@ -52,8 +52,9 @@
 - [x] Monitoring Sentry 🔒, emails invitations/reset 🔒, 27 tests, CI
 - [x] Déployé sur Railway (api, admin, presence, web, Postgres)
 
-> Reste 🔒 (toi) : roter secrets Postgres + `JWT_SECRET` ; activer S3 / VAPID /
-> Resend / Sentry (variables d'env). Voir `ETAT-DU-PROJET.md` §0.
+> Reste 🔒 (toi) : roter secrets Postgres + `JWT_SECRET` + renforcer mdp admin
+> (**runbook : `SECURITE-ROTATION.md`**) ; activer S3 / VAPID / Resend / Sentry
+> (variables d'env). Voir `ETAT-DU-PROJET.md` §0.
 
 ## Phase 1 — Productisation (clonable) 🔄
 
