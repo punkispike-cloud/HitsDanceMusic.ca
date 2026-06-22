@@ -301,6 +301,23 @@ export const analyticsShowListen = pgTable(
   }),
 );
 
+/* ───────────────────────── track_history (titres diffusés) ─────────────────────────
+   Historique des titres passés à l'antenne. Alimenté par un poller qui interroge
+   le now-playing du flux et enregistre chaque changement de titre. */
+
+export const trackHistory = pgTable(
+  "track_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    artist: text("artist").notNull().default(""),
+    title: text("title").notNull(),
+    playedAt: timestamp("played_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    playedAtIdx: index("track_history_played_at_idx").on(t.playedAt),
+  }),
+);
+
 /* ───────────────────────── push_subscriptions (rappels d'émission) ─────────────────────────
    Abonnement Web Push (PushSubscription du navigateur). showSlug null = tous
    les rappels ; sinon limité à une émission. client_id = même UUID que presence/analytics. */

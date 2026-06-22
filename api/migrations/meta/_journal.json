@@ -36,6 +36,13 @@
       "when": 1782155815674,
       "tag": "0004_lame_kid_colt",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782166109050,
+      "tag": "0005_optimal_dark_beast",
+      "breakpoints": true
     }
   ]
 }

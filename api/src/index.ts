@@ -22,12 +22,14 @@ import { shareRoutes } from "./routes/share.js";
 import { pushRoutes } from "./routes/push.js";
 import { pushAdminRoutes } from "./routes/push-admin.js";
 import { auditAdminRoutes } from "./routes/audit-admin.js";
+import { nowPlayingRoutes } from "./routes/now-playing.js";
 import { auditMiddleware } from "./middleware/audit.js";
 import { pingDb, closeDb } from "./db/client.js";
 import { startMaintenance } from "./services/maintenance.js";
 import { initMonitoring } from "./services/monitoring.js";
 import { initPush } from "./services/push.js";
 import { startReminders } from "./services/reminders.js";
+import { startTrackHistory } from "./services/track-history.js";
 import type { AppBindings } from "./types.js";
 
 // Monitoring d'abord (capture les erreurs dès le boot, si SENTRY_DSN présent).
@@ -65,6 +67,7 @@ app.route("/v1/admin/uploads", uploadRoutes);
 app.route("/v1/admin/analytics", analyticsAdminRoutes);
 app.route("/v1/admin/audit", auditAdminRoutes);
 app.route("/v1/admin/push", pushAdminRoutes);
+app.route("/v1/admin/tracks", nowPlayingRoutes);
 
 // Démarrage
 const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
@@ -75,6 +78,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
   startMaintenance();
   initPush();
   startReminders();
+  startTrackHistory();
 });
 
 // Arrêt gracieux

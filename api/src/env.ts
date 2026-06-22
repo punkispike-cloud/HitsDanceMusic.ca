@@ -86,6 +86,10 @@ export const env = {
   // URL publique du site (liens RSS, partage, emails). Sans slash final requis.
   PUBLIC_SITE_URL: optional("PUBLIC_SITE_URL", "https://hitsdancemusic.ca"),
 
+  // Now-playing du flux (7.html SHOUTcast / JSON) — interrogé par le poller
+  // d'historique des titres. Vide → poller inactif.
+  NOWPLAYING_URL: optional("NOWPLAYING_URL", ""),
+
   // Rétention analytics (Loi 25) : purge des sessions/écoutes plus vieilles que N jours.
   ANALYTICS_RETENTION_DAYS: intOpt("ANALYTICS_RETENTION_DAYS", 180),
 
