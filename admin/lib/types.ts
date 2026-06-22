@@ -157,6 +157,13 @@ export interface AnalyticsBreakdown {
   hourly: { hour: number; sessions: number }[];
 }
 
+export interface TrackHistoryEntry {
+  id: string;
+  artist: string;
+  title: string;
+  playedAt: string;
+}
+
 export interface AuditEntry {
   id: string;
   actorId: string | null;

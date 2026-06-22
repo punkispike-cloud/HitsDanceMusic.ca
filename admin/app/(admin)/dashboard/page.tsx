@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Spinner } from "@/components/ui";
-import type { Artist, Show, Episode, Mix } from "@/lib/types";
+import type { Artist, Show, Episode, Mix, TrackHistoryEntry } from "@/lib/types";
 
 interface NowSlot {
   from: string;
@@ -24,6 +24,7 @@ export default function DashboardPage() {
     mixes: number;
   } | null>(null);
   const [now, setNow] = useState<NowSlot | null>(null);
+  const [tracks, setTracks] = useState<TrackHistoryEntry[] | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +49,18 @@ export default function DashboardPage() {
     })();
   }, []);
 
+  // Titres récemment joués — rafraîchis toutes les 20 s.
+  useEffect(() => {
+    const load = () =>
+      api
+        .get<TrackHistoryEntry[]>("/v1/admin/tracks/recent?limit=20")
+        .then(setTracks)
+        .catch(() => {});
+    void load();
+    const id = setInterval(load, 20_000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div>
       <div className="page-head">
@@ -62,6 +75,32 @@ export default function DashboardPage() {
           <div style={{ fontSize: "1.3rem", fontWeight: 800, marginTop: 4 }}>{now.title}</div>
           <div className="muted">
             {now.from}–{now.to} · {now.host}
+          </div>
+        </div>
+      )}
+
+      {tracks && tracks.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h2 style={{ marginTop: 0 }}>🎵 Titres récemment joués</h2>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Artiste</th>
+                  <th>Passé à</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tracks.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.title}</td>
+                    <td className="muted">{t.artist || "—"}</td>
+                    <td className="muted">{new Date(t.playedAt).toLocaleTimeString("fr-CA")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
