@@ -92,7 +92,8 @@
       par client) + `OPERATIONS.md` (le process).
 - [x] **Monitoring** documenté : Sentry **par projet** (DSN distinct) — gated, à activer 🔒
 - [x] **Sauvegardes** Postgres : **PITR continu activé** + snapshot manuel (2026-06-22)
-- [ ] **Restauration testée** (drill) — 🔒 action Railway (toi)
+- [x] **Restauration testée** : drill logique 2026-06-22 (dump → restore base jetable,
+      comptes identiques prod/restauré, **RTO ~4 s** sur la base actuelle)
 - [ ] (plus tard) Tableau de bord opérateur **web** (la version CLI suffit pour démarrer)
 - 📓 Bible opérateur : `OPERATIONS.md`
 

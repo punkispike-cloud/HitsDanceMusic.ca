@@ -102,6 +102,11 @@ une page à recharger. **Aucune reconnexion forcée.**
 
 ## 4. Sauvegardes récurrentes + restauration testée
 
+> ✅ **Drill effectué le 2026-06-22** (Hits Dance) : `pg_dump` de la prod → restauration
+> dans une base jetable `restore_drill` → comptes identiques (sessions/artists/shows/
+> tracks) → base supprimée. **RTO ~4 s** sur la base actuelle (logique). À refaire après
+> une grosse croissance des données, et tester aussi un **PITR restore** Railway une fois.
+
 Un backup jamais restauré n'est pas un backup.
 
 1. Railway → Postgres → **Backups** → activer les **snapshots automatiques** (quotidiens).
