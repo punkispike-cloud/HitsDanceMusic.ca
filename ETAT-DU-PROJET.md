@@ -47,7 +47,7 @@ Ajoutées sans modifier le visuel des pages existantes (le live garde son lien) 
    - Emails (invitations/reset) : `RESEND_API_KEY` + `EMAIL_FROM` (domaine vérifié chez Resend)
    - Web Push (rappels) : générer avec `cd api && npm run vapid` → coller `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`
    - Puis configurer le **CORS du bucket S3** + variables `S3_*` pour activer l'upload audio (sinon pas de podcasts à jouer).
-5. **Sécurité (toujours à faire)** : roter le mot de passe **Postgres** + le **`JWT_SECRET`** (exposés dans le chat) + renforcer le mdp admin + activer/tester les backups. → **runbook ordonné pas-à-pas : `SECURITE-ROTATION.md`** (générer les secrets en local, jamais dans un chat).
+5. **Sécurité** : ✅ **fait le 2026-06-22** — `JWT_SECRET`, mot de passe **Postgres** et mot de passe **admin** rotés/renforcés via le CLI Railway (secrets jamais exposés dans le chat) ; faible `Carlogix` retiré de l'env (`SEED_ADMIN_PASSWORD` aligné). PITR Postgres actif + snapshot manuel pris. **Reste** : drill de restauration Postgres. Runbook : `SECURITE-ROTATION.md`.
 6. **« Reveal » du projet (quand tu voudras)** — rendre visibles sur le SITE LIVE les 3 ajouts gardés sur les pages neuves :
    - lien « Podcasts » dans la nav partagée (`_partials/header-tools.html` ou la `<nav>` de chaque page) ;
    - badge live : ajouter `<div id="liveBadge" hidden></div>` près du player sur `index.html` ;

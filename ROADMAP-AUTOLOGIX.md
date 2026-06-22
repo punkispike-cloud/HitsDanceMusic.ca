@@ -52,9 +52,11 @@
 - [x] Monitoring Sentry 🔒, emails invitations/reset 🔒, 27 tests, CI
 - [x] Déployé sur Railway (api, admin, presence, web, Postgres)
 
-> Reste 🔒 (toi) : roter secrets Postgres + `JWT_SECRET` + renforcer mdp admin
-> (**runbook : `SECURITE-ROTATION.md`**) ; activer S3 / VAPID / Resend / Sentry
-> (variables d'env). Voir `ETAT-DU-PROJET.md` §0.
+> ✅ **Secrets rotés le 2026-06-22** : `JWT_SECRET`, mot de passe **Postgres** et mot
+> de passe **admin** renforcés (via CLI Railway, secrets jamais exposés ; runbook
+> `SECURITE-ROTATION.md`). Reste 🔒 (toi) : activer S3 / VAPID / Resend / Sentry
+> (variables d'env) + **drill de restauration** Postgres (PITR déjà actif).
+> Voir `ETAT-DU-PROJET.md` §0.
 
 ## Phase 1 — Productisation (clonable) 🔄
 
@@ -89,7 +91,8 @@
 - [x] **Mises à jour mutualisées** : `scripts/update-clients.mjs` (guide les commandes
       par client) + `OPERATIONS.md` (le process).
 - [x] **Monitoring** documenté : Sentry **par projet** (DSN distinct) — gated, à activer 🔒
-- [ ] **Sauvegardes** Postgres + **restauration testée** — 🔒 action Railway (toi)
+- [x] **Sauvegardes** Postgres : **PITR continu activé** + snapshot manuel (2026-06-22)
+- [ ] **Restauration testée** (drill) — 🔒 action Railway (toi)
 - [ ] (plus tard) Tableau de bord opérateur **web** (la version CLI suffit pour démarrer)
 - 📓 Bible opérateur : `OPERATIONS.md`
 
