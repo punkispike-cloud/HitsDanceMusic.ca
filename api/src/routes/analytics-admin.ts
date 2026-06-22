@@ -11,10 +11,14 @@ import type { AppBindings } from "../types.js";
 
 export const analyticsAdminRoutes = new Hono<AppBindings>();
 
-/** Échappe une valeur pour une cellule CSV (RFC 4180). */
+/** Échappe une valeur pour une cellule CSV (RFC 4180) + neutralise l'injection
+   de formule (Excel/LibreOffice) sur les données d'origine externe. */
 function csvCell(v: unknown): string {
-  const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = v == null ? "" : String(v);
+  // Anti-injection de formule : une cellule commençant par = + - @ tab ou CR
+  // est exécutée comme formule par les tableurs → on la préfixe d'une apostrophe.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 function toCsv(headers: string[], rows: unknown[][]): string {
   const lines = [headers.map(csvCell).join(",")];

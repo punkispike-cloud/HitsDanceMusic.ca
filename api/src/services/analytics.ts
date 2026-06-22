@@ -153,9 +153,16 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
 
   // Géo-IP : une tentative par visiteur (asynchrone, n'attend pas).
   if (!_geoAttempted.has(clientId)) {
-    // Borne mémoire : le Set est purgé s'il devient trop gros (un nouveau
-    // visiteur déjà résolu sera juste re-tenté une fois — sans gravité).
-    if (_geoAttempted.size > 20_000) _geoAttempted.clear();
+    // Borne mémoire : éviction FIFO PARTIELLE (les plus anciens) plutôt qu'un
+    // clear total — sinon tous les visiteurs déjà résolus seraient re-tentés,
+    // déclenchant une rafale d'appels vers les fournisseurs géo gratuits.
+    if (_geoAttempted.size > 20_000) {
+      let n = 0;
+      for (const k of _geoAttempted) {
+        _geoAttempted.delete(k);
+        if (++n >= 10_000) break;
+      }
+    }
     _geoAttempted.add(clientId);
     void resolveCountry(ip, clientId);
   }
