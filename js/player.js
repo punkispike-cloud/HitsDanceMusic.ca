@@ -202,6 +202,7 @@ export function bindAudioEvents() {
     reconnectAttempt++;
     const delay = Math.min(15000, 1000 * Math.pow(2, reconnectAttempt - 1));
     setPlayingUI(false, `Reconnexion… (${reconnectAttempt})`);
+    pauseSessionClock();
     console.info(`[HitRadio] reconnect (${reason}) in ${delay}ms`);
     reconnectTimer = setTimeout(async () => {
       reconnectTimer = null;
@@ -238,15 +239,22 @@ export function bindAudioEvents() {
     if (watchdog) { clearInterval(watchdog); watchdog = null; }
   }
 
-  audio.addEventListener("waiting", () => setPlayingUI(false, "Mise en mémoire tampon…"));
+  audio.addEventListener("waiting", () => {
+    setPlayingUI(false, "Mise en mémoire tampon…");
+    // Buffering/reconnexion = pas de son réel → on gèle le compteur d'écoute
+    // pour ne pas surcompter le temps pendant les coupures.
+    pauseSessionClock();
+  });
   audio.addEventListener("playing", () => {
     setPlayingUI(true, "En direct");
     cancelReconnect();
     startWatchdog();
+    startSessionClock();
   });
   audio.addEventListener("pause", () => {
     setPlayingUI(false, "En pause");
     stopWatchdog();
+    pauseSessionClock();
   });
   audio.addEventListener("stalled", () => scheduleReconnect("stalled"));
   audio.addEventListener("ended", () => scheduleReconnect("ended"));
@@ -311,6 +319,8 @@ export async function refreshLiveTrack() {
     return;
   }
   nowPlayingFails = 0;
+  // Métadonnées de nouveau disponibles → retirer le message d'indisponibilité.
+  document.getElementById("liveTrackHint")?.remove();
   state.currentTrack = np;
   let coverUrl = null;
   if (np.artist) coverUrl = await fetchCover(np.artist, np.title);
