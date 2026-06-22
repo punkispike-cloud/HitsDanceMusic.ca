@@ -57,7 +57,9 @@ export default function DashboardPage() {
         .then(setTracks)
         .catch(() => {});
     void load();
-    const id = setInterval(load, 20_000);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 20_000);
     return () => clearInterval(id);
   }, []);
 

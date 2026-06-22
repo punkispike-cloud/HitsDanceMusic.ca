@@ -10,6 +10,7 @@ import type { GeoPoint } from "@/lib/types";
 const GEO_URL = "https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json";
 const W = 1000;
 const H = 500;
+const LIVE_WINDOW_MS = 60_000; // un point « en direct » = vu il y a moins de 60 s
 
 const projX = (lon: number) => ((lon + 180) / 360) * W;
 const projY = (lat: number) => ((90 - lat) / 180) * H;
@@ -80,9 +81,10 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
     (p) => typeof p.lat === "number" && typeof p.lon === "number",
   );
   const maxS = Math.max(1, ...pts.map((p) => p.sessions));
-  const liveSessions = pts.filter((p) => p.live).reduce((a, p) => a + p.sessions, 0);
-  // `now` force le recalcul périodique (les points « live » se mettent à jour).
-  void now;
+  // Liveness calculée côté client à partir de last_seen + `now` (horloge 1 s du
+  // parent) → un point s'« éteint » tout seul après 60 s sans nouveau fetch.
+  const isLive = (p: GeoPoint) => now - new Date(p.last_seen).getTime() < LIVE_WINDOW_MS;
+  const liveSessions = pts.filter(isLive).reduce((a, p) => a + p.sessions, 0);
 
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
@@ -94,17 +96,18 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
           const x = projX(p.lon);
           const y = projY(p.lat);
           const r = 2.5 + (p.sessions / maxS) * 6;
-          const color = p.live ? "#19c37d" : "#5b8cff";
+          const live = isLive(p);
+          const color = live ? "#19c37d" : "#5b8cff";
           return (
             <g key={i}>
-              {p.live && (
+              {live && (
                 <circle cx={x} cy={y} r={r} fill="#19c37d" opacity={0.3}>
                   <animate attributeName="r" values={`${r};${r + 8};${r}`} dur="1.6s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.4;0;0.4" dur="1.6s" repeatCount="indefinite" />
                 </circle>
               )}
               <circle cx={x} cy={y} r={r} fill={color} stroke="#ffffff" strokeWidth={0.5} opacity={0.92}>
-                <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${p.live ? " · en direct" : ""}`}</title>
+                <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${live ? " · en direct" : ""}`}</title>
               </circle>
             </g>
           );
