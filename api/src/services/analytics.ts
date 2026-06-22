@@ -13,17 +13,46 @@ const MAX_SECONDS_PER_BEACON = 60;
 const _geoAttempted = new Set<string>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
 
+/** Un appel HTTP géo borné dans le temps ; renvoie le JSON ou null (best-effort). */
+async function fetchGeoJson(url: string): Promise<Record<string, unknown> | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) return null;
+    return (await r.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Résout { ville, pays } via des fournisseurs gratuits HTTPS sans clé.
+    geojs.io en premier (ville + pays), freeipapi.com en repli.
+    (ipwho.is a fermé son offre gratuite → 403 "CORS not supported on Free plan".) */
+async function lookupGeo(ip: string): Promise<{ city?: string; country?: string } | null> {
+  const enc = encodeURIComponent(ip);
+  // 1) geojs.io → { city, country }
+  const g = await fetchGeoJson(`https://get.geojs.io/v1/ip/geo/${enc}.json`);
+  if (g && (g.city || g.country)) {
+    return { city: g.city as string | undefined, country: g.country as string | undefined };
+  }
+  // 2) repli : freeipapi.com → { cityName, countryName }
+  const f = await fetchGeoJson(`https://freeipapi.com/api/json/${enc}`);
+  if (f && (f.cityName || f.countryName)) {
+    return { city: f.cityName as string | undefined, country: f.countryName as string | undefined };
+  }
+  return null;
+}
+
 async function resolveCountry(ip: string, clientId: string): Promise<void> {
   if (!ip || PRIVATE_IP.test(ip)) return;
   try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 4000);
-    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,city`, {
-      signal: ctrl.signal,
-    }).finally(() => clearTimeout(t));
-    if (!r.ok) return;
-    const data = (await r.json()) as { country?: string; city?: string };
-    const parts = [data?.city, data?.country].filter((s): s is string => typeof s === "string" && !!s);
+    const geo = await lookupGeo(ip);
+    const parts = [geo?.city, geo?.country].filter(
+      (s): s is string => typeof s === "string" && !!s,
+    );
     if (parts.length) {
       await db
         .update(analyticsSessions)
