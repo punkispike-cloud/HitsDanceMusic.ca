@@ -179,7 +179,7 @@ export default function StatistiquesPage() {
             onClick={() => setAuto((a) => !a)}
             title={auto ? "Mettre le direct en pause" : "Reprendre le direct"}
           >
-            {auto ? "⏸" : "▶"}
+            {auto ? "⏸ Pause" : "▶ Reprendre le direct"}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={refreshAll} title="Rafraîchir maintenant">
             ↻
