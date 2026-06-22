@@ -45,6 +45,18 @@ function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   );
 }
 
+/** Étiquette relative compacte, ex. « il y a 3 s ». */
+function relTime(ts: number, now: number): string {
+  const s = Math.max(0, Math.round((now - ts) / 1000));
+  if (s < 2) return "à l'instant";
+  if (s < 60) return `il y a ${s} s`;
+  return `il y a ${Math.floor(s / 60)} min`;
+}
+
+const LIVE_MS = 4_000; // rafraîchissement « live » (sessions + compteur en direct)
+const HEAVY_MS = 60_000; // rafraîchissement « lourd » (graphe + émissions)
+const LIVE_WINDOW_MS = 60_000; // une session vue il y a moins de 60 s = « en direct »
+
 export default function StatistiquesPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -55,31 +67,74 @@ export default function StatistiquesPage() {
   const [sessions, setSessions] = useState<AnalyticsSession[] | null>(null);
   const [series, setSeries] = useState<AnalyticsPoint[] | null>(null);
   const [days, setDays] = useState(30);
+  const [auto, setAuto] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
-  const load = useCallback(async () => {
+  // Données qui bougent vite : compteur « en direct » + sessions visiteurs.
+  const loadLive = useCallback(async () => {
     try {
-      const [ov, sh, ts] = await Promise.all([
-        api.get<AnalyticsOverview>("/v1/admin/analytics/overview"),
-        api.get<AnalyticsShow[]>("/v1/admin/analytics/shows"),
-        api.get<AnalyticsPoint[]>(`/v1/admin/analytics/timeseries?days=${days}`),
-      ]);
+      const ov = await api.get<AnalyticsOverview>("/v1/admin/analytics/overview");
       setOverview(ov);
-      setShows(sh);
-      setSeries(ts);
       if (isAdmin) {
         setSessions(await api.get<AnalyticsSession[]>("/v1/admin/analytics/sessions"));
       }
+      setUpdatedAt(Date.now());
     } catch {
-      setOverview(null);
+      /* on garde l'affichage précédent — pas de page blanche sur un hoquet réseau */
     }
-  }, [isAdmin, days]);
+  }, [isAdmin]);
 
-  // Rafraîchit toutes les 15 s (le compteur « live » bouge vite).
+  // Données qui bougent lentement : graphe par jour + répartition par émission.
+  const loadHeavy = useCallback(async () => {
+    try {
+      const [sh, ts] = await Promise.all([
+        api.get<AnalyticsShow[]>("/v1/admin/analytics/shows"),
+        api.get<AnalyticsPoint[]>(`/v1/admin/analytics/timeseries?days=${days}`),
+      ]);
+      setShows(sh);
+      setSeries(ts);
+    } catch {
+      /* idem : best-effort */
+    }
+  }, [days]);
+
+  const refreshAll = useCallback(() => {
+    void loadLive();
+    void loadHeavy();
+  }, [loadLive, loadHeavy]);
+
+  // Chargement initial + recharge « lourde » quand la période change.
   useEffect(() => {
-    void load();
-    const id = setInterval(() => void load(), 15_000);
+    void loadHeavy();
+  }, [loadHeavy]);
+  useEffect(() => {
+    void loadLive();
+  }, [loadLive]);
+
+  // Boucle « live » (~4 s) — en pause si auto désactivé ou onglet masqué.
+  useEffect(() => {
+    if (!auto) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void loadLive();
+    }, LIVE_MS);
     return () => clearInterval(id);
-  }, [load]);
+  }, [auto, loadLive]);
+
+  // Boucle « lourde » (60 s).
+  useEffect(() => {
+    if (!auto) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void loadHeavy();
+    }, HEAVY_MS);
+    return () => clearInterval(id);
+  }, [auto, loadHeavy]);
+
+  // Horloge 1 s pour l'étiquette « maj il y a Xs » + recalcul des points « live ».
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1_000);
+    return () => clearInterval(id);
+  }, []);
 
   const exportCsv = async (type: "sessions" | "shows") => {
     try {
@@ -111,11 +166,35 @@ export default function StatistiquesPage() {
               ⬇ CSV sessions
             </button>
           )}
-          <button className="btn btn-ghost btn-sm" onClick={() => void load()}>
+          <span
+            className="stats-live"
+            title={updatedAt ? `Dernière mise à jour : ${new Date(updatedAt).toLocaleTimeString("fr-CA")}` : ""}
+          >
+            <span className={auto ? "stats-dot stats-dot--on" : "stats-dot"} />
+            {auto ? "En direct" : "En pause"}
+            {updatedAt && <span className="muted" style={{ marginLeft: 6 }}>· maj {relTime(updatedAt, nowTick)}</span>}
+          </span>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setAuto((a) => !a)}
+            title={auto ? "Mettre le direct en pause" : "Reprendre le direct"}
+          >
+            {auto ? "⏸" : "▶"}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={refreshAll} title="Rafraîchir maintenant">
             ↻
           </button>
         </div>
       </div>
+
+      <style>{`
+        .stats-live { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; font-weight:600; }
+        .stats-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block; }
+        .stats-dot--on { background:#19c37d; animation:statsPulse 1.4s ease-in-out infinite; }
+        .stats-livedot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#19c37d; margin-right:6px; vertical-align:middle; animation:statsPulse 1.4s ease-in-out infinite; }
+        .stats-row-live > td:first-child { box-shadow: inset 3px 0 0 #19c37d; }
+        @keyframes statsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(25,195,125,.55);} 50%{ box-shadow:0 0 0 5px rgba(25,195,125,0);} }
+      `}</style>
 
       {!overview ? (
         <Spinner />
@@ -232,20 +311,24 @@ export default function StatistiquesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sessions.map((s) => (
-                      <tr key={s.id}>
-                        <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.ip ?? "—"}</td>
-                        <td>{s.ipCountry ?? "—"}</td>
-                        <td>{s.device ?? "—"}</td>
-                        <td>{s.browser ?? "—"}</td>
-                        <td>{s.pageViews}</td>
-                        <td>{formatDuration(s.activeSec)}</td>
-                        <td>{formatDuration(s.listenSec)}</td>
-                        <td className="muted">
-                          {new Date(s.lastSeen).toLocaleString("fr-CA")}
-                        </td>
-                      </tr>
-                    ))}
+                    {sessions.map((s) => {
+                      const isLive = nowTick - new Date(s.lastSeen).getTime() < LIVE_WINDOW_MS;
+                      return (
+                        <tr key={s.id} className={isLive ? "stats-row-live" : undefined}>
+                          <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.ip ?? "—"}</td>
+                          <td>{s.ipCountry ?? "—"}</td>
+                          <td>{s.device ?? "—"}</td>
+                          <td>{s.browser ?? "—"}</td>
+                          <td>{s.pageViews}</td>
+                          <td>{formatDuration(s.activeSec)}</td>
+                          <td>{formatDuration(s.listenSec)}</td>
+                          <td className="muted">
+                            {isLive && <span className="stats-livedot" title="Actif en ce moment" />}
+                            {new Date(s.lastSeen).toLocaleString("fr-CA")}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
