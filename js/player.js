@@ -300,7 +300,10 @@ export function renderOnAir() {
 /* ----- Now playing tick : récupère + pousse aux UI ----- */
 let nowPlayingFails = 0;
 export async function refreshLiveTrack() {
-  if (document.hidden) return;
+  // On continue de rafraîchir onglet caché SI l'audio joue, pour que les
+  // métadonnées MediaSession (écran verrouillé) restent à jour en arrière-plan
+  // — c'est précisément le contrat de keepFresh. Sinon (en pause/caché), on sort.
+  if (document.hidden && (!audio || audio.paused)) return;
   const np = await fetchNowPlaying();
   if (!np || !np.title) {
     nowPlayingFails++;

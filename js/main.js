@@ -217,7 +217,12 @@ function initIdle() {
   // Branche animateurs/émissions sur l'API (visuel identique, fallback HTML).
   // Re-rend puis ré-annote les cartes animateurs avec leur prochain passage.
   void loadContentFromApi().then((touchedTalent) => {
-    if (touchedTalent) annotateTalentCards();
+    if (touchedTalent) {
+      annotateTalentCards();
+      // Le re-rendu du contenu API a remplacé les cartes → ré-injecter les cœurs
+      // de favoris (sinon ils disparaissent et « Mes favoris » ne filtre plus rien).
+      injectFavButtons();
+    }
   });
   // Page Podcasts (no-op ailleurs : ne s'exécute que si .podcast-grid/.mix-grid
   // est présent) + bouton d'abonnement aux rappels (no-op si #pushOptIn absent).

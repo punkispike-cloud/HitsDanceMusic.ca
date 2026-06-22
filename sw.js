@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-d84f433e197c";
+const CACHE = "hitradio-4d5897ed328d";
 const SHELL = [
   "./",
   "./index.html",
@@ -106,7 +106,15 @@ const SHELL = [
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})));
+  e.waitUntil(
+    caches.open(CACHE).then(async (c) => {
+      // Précache fichier par fichier (tolérant) : un asset manquant n'invalide
+      // plus TOUT le cache offline (addAll est atomique), et les échecs sont visibles.
+      const results = await Promise.allSettled(SHELL.map((u) => c.add(u)));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed) console.warn(`[SW] précache: ${failed}/${SHELL.length} fichier(s) en échec`);
+    }),
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -142,16 +150,28 @@ self.addEventListener("push", (event) => {
   );
 });
 
-/* Clic sur la notification : focus un onglet existant ou ouvre l'URL. */
+/* Clic sur la notification : aller à l'URL cible (focus l'onglet déjà dessus,
+   sinon navigue un onglet existant, sinon en ouvre un). */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil((async () => {
+    const targetUrl = new URL(target, self.location.origin).href;
     const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    // 1) Un onglet est déjà sur l'URL cible → on le focus.
     for (const c of all) {
-      if ("focus" in c) { try { await c.focus(); return; } catch { /* noop */ } }
+      if (c.url === targetUrl && "focus" in c) {
+        try { return await c.focus(); } catch { /* noop */ }
+      }
     }
-    if (self.clients.openWindow) await self.clients.openWindow(target);
+    // 2) Sinon, naviguer un onglet existant vers la cible puis le focus.
+    for (const c of all) {
+      if ("navigate" in c) {
+        try { const nc = await c.navigate(targetUrl); return await (nc || c).focus(); } catch { /* noop */ }
+      }
+    }
+    // 3) Aucun onglet → en ouvrir un.
+    if (self.clients.openWindow) await self.clients.openWindow(targetUrl);
   })());
 });
 

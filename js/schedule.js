@@ -154,13 +154,21 @@ export function getNextSlot(date = new Date()) {
 export function findNextSlotForHost(hostName) {
   const norm = (s) => (s || "").toLowerCase();
   const target = norm(hostName);
+  // On exige TOUS les tokens significatifs (>2 lettres) du nom, pas seulement le
+  // premier : sinon « DJ Pierre », « DJ Oskana »… s'effondrent tous sur « dj ».
+  const tokens = target.split(/\s+/).filter((w) => w.length > 2);
+  const matches = (s) => {
+    if (!tokens.length) return false;
+    const n = norm(s);
+    return tokens.every((t) => n.includes(t));
+  };
   const { day, hour, minute } = getMontrealParts();
   const nowMin = hour * 60 + minute;
   for (let off = 0; off < 7; off++) {
     const d = (day + off) % 7;
     const slots = SCHEDULE[d] || [];
     for (const [from, to, title, host, tag] of slots) {
-      if (!norm(host).includes(target.split(" ")[0]) && !norm(title).includes(target.split(" ")[0])) continue;
+      if (!matches(host) && !matches(title)) continue;
       const fromMin = toMinutes(from);
       if (off > 0 || fromMin > nowMin) {
         return { from, to, title, host, tag, day: d };
