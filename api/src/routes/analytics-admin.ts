@@ -112,6 +112,34 @@ analyticsAdminRoutes.get("/geo", async (c) => {
   return c.json(result.rows);
 });
 
+/* GET /v1/admin/analytics/breakdown — répartitions (appareils, navigateurs,
+   top villes, nouveaux vs récurrents, activité par heure). Pas d'IP → tout admin. */
+analyticsAdminRoutes.get("/breakdown", async (c) => {
+  const [devices, browsers, cities, retention, hourly] = await Promise.all([
+    db.execute(sql`SELECT coalesce(device, '?') AS device, count(*)::int AS sessions
+                   FROM analytics_sessions GROUP BY device ORDER BY sessions DESC`),
+    db.execute(sql`SELECT coalesce(browser, '?') AS browser, count(*)::int AS sessions
+                   FROM analytics_sessions GROUP BY browser ORDER BY sessions DESC`),
+    db.execute(sql`SELECT ip_country AS label, count(*)::int AS sessions
+                   FROM analytics_sessions WHERE ip_country IS NOT NULL
+                   GROUP BY ip_country ORDER BY sessions DESC LIMIT 10`),
+    db.execute(sql`SELECT
+                     count(*) FILTER (WHERE last_seen - first_seen > interval '1 day')::int AS returning,
+                     count(*) FILTER (WHERE last_seen - first_seen <= interval '1 day')::int AS fresh
+                   FROM analytics_sessions`),
+    db.execute(sql`SELECT extract(hour FROM first_seen AT TIME ZONE 'America/Toronto')::int AS hour,
+                          count(*)::int AS sessions
+                   FROM analytics_sessions GROUP BY hour ORDER BY hour`),
+  ]);
+  return c.json({
+    devices: devices.rows,
+    browsers: browsers.rows,
+    topCities: cities.rows,
+    newVsReturning: retention.rows[0] ?? { returning: 0, fresh: 0 },
+    hourly: hourly.rows,
+  });
+});
+
 /* GET /v1/admin/analytics/sessions — détail des visiteurs (IP, navigateur…).
    Superadmin uniquement (expose des données personnelles). */
 analyticsAdminRoutes.get("/sessions", requireRole("superadmin"), async (c) => {
