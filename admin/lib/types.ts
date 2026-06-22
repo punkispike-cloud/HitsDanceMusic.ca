@@ -149,6 +149,14 @@ export interface GeoPoint {
   last_seen: string;
 }
 
+export interface AnalyticsBreakdown {
+  devices: { device: string; sessions: number }[];
+  browsers: { browser: string; sessions: number }[];
+  topCities: { label: string; sessions: number }[];
+  newVsReturning: { returning: number; fresh: number };
+  hourly: { hour: number; sessions: number }[];
+}
+
 export interface AuditEntry {
   id: string;
   actorId: string | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
@@ -12,6 +12,7 @@ import {
   type AnalyticsSession,
   type AnalyticsPoint,
   type GeoPoint,
+  type AnalyticsBreakdown,
 } from "@/lib/types";
 import VisitorMap from "./VisitorMap";
 
@@ -47,6 +48,48 @@ function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   );
 }
 
+/* Liste à barres : libellé · barre proportionnelle · valeur. */
+function BarList({ items }: { items: { label: string; value: number }[] }) {
+  const max = Math.max(1, ...items.map((i) => i.value));
+  if (!items.length) return <Empty label="Pas encore de données." />;
+  return (
+    <div className="card">
+      {items.map((it) => (
+        <div key={it.label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <span style={{ width: 140, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {it.label}
+          </span>
+          <span style={{ flex: 1, height: 8, background: "rgba(127,127,127,0.18)", borderRadius: 4 }}>
+            <span style={{ display: "block", width: `${(it.value / max) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 4, minWidth: 3 }} />
+          </span>
+          <span className="muted" style={{ fontSize: "0.8rem", width: 36, textAlign: "right" }}>{it.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Histogramme de l'activité par heure (0-23, fuseau America/Toronto). */
+function HourlyChart({ data }: { data: { hour: number; sessions: number }[] }) {
+  const byHour = new Array(24).fill(0) as number[];
+  for (const d of data) if (d.hour >= 0 && d.hour < 24) byHour[d.hour] = d.sessions;
+  const max = Math.max(1, ...byHour);
+  return (
+    <div className="card">
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 90 }}>
+        {byHour.map((v, h) => (
+          <div key={h} title={`${h} h — ${v} visite(s)`} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+            <div style={{ height: `${(v / max) * 100}%`, background: "var(--accent)", borderRadius: 2, minHeight: v ? 2 : 0 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--muted)", marginTop: 4 }}>
+        <span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span>
+      </div>
+    </div>
+  );
+}
+
 /** Étiquette relative compacte, ex. « il y a 3 s ». */
 function relTime(ts: number, now: number): string {
   const s = Math.max(0, Math.round((now - ts) / 1000));
@@ -69,10 +112,15 @@ export default function StatistiquesPage() {
   const [sessions, setSessions] = useState<AnalyticsSession[] | null>(null);
   const [series, setSeries] = useState<AnalyticsPoint[] | null>(null);
   const [geo, setGeo] = useState<GeoPoint[] | null>(null);
+  const [breakdown, setBreakdown] = useState<AnalyticsBreakdown | null>(null);
   const [days, setDays] = useState(30);
   const [auto, setAuto] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const [alertThreshold, setAlertThreshold] = useState(0);
+  const [notifOn, setNotifOn] = useState(false);
+  const prevLiveRef = useRef(0);
+  const seenCountriesRef = useRef<Set<string> | null>(null);
 
   // Données qui bougent vite : compteur « en direct » + sessions visiteurs.
   const loadLive = useCallback(async () => {
@@ -95,16 +143,33 @@ export default function StatistiquesPage() {
   // Données qui bougent lentement : graphe par jour + répartition par émission.
   const loadHeavy = useCallback(async () => {
     try {
-      const [sh, ts] = await Promise.all([
+      const [sh, ts, bd] = await Promise.all([
         api.get<AnalyticsShow[]>("/v1/admin/analytics/shows"),
         api.get<AnalyticsPoint[]>(`/v1/admin/analytics/timeseries?days=${days}`),
+        api.get<AnalyticsBreakdown>("/v1/admin/analytics/breakdown"),
       ]);
       setShows(sh);
       setSeries(ts);
+      setBreakdown(bd);
     } catch {
       /* idem : best-effort */
     }
   }, [days]);
+
+  // Émet une alerte : toast in-app + notification navigateur (si autorisée).
+  const fireAlert = useCallback(
+    (title: string, body: string) => {
+      toast(`${title} — ${body}`, "warn");
+      if (notifOn && typeof Notification !== "undefined" && Notification.permission === "granted") {
+        try {
+          new Notification(`📻 ${title}`, { body });
+        } catch {
+          /* noop */
+        }
+      }
+    },
+    [toast, notifOn],
+  );
 
   const refreshAll = useCallback(() => {
     void loadLive();
@@ -142,6 +207,47 @@ export default function StatistiquesPage() {
     const id = setInterval(() => setNowTick(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
+
+  // Alertes : seuil d'auditeurs en direct franchi + apparition d'un nouveau pays.
+  useEffect(() => {
+    if (!overview) return;
+    const live = overview.live;
+    if (alertThreshold > 0 && live >= alertThreshold && prevLiveRef.current < alertThreshold) {
+      fireAlert(`${live} auditeurs en direct`, `Seuil de ${alertThreshold} atteint`);
+    }
+    prevLiveRef.current = live;
+
+    const countries = new Set(
+      (geo ?? [])
+        .map((p) => (p.label ?? "").split(",").pop()?.trim())
+        .filter((s): s is string => !!s),
+    );
+    if (seenCountriesRef.current === null) {
+      seenCountriesRef.current = countries; // 1er chargement : mémoriser sans alerter
+    } else {
+      for (const c of countries) {
+        if (!seenCountriesRef.current.has(c)) {
+          seenCountriesRef.current.add(c);
+          fireAlert("Nouveau pays", `Un visiteur depuis ${c}`);
+        }
+      }
+    }
+  }, [overview, geo, alertThreshold, fireAlert]);
+
+  // Active les notifications navigateur (demande la permission).
+  const enableNotifs = async () => {
+    if (typeof Notification === "undefined") {
+      toast("Notifications non supportées par ce navigateur", "warn");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      setNotifOn(true);
+      toast("Notifications activées", "ok");
+    } else {
+      toast("Notifications refusées", "warn");
+    }
+  };
 
   const exportCsv = async (type: "sessions" | "shows") => {
     try {
@@ -244,6 +350,72 @@ export default function StatistiquesPage() {
 
           <h2 style={{ marginTop: 28 }}>Carte des visiteurs en direct</h2>
           <VisitorMap points={geo} now={nowTick} />
+
+          <h2 style={{ marginTop: 28 }}>Détails de l&apos;audience</h2>
+          <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+            <strong>🔔 Alertes</strong>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem" }}>
+              M&apos;alerter si ≥
+              <input
+                type="number"
+                min={0}
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(Math.max(0, Number(e.target.value) || 0))}
+                style={{ width: 64 }}
+              />
+              en direct
+            </label>
+            <span className="muted" style={{ fontSize: "0.8rem" }}>+ tout nouveau pays</span>
+            {!notifOn ? (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => void enableNotifs()}>
+                Activer les notifications navigateur
+              </button>
+            ) : (
+              <span style={{ color: "var(--ok)", fontSize: "0.8rem" }}>✓ Notifications actives</span>
+            )}
+          </div>
+
+          {breakdown && (
+            <>
+              <div className="cards-grid" style={{ marginTop: 12 }}>
+                <div className="card stat-card">
+                  <div className="label">Nouveaux visiteurs</div>
+                  <div className="value">{breakdown.newVsReturning.fresh}</div>
+                </div>
+                <div className="card stat-card">
+                  <div className="label">Visiteurs de retour</div>
+                  <div className="value">{breakdown.newVsReturning.returning}</div>
+                </div>
+                <div className="card stat-card">
+                  <div className="label">Taux de retour</div>
+                  <div className="value">
+                    {(() => {
+                      const t = breakdown.newVsReturning.fresh + breakdown.newVsReturning.returning;
+                      return t ? `${Math.round((breakdown.newVsReturning.returning / t) * 100)} %` : "—";
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 12 }}>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Appareils</h3>
+                  <BarList items={breakdown.devices.map((d) => ({ label: d.device, value: d.sessions }))} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Navigateurs</h3>
+                  <BarList items={breakdown.browsers.map((b) => ({ label: b.browser, value: b.sessions }))} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Top villes</h3>
+                  <BarList items={breakdown.topCities.map((ci) => ({ label: ci.label, value: ci.sessions }))} />
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: "0.95rem", margin: "16px 0 8px" }}>Activité par heure (heure de Montréal)</h3>
+              <HourlyChart data={breakdown.hourly} />
+            </>
+          )}
 
           <h2 style={{ marginTop: 28 }}>Écoute par jour ({days} derniers jours)</h2>
           {series && series.length > 0 ? (
