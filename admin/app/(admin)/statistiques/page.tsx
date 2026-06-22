@@ -11,7 +11,9 @@ import {
   type AnalyticsShow,
   type AnalyticsSession,
   type AnalyticsPoint,
+  type GeoPoint,
 } from "@/lib/types";
+import VisitorMap from "./VisitorMap";
 
 /* Mini graphe à barres (SVG, sans dépendance) du temps d'écoute par jour. */
 function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
@@ -66,6 +68,7 @@ export default function StatistiquesPage() {
   const [shows, setShows] = useState<AnalyticsShow[] | null>(null);
   const [sessions, setSessions] = useState<AnalyticsSession[] | null>(null);
   const [series, setSeries] = useState<AnalyticsPoint[] | null>(null);
+  const [geo, setGeo] = useState<GeoPoint[] | null>(null);
   const [days, setDays] = useState(30);
   const [auto, setAuto] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -74,8 +77,12 @@ export default function StatistiquesPage() {
   // Données qui bougent vite : compteur « en direct » + sessions visiteurs.
   const loadLive = useCallback(async () => {
     try {
-      const ov = await api.get<AnalyticsOverview>("/v1/admin/analytics/overview");
+      const [ov, g] = await Promise.all([
+        api.get<AnalyticsOverview>("/v1/admin/analytics/overview"),
+        api.get<GeoPoint[]>("/v1/admin/analytics/geo"),
+      ]);
       setOverview(ov);
+      setGeo(g);
       if (isAdmin) {
         setSessions(await api.get<AnalyticsSession[]>("/v1/admin/analytics/sessions"));
       }
@@ -234,6 +241,9 @@ export default function StatistiquesPage() {
               <div className="value">{formatDuration(overview.avgActiveSec)}</div>
             </div>
           </div>
+
+          <h2 style={{ marginTop: 28 }}>Carte des visiteurs en direct</h2>
+          <VisitorMap points={geo} now={nowTick} />
 
           <h2 style={{ marginTop: 28 }}>Écoute par jour ({days} derniers jours)</h2>
           {series && series.length > 0 ? (

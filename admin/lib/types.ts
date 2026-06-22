@@ -140,6 +140,15 @@ export interface AnalyticsPoint {
   page_views: number;
 }
 
+export interface GeoPoint {
+  lat: number;
+  lon: number;
+  label: string | null;
+  sessions: number;
+  live: boolean;
+  last_seen: string;
+}
+
 export interface AuditEntry {
   id: string;
   actorId: string | null;
