@@ -143,6 +143,8 @@ export default function ParcPage() {
         <h1>Parc — toutes tes radios</h1>
       </div>
 
+      <AlertsPanel radios={radios} health={health} />
+
       <div
         style={{
           display: "grid",
@@ -422,6 +424,52 @@ const inputStyle: React.CSSProperties = {
   color: "var(--txt, #eee)",
   border: "1px solid var(--border, #2a2a33)",
 };
+
+const alertBox: React.CSSProperties = {
+  background: "var(--panel, #15151b)",
+  border: "1px solid #2a2a33",
+  borderRadius: 10,
+  padding: 14,
+  marginBottom: 18,
+  fontSize: 14,
+};
+
+/* Centre d'alertes opérateur : ce qui demande l'attention de l'owner, tout le
+   parc d'un coup (flux down, licences manquantes, montage, suspension). */
+function AlertsPanel({ radios, health }: { radios: RadioSummary[]; health: Record<string, RadioHealth> }) {
+  const alerts: { id: string; name: string; high: boolean; msg: string }[] = [];
+  for (const r of radios) {
+    if (r.status === "active" && health[r.id]?.status === "down")
+      alerts.push({ id: r.id, name: r.name, high: true, msg: "Flux injoignable" });
+    if (r.status === "active" && !r.licenseConfirmed)
+      alerts.push({ id: r.id, name: r.name, high: true, msg: "Licences SOCAN / Re:Sound non confirmées" });
+    if (r.status === "provisioning")
+      alerts.push({ id: r.id, name: r.name, high: false, msg: "En montage — à finaliser" });
+    if (r.status === "paused") alerts.push({ id: r.id, name: r.name, high: false, msg: "Radio suspendue" });
+  }
+  if (!alerts.length)
+    return <div style={{ ...alertBox, borderColor: "#2ecc71" }}>✅ Tout est en ordre — rien à traiter.</div>;
+  return (
+    <div style={{ ...alertBox, borderColor: "#e0a23a" }}>
+      <strong>⚠️ À traiter ({alerts.length})</strong>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+        {alerts.map((a, i) => (
+          <Link
+            key={i}
+            href={`/parc/${a.id}`}
+            style={{ color: "var(--txt, #eee)", textDecoration: "none", display: "flex", gap: 8, alignItems: "center" }}
+          >
+            <span
+              style={{ width: 8, height: 8, borderRadius: "50%", background: a.high ? "#e74c3c" : "#e0a23a", display: "inline-block" }}
+            />
+            <strong>{a.name}</strong>
+            <span style={{ color: "#9aa" }}>— {a.msg}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function HealthDot({ h }: { h?: RadioHealth }) {
   const map = {
