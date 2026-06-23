@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
 import { useToast } from "@/components/toast";
 import { Spinner, Empty } from "@/components/ui";
-import { formatDuration, type RadioSummary, type OwnerOverview, type RadioStatus } from "@/lib/types";
+import { formatDuration, type RadioSummary, type OwnerOverview, type RadioStatus, type RadioHealth } from "@/lib/types";
 
 const STATUS_LABEL: Record<RadioStatus, string> = {
   active: "Active",
@@ -31,6 +31,7 @@ export default function ParcPage() {
   const [radios, setRadios] = useState<RadioSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<RadioSummary | null>(null);
+  const [health, setHealth] = useState<Record<string, RadioHealth>>({});
   const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
 
   const isOwner = user?.role === "owner";
@@ -38,6 +39,10 @@ export default function ParcPage() {
   const load = useCallback(() => {
     api.get<OwnerOverview>("/v1/owner/overview").then(setOverview).catch(() => setOverview(null));
     api.get<RadioSummary[]>("/v1/owner/radios").then(setRadios).catch(() => setRadios([]));
+    api
+      .get<RadioHealth[]>("/v1/owner/health")
+      .then((h) => setHealth(Object.fromEntries(h.map((x) => [x.id, x]))))
+      .catch(() => setHealth({}));
   }, []);
 
   useEffect(() => {
@@ -108,6 +113,7 @@ export default function ParcPage() {
       >
         <Kpi label="Radios" value={`${overview.activeRadios}/${overview.radios}`} sub="actives / total" />
         <Kpi label="MRR" value={`${overview.mrr} $`} sub="revenu mensuel récurrent" accent />
+        <Kpi label="ARR (projeté)" value={`${overview.mrr * 12} $`} sub="revenu annuel" />
         <Kpi label="En direct" value={overview.live} sub="auditeurs maintenant" />
         <Kpi label="Aujourd'hui" value={overview.today} sub="visiteurs" />
         <Kpi label="Écoute cumulée" value={formatDuration(overview.listenSec)} />
@@ -130,9 +136,12 @@ export default function ParcPage() {
           {radios.map((r) => (
             <tr key={r.id} style={selectedId === r.id ? { outline: "1px solid var(--accent, #3aa0ff)" } : undefined}>
               <td>
-                <strong>{r.name}</strong>
+                <HealthDot h={health[r.id]} /> <strong>{r.name}</strong>
                 <br />
-                <span style={{ color: "#9aa", fontSize: 12 }}>{r.slug}</span>
+                <span style={{ color: "#9aa", fontSize: 12 }}>
+                  {r.slug}
+                  {r.contactEmail ? ` · ${r.contactEmail}` : ""}
+                </span>
               </td>
               <td>
                 <span className={`status-dot ${r.status === "active" ? "status-published" : "status-archived"}`} />
@@ -229,6 +238,9 @@ function RadioEditPanel({
     streamUrl: radio.streamUrl ?? "",
     nowPlayingUrl: radio.nowPlayingUrl ?? "",
     billingNote: radio.billingNote ?? "",
+    contactName: radio.contactName ?? "",
+    contactEmail: radio.contactEmail ?? "",
+    contactPhone: radio.contactPhone ?? "",
   });
 
   const save = async (e: FormEvent) => {
@@ -244,6 +256,9 @@ function RadioEditPanel({
         streamUrl: f.streamUrl || null,
         nowPlayingUrl: f.nowPlayingUrl || null,
         billingNote: f.billingNote || null,
+        contactName: f.contactName || null,
+        contactEmail: f.contactEmail || null,
+        contactPhone: f.contactPhone || null,
       });
       toast("Radio enregistrée ✓", "ok");
       onSaved();
@@ -302,6 +317,9 @@ function RadioEditPanel({
         <Field label="Domaines (séparés par ,)" value={f.domains} onChange={(v) => setF({ ...f, domains: v })} wide />
         <Field label="Flux audio (stream URL)" value={f.streamUrl} onChange={(v) => setF({ ...f, streamUrl: v })} wide />
         <Field label="Now-playing URL" value={f.nowPlayingUrl} onChange={(v) => setF({ ...f, nowPlayingUrl: v })} wide />
+        <Field label="Contact — nom" value={f.contactName} onChange={(v) => setF({ ...f, contactName: v })} />
+        <Field label="Contact — courriel" value={f.contactEmail} onChange={(v) => setF({ ...f, contactEmail: v })} />
+        <Field label="Contact — téléphone" value={f.contactPhone} onChange={(v) => setF({ ...f, contactPhone: v })} />
         <label style={{ display: "block", fontSize: 12, color: "#9aa", gridColumn: "1 / -1" }}>
           Note de facturation
           <textarea
@@ -333,6 +351,21 @@ const inputStyle: React.CSSProperties = {
   color: "var(--txt, #eee)",
   border: "1px solid var(--border, #2a2a33)",
 };
+
+function HealthDot({ h }: { h?: RadioHealth }) {
+  const map = {
+    up: ["#2ecc71", "Flux en ligne"],
+    down: ["#e74c3c", "Flux injoignable"],
+    none: ["#778", "Pas de flux configuré"],
+  } as const;
+  const [color, title] = map[h?.status ?? "none"];
+  return (
+    <span
+      title={h?.ms != null ? `${title} (${h.ms} ms)` : title}
+      style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: color }}
+    />
+  );
+}
 
 function Kpi({ label, value, sub, accent }: { label: string; value: ReactNode; sub?: string; accent?: boolean }) {
   return (

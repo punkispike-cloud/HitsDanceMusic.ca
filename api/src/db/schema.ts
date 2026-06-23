@@ -66,6 +66,9 @@ export const radios = pgTable(
     nowPlayingUrl: text("now_playing_url"), // now-playing de la station
     billingNote: text("billing_note"),
     monthlyPrice: integer("monthly_price"), // $ / mois (suivi MRR)
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
     ...timestamps,
   },
   (t) => ({

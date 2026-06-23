@@ -89,6 +89,9 @@ ownerRoutes.get("/radios", async (c) => {
         nowPlayingUrl: r.nowPlayingUrl,
         billingNote: r.billingNote,
         monthlyPrice: r.monthlyPrice,
+        contactName: r.contactName,
+        contactEmail: r.contactEmail,
+        contactPhone: r.contactPhone,
         createdAt: r.createdAt,
         live: s?.live ?? 0,
         today: s?.today ?? 0,
@@ -109,6 +112,9 @@ const radioCreate = z.object({
   streamUrl: z.string().trim().max(500).nullish(),
   nowPlayingUrl: z.string().trim().max(500).nullish(),
   monthlyPrice: z.number().int().min(0).max(100000).nullish(),
+  contactName: z.string().trim().max(120).nullish(),
+  contactEmail: z.string().trim().max(254).nullish(),
+  contactPhone: z.string().trim().max(40).nullish(),
 });
 
 /* POST /v1/owner/radios — crée une radio (tenant). Démarre en "provisioning".
@@ -146,6 +152,9 @@ ownerRoutes.post("/radios", async (c) => {
       streamUrl,
       nowPlayingUrl,
       monthlyPrice: body.monthlyPrice ?? null,
+      contactName: body.contactName ?? null,
+      contactEmail: body.contactEmail ?? null,
+      contactPhone: body.contactPhone ?? null,
       status: "provisioning",
     })
     .returning();
@@ -162,6 +171,9 @@ const radioPatch = z.object({
   nowPlayingUrl: z.string().trim().max(500).nullish(),
   billingNote: z.string().trim().max(2000).nullish(),
   monthlyPrice: z.number().int().min(0).max(100000).nullish(),
+  contactName: z.string().trim().max(120).nullish(),
+  contactEmail: z.string().trim().max(254).nullish(),
+  contactPhone: z.string().trim().max(40).nullish(),
 });
 
 /* PATCH /v1/owner/radios/:id — gère une radio (statut, flux, forfait, note). */
@@ -175,4 +187,30 @@ ownerRoutes.patch("/radios/:id", async (c) => {
   if (!row) throw notFound("Radio introuvable");
   invalidateRadioCache();
   return c.json(row);
+});
+
+/* GET /v1/owner/health — ping du flux (now-playing/stream) de chaque radio.
+   Statut : up | down | none (pas d'URL). Best-effort, timeout 5s, en parallèle. */
+ownerRoutes.get("/health", async (c) => {
+  const rows = await db
+    .select({ id: radios.id, np: radios.nowPlayingUrl, stream: radios.streamUrl })
+    .from(radios);
+  const checks = await Promise.all(
+    rows.map(async (r) => {
+      const target = r.np || r.stream;
+      if (!target) return { id: r.id, status: "none", ms: null as number | null };
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      const start = Date.now();
+      try {
+        const res = await fetch(target, { signal: ctrl.signal });
+        return { id: r.id, status: res.ok ? "up" : "down", ms: Date.now() - start };
+      } catch {
+        return { id: r.id, status: "down", ms: null as number | null };
+      } finally {
+        clearTimeout(t);
+      }
+    }),
+  );
+  return c.json(checks);
 });

@@ -49,6 +49,9 @@ export interface RadioSummary {
   nowPlayingUrl: string | null;
   billingNote: string | null;
   monthlyPrice: number | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
   createdAt: string;
   live: number;
   today: number;
@@ -56,6 +59,13 @@ export interface RadioSummary {
   listenSec: number;
   artists: number;
   shows: number;
+}
+
+/** Santé du flux d'une radio (ping now-playing/stream, console opérateur). */
+export interface RadioHealth {
+  id: string;
+  status: "up" | "down" | "none";
+  ms: number | null;
 }
 
 /** Totaux agrégés sur tout le parc (console opérateur). */
