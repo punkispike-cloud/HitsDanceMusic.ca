@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { sql, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
-import { requireRole } from "../middleware/rbac.js";
+import { requireMinRole } from "../middleware/rbac.js";
 import type { AppBindings } from "../types.js";
 
 export const analyticsAdminRoutes = new Hono<AppBindings>();
@@ -146,7 +146,7 @@ analyticsAdminRoutes.get("/breakdown", async (c) => {
 
 /* GET /v1/admin/analytics/sessions — détail des visiteurs (IP, navigateur…).
    Superadmin uniquement (expose des données personnelles). */
-analyticsAdminRoutes.get("/sessions", requireRole("superadmin"), async (c) => {
+analyticsAdminRoutes.get("/sessions", requireMinRole("superadmin"), async (c) => {
   const limit = Math.min(500, Math.max(1, Number(c.req.query("limit")) || 200));
   const rows = await db
     .select()
@@ -158,7 +158,7 @@ analyticsAdminRoutes.get("/sessions", requireRole("superadmin"), async (c) => {
 
 /* GET /v1/admin/analytics/export?type=sessions|shows — téléchargement CSV.
    Superadmin uniquement. */
-analyticsAdminRoutes.get("/export", requireRole("superadmin"), async (c) => {
+analyticsAdminRoutes.get("/export", requireMinRole("superadmin"), async (c) => {
   const type = c.req.query("type") === "shows" ? "shows" : "sessions";
   let csv: string;
   let filename: string;

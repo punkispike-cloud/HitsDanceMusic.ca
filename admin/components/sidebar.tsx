@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { roleAtLeast, ROLE_LABEL } from "@/lib/types";
 
 const LINKS: { href: string; label: string; minRole?: "superadmin" }[] = [
   { href: "/dashboard", label: "Tableau de bord" },
@@ -28,7 +29,7 @@ export function Sidebar() {
         <span className="dot" /> Hits Dance
       </div>
       <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {LINKS.filter((l) => !l.minRole || user?.role === "superadmin").map((l) => (
+        {LINKS.filter((l) => !l.minRole || roleAtLeast(user?.role, l.minRole)).map((l) => (
           <Link
             key={l.href}
             href={l.href}
@@ -42,7 +43,7 @@ export function Sidebar() {
       <div className="user-box">
         <div style={{ fontWeight: 700, color: "var(--txt)" }}>{user?.displayName}</div>
         <div className={`role-badge role-${user?.role}`} style={{ marginTop: 6, display: "inline-block" }}>
-          {user?.role}
+          {user ? ROLE_LABEL[user.role] : ""}
         </div>
         <button className="btn btn-ghost btn-sm" style={{ marginTop: 12, width: "100%" }} onClick={() => void logout()}>
           Déconnexion

@@ -14,10 +14,16 @@ import {
   episodes,
   mixes,
 } from "../db/schema.js";
-import { slugify, slotTagSchema, registerSchema } from "../lib/validation.js";
+import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
 import { badRequest, notFound, conflict, forbidden } from "../lib/errors.js";
-import { requireRole, requireOwnershipOrAdmin, assertCanActAs } from "../middleware/rbac.js";
+import {
+  requireMinRole,
+  requireOwnershipOrAdmin,
+  assertCanActAs,
+  assertCanAssignRole,
+  assertCanManageUser,
+} from "../middleware/rbac.js";
 import { createAuthToken } from "../services/auth-tokens.js";
 import { sendEmail, inviteEmailHtml } from "../services/email.js";
 import { env, isResendConfigured } from "../env.js";
@@ -76,7 +82,7 @@ adminRoutes.get("/artists", async (c) => {
   );
 });
 
-adminRoutes.post("/artists", requireRole("superadmin"), async (c) => {
+adminRoutes.post("/artists", requireMinRole("superadmin"), async (c) => {
   const body = artistInput.parse(await c.req.json());
   const slug = slugify(body.slug || body.name);
   if (await db.query.artists.findFirst({ where: eq(artists.slug, slug) }))
@@ -108,7 +114,7 @@ adminRoutes.patch(
   },
 );
 
-adminRoutes.delete("/artists/:id", requireRole("superadmin"), async (c) => {
+adminRoutes.delete("/artists/:id", requireMinRole("superadmin"), async (c) => {
   const [row] = await db.delete(artists).where(eq(artists.id, c.req.param("id"))).returning();
   if (!row) throw notFound("Animateur introuvable");
   return c.json({ ok: true });
@@ -138,7 +144,7 @@ adminRoutes.get("/shows", async (c) => {
   );
 });
 
-adminRoutes.post("/shows", requireRole("superadmin", "animateur"), async (c) => {
+adminRoutes.post("/shows", requireMinRole("animateur"), async (c) => {
   const user = c.get("user");
   const body = showInput.parse(await c.req.json());
   // Un animateur ne peut créer une émission que rattachée à lui-même.
@@ -187,7 +193,7 @@ adminRoutes.get("/schedule-slots", async (c) => {
   );
 });
 
-adminRoutes.post("/schedule-slots", requireRole("superadmin", "animateur"), async (c) => {
+adminRoutes.post("/schedule-slots", requireMinRole("animateur"), async (c) => {
   const user = c.get("user");
   const body = slotInput.parse(await c.req.json());
   if (body.startMin >= body.endMin) throw badRequest("startMin doit être < endMin");
@@ -252,7 +258,7 @@ adminRoutes.get("/episodes", async (c) => {
   );
 });
 
-adminRoutes.post("/episodes", requireRole("superadmin", "animateur"), async (c) => {
+adminRoutes.post("/episodes", requireMinRole("animateur"), async (c) => {
   const user = c.get("user");
   const body = episodeInput.parse(await c.req.json());
   const artistId = user.role === "superadmin" ? body.artistId ?? null : user.artistId;
@@ -316,7 +322,7 @@ adminRoutes.get("/mixes", async (c) => {
   );
 });
 
-adminRoutes.post("/mixes", requireRole("superadmin", "animateur"), async (c) => {
+adminRoutes.post("/mixes", requireMinRole("animateur"), async (c) => {
   const user = c.get("user");
   const body = mixInput.parse(await c.req.json());
   const artistId = user.role === "superadmin" ? body.artistId ?? null : user.artistId;
@@ -360,7 +366,7 @@ adminRoutes.delete("/mixes/:id", requireOwnershipOrAdmin(loadMixOwner), async (c
 
 const userPatch = z.object({
   displayName: z.string().trim().min(1).max(120).optional(),
-  role: z.enum(["superadmin", "animateur", "lecteur"]).optional(),
+  role: roleSchema.optional(),
   artistId: z.string().uuid().nullish(),
   isActive: z.boolean().optional(),
 });
@@ -377,7 +383,7 @@ function publicUser(u: typeof users.$inferSelect) {
   };
 }
 
-adminRoutes.get("/users", requireRole("superadmin"), async (c) => {
+adminRoutes.get("/users", requireMinRole("superadmin"), async (c) => {
   const q = c.req.query("q")?.trim();
   const where: SQL | undefined = q
     ? or(ilike(users.email, `%${q}%`), ilike(users.displayName, `%${q}%`))
@@ -400,8 +406,9 @@ const userCreateSchema = registerSchema
     invite: z.boolean().optional(),
   });
 
-adminRoutes.post("/users", requireRole("superadmin"), async (c) => {
+adminRoutes.post("/users", requireMinRole("superadmin"), async (c) => {
   const body = userCreateSchema.parse(await c.req.json());
+  assertCanAssignRole(c.get("user"), body.role); // anti-escalade : jamais un rôle au-dessus du sien
   if (await db.query.users.findFirst({ where: eq(users.email, body.email) }))
     throw conflict("Email déjà utilisé");
 
@@ -437,9 +444,10 @@ adminRoutes.post("/users", requireRole("superadmin"), async (c) => {
 });
 
 /* POST /users/:id/invite — (re)génère et envoie un lien d'invitation. */
-adminRoutes.post("/users/:id/invite", requireRole("superadmin"), async (c) => {
+adminRoutes.post("/users/:id/invite", requireMinRole("superadmin"), async (c) => {
   const user = await db.query.users.findFirst({ where: eq(users.id, c.req.param("id")) });
   if (!user) throw notFound("Utilisateur introuvable");
+  assertCanManageUser(c.get("user"), user.role); // pas d'invitation d'un compte de rang supérieur
   const token = await createAuthToken(user.id, "invite", 48 * 60 * 60);
   const link = `${env.ADMIN_BASE_URL.replace(/\/$/, "")}/set-password?token=${token}`;
   const invited = await sendEmail({
@@ -450,21 +458,32 @@ adminRoutes.post("/users/:id/invite", requireRole("superadmin"), async (c) => {
   return c.json({ ok: true, invited, emailConfigured: isResendConfigured() });
 });
 
-adminRoutes.patch("/users/:id", requireRole("superadmin"), async (c) => {
+adminRoutes.patch("/users/:id", requireMinRole("superadmin"), async (c) => {
+  const actor = c.get("user");
+  const id = c.req.param("id");
   const body = userPatch.parse(await c.req.json());
+  const target = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (!target) throw notFound("Utilisateur introuvable");
+  // Anti-escalade : on ne modifie pas un compte de rang supérieur, et on
+  // n'attribue pas un rôle au-dessus du sien.
+  assertCanManageUser(actor, target.role);
+  if (body.role) assertCanAssignRole(actor, body.role);
   const [row] = await db
     .update(users)
     .set({ ...body, updatedAt: new Date() })
-    .where(eq(users.id, c.req.param("id")))
+    .where(eq(users.id, id))
     .returning();
   if (!row) throw notFound("Utilisateur introuvable");
   return c.json(publicUser(row));
 });
 
-adminRoutes.delete("/users/:id", requireRole("superadmin"), async (c) => {
+adminRoutes.delete("/users/:id", requireMinRole("superadmin"), async (c) => {
+  const actor = c.get("user");
   const id = c.req.param("id");
-  if (id === c.get("user").userId) throw badRequest("Tu ne peux pas supprimer ton propre compte");
-  const [row] = await db.delete(users).where(eq(users.id, id)).returning();
-  if (!row) throw notFound("Utilisateur introuvable");
+  if (id === actor.userId) throw badRequest("Tu ne peux pas supprimer ton propre compte");
+  const target = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (!target) throw notFound("Utilisateur introuvable");
+  assertCanManageUser(actor, target.role); // anti-escalade : pas de suppression d'un rang supérieur
+  await db.delete(users).where(eq(users.id, id));
   return c.json({ ok: true });
 });

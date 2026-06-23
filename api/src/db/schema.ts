@@ -22,7 +22,10 @@ import { relations, sql } from "drizzle-orm";
 
 /* ───────────────────────── Enums ───────────────────────── */
 
-export const userRole = pgEnum("user_role", ["superadmin", "animateur", "lecteur"]);
+export const userRole = pgEnum("user_role", ["owner", "superadmin", "animateur", "lecteur"]);
+
+// Cycle de vie d'une radio cliente dans le parc (multi-tenant).
+export const radioStatus = pgEnum("radio_status", ["active", "provisioning", "paused"]);
 
 // Calque exact de SLOT_TAGS (js/schedule.js:8-16)
 export const slotTag = pgEnum("slot_tag", [
@@ -44,6 +47,30 @@ const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 };
+
+/* ───────────────────────── radios (tenants) ─────────────────────────
+   Registre des radios clientes (multi-tenant). Chaque ligne = une radio.
+   `slug` = la marque (= SEED_BRAND : hitsdance, rockradio, …). Le contenu de
+   chaque radio sera cloisonné par `radio_id` (ajouté ensuite aux tables). */
+
+export const radios = pgTable(
+  "radios",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull(), // = SEED_BRAND
+    name: text("name").notNull(),
+    status: radioStatus("status").notNull().default("provisioning"),
+    plan: text("plan"), // starter | growth | pro… (facturation tenue hors dépôt)
+    domains: jsonb("domains").notNull().default(sql`'[]'::jsonb`), // hôtes du site public
+    streamUrl: text("stream_url"), // flux audio (AzuraCast/Icecast ou externe)
+    nowPlayingUrl: text("now_playing_url"), // now-playing de la station
+    billingNote: text("billing_note"),
+    ...timestamps,
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("radios_slug_idx").on(t.slug),
+  }),
+);
 
 /* ───────────────────────── artists (animateurs / DJs) ───────────────────────── */
 
@@ -443,3 +470,6 @@ export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type AuditLogRow = typeof auditLog.$inferSelect;
 export type AuthToken = typeof authTokens.$inferSelect;
+export type Radio = typeof radios.$inferSelect;
+export type NewRadio = typeof radios.$inferInsert;
+export type RadioStatus = (typeof radioStatus.enumValues)[number];

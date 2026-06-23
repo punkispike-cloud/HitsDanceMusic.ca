@@ -12,7 +12,7 @@ export const emailSchema = z
 // 12 caractères minimum pour des comptes équipe (pas du grand public).
 export const passwordSchema = z.string().min(12, "Mot de passe trop court (≥ 12)").max(200);
 
-export const roleSchema = z.enum(["superadmin", "animateur", "lecteur"]);
+export const roleSchema = z.enum(["owner", "superadmin", "animateur", "lecteur"]);
 
 export const slotTagSchema = z.enum([
   "morning",

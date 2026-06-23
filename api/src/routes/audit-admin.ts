@@ -5,12 +5,12 @@ import { Hono } from "hono";
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { auditLog } from "../db/schema.js";
-import { requireRole } from "../middleware/rbac.js";
+import { requireMinRole } from "../middleware/rbac.js";
 import type { AppBindings } from "../types.js";
 
 export const auditAdminRoutes = new Hono<AppBindings>();
 
-auditAdminRoutes.get("/", requireRole("superadmin"), async (c) => {
+auditAdminRoutes.get("/", requireMinRole("superadmin"), async (c) => {
   const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 100));
   const offset = Math.max(0, Number(c.req.query("offset")) || 0);
   const entity = c.req.query("entity");

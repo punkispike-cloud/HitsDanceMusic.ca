@@ -43,6 +43,20 @@
       "when": 1782166109050,
       "tag": "0005_optimal_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782217152844,
+      "tag": "0006_heavy_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782217413473,
+      "tag": "0007_wild_peter_parker",
+      "breakpoints": true
     }
   ]
 }

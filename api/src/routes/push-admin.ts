@@ -6,7 +6,7 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { pushSubscriptions } from "../db/schema.js";
-import { requireRole } from "../middleware/rbac.js";
+import { requireMinRole } from "../middleware/rbac.js";
 import { notifyShow } from "../services/push.js";
 import { isPushConfigured } from "../env.js";
 import type { AppBindings } from "../types.js";
@@ -31,7 +31,7 @@ const notifySchema = z.object({
 });
 
 /* POST /v1/admin/push/notify — diffuse une notification (superadmin). */
-pushAdminRoutes.post("/notify", requireRole("superadmin"), async (c) => {
+pushAdminRoutes.post("/notify", requireMinRole("superadmin"), async (c) => {
   if (!isPushConfigured()) return c.json({ error: { code: "push_disabled", message: "Push non activé" } }, 503);
   const body = notifySchema.parse(await c.req.json());
   const sent = await notifyShow(body.showSlug ?? "__all__", {

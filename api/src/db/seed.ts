@@ -36,6 +36,33 @@ async function seedSuperadmin() {
   console.log(`[seed] superadmin créé : ${env.SEED_ADMIN_EMAIL}`);
 }
 
+/* Compte PROPRIÉTAIRE En Ondes (rôle `owner`, cross-radio). Idempotent ET
+   rejouable : crée le compte s'il manque, le PROMEUT en owner s'il existe déjà
+   (ainsi un superadmin existant — ex. le compte hôte de Hits Dance — devient
+   owner sans SQL manuel). Posé seulement si SEED_OWNER_* sont fournis. */
+async function seedOwner() {
+  if (!env.SEED_OWNER_EMAIL || !env.SEED_OWNER_PASSWORD) return;
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, env.SEED_OWNER_EMAIL),
+  });
+  if (existing) {
+    if (existing.role !== "owner") {
+      await db.update(users).set({ role: "owner", updatedAt: new Date() }).where(eq(users.id, existing.id));
+      console.log(`[seed] compte promu owner : ${env.SEED_OWNER_EMAIL}`);
+    } else {
+      console.log(`[seed] owner déjà présent : ${env.SEED_OWNER_EMAIL}`);
+    }
+    return;
+  }
+  await db.insert(users).values({
+    email: env.SEED_OWNER_EMAIL,
+    passwordHash: await hashPassword(env.SEED_OWNER_PASSWORD),
+    displayName: "En Ondes (propriétaire)",
+    role: "owner",
+  });
+  console.log(`[seed] owner créé : ${env.SEED_OWNER_EMAIL}`);
+}
+
 async function seedArtists(seedArtistList: SeedArtist[]): Promise<Map<string, string>> {
   const bySlug = new Map<string, string>();
   for (const a of seedArtistList) {
@@ -159,8 +186,10 @@ async function main() {
   // Sanity : la DB répond ?
   await db.execute(sql`SELECT 1`);
 
-  // Le superadmin est toujours garanti (création idempotente).
+  // Le superadmin (admin de la radio) + le propriétaire En Ondes sont toujours
+  // garantis (création/promotion idempotente).
   await seedSuperadmin();
+  await seedOwner();
 
   // Le contenu (animateurs / émissions / grille) n'est seedé QUE si la base
   // est vierge. Sur une base déjà peuplée, on ne touche à rien → les éditions

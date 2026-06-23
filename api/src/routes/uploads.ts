@@ -12,7 +12,7 @@ import { uploadIntents, episodes, mixes } from "../db/schema.js";
 import { env } from "../env.js";
 import { badRequest, notFound, forbidden, AppError } from "../lib/errors.js";
 import { presignPut, headObject, publicUrl, isS3Configured } from "../lib/s3.js";
-import { requireRole, assertCanActAs } from "../middleware/rbac.js";
+import { requireMinRole, assertCanActAs } from "../middleware/rbac.js";
 import type { AppBindings } from "../types.js";
 
 export const uploadRoutes = new Hono<AppBindings>();
@@ -45,7 +45,7 @@ const presignSchema = z.object({
 });
 
 /* POST /v1/admin/uploads/presign */
-uploadRoutes.post("/presign", requireRole("superadmin", "animateur"), async (c) => {
+uploadRoutes.post("/presign", requireMinRole("animateur"), async (c) => {
   ensureS3();
   const user = c.get("user");
   const body = presignSchema.parse(await c.req.json());
@@ -81,7 +81,7 @@ const confirmSchema = z.object({
 });
 
 /* POST /v1/admin/uploads/confirm */
-uploadRoutes.post("/confirm", requireRole("superadmin", "animateur"), async (c) => {
+uploadRoutes.post("/confirm", requireMinRole("animateur"), async (c) => {
   ensureS3();
   const user = c.get("user");
   const body = confirmSchema.parse(await c.req.json());

@@ -79,6 +79,11 @@ export const env = {
 
   SEED_ADMIN_EMAIL: optional("SEED_ADMIN_EMAIL", ""),
   SEED_ADMIN_PASSWORD: optional("SEED_ADMIN_PASSWORD", ""),
+  // Compte PROPRIÉTAIRE (En Ondes) — rôle `owner`, au-dessus de l'admin client.
+  // Posé uniquement sur les instances de l'hôte. Crée le compte s'il manque,
+  // PROMEUT en owner s'il existe déjà (migration douce d'un superadmin existant).
+  SEED_OWNER_EMAIL: optional("SEED_OWNER_EMAIL", ""),
+  SEED_OWNER_PASSWORD: optional("SEED_OWNER_PASSWORD", ""),
   // Marque seedée : "hitsdance" → contenu démo Hits Dance. Tout autre valeur
   // (= nouveau client) → DB de contenu vierge, à remplir via l'admin.
   SEED_BRAND: optional("SEED_BRAND", "hitsdance"),

@@ -19,7 +19,7 @@ import {
 import { badRequest, unauthorized, conflict } from "../lib/errors.js";
 import { env } from "../env.js";
 import { requireAuth } from "../middleware/auth.js";
-import { requireRole } from "../middleware/rbac.js";
+import { requireMinRole, assertCanAssignRole } from "../middleware/rbac.js";
 import {
   issueTokenPair,
   rotateRefreshToken,
@@ -57,8 +57,9 @@ function tokenResponse(pair: TokenPair) {
 export const authRoutes = new Hono<AppBindings>();
 
 /* POST /auth/register — création de compte équipe (superadmin uniquement). */
-authRoutes.post("/register", requireAuth, requireRole("superadmin"), async (c) => {
+authRoutes.post("/register", requireAuth, requireMinRole("superadmin"), async (c) => {
   const body = registerSchema.parse(await c.req.json());
+  assertCanAssignRole(c.get("user"), body.role); // anti-escalade : jamais un rôle au-dessus du sien
   const existing = await db.query.users.findFirst({ where: eq(users.email, body.email) });
   if (existing) throw conflict("Un compte existe déjà avec cet email", "email_taken");
   const [created] = await db

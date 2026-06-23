@@ -16,8 +16,19 @@ export function requireRole(...roles: Role[]): MiddlewareHandler<AppBindings> {
   };
 }
 
-/** Hiérarchie : superadmin > animateur > lecteur. */
-const RANK: Record<Role, number> = { lecteur: 1, animateur: 2, superadmin: 3 };
+/** Hiérarchie : owner > superadmin > animateur > lecteur.
+    `owner` = En Ondes (propriétaire de la plateforme, cross-radio) ; `superadmin`
+    = admin d'UNE radio cliente. */
+export const RANK: Record<Role, number> = { lecteur: 1, animateur: 2, superadmin: 3, owner: 4 };
+
+/** Admin d'une radio OU au-dessus (superadmin ou owner) — court-circuite l'ownership. */
+export function isAdminOrAbove(role: Role): boolean {
+  return RANK[role] >= RANK.superadmin;
+}
+
+/** Réservé au propriétaire de la plateforme En Ondes (cross-radio). */
+export const requireOwner = requireRole("owner");
+
 export function requireMinRole(min: Role): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const user = c.get("user");
@@ -32,7 +43,7 @@ type OwnerLoader = (id: string) => Promise<{ artistId: string | null } | undefin
 export function requireOwnershipOrAdmin(loader: OwnerLoader): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const user = c.get("user");
-    if (user.role === "superadmin") return next();
+    if (isAdminOrAbove(user.role)) return next();
     const id = c.req.param("id");
     if (!id) throw notFound();
     const resource = await loader(id);
@@ -46,8 +57,24 @@ export function requireOwnershipOrAdmin(loader: OwnerLoader): MiddlewareHandler<
 
 /** Helper hors middleware : un animateur ne peut écrire que son contenu. */
 export function assertCanActAs(user: AuthUser, targetArtistId: string | null): void {
-  if (user.role === "superadmin") return;
+  if (isAdminOrAbove(user.role)) return;
   if (!user.artistId || targetArtistId !== user.artistId) {
     throw forbidden("Tu ne peux agir que sur ton propre contenu");
+  }
+}
+
+/** Anti-escalade : on n'ATTRIBUE jamais un rôle supérieur au sien.
+    → un `superadmin` ne peut pas créer/promouvoir un `owner`. */
+export function assertCanAssignRole(actor: AuthUser, targetRole: Role): void {
+  if (RANK[targetRole] > RANK[actor.role]) {
+    throw forbidden("Tu ne peux pas attribuer un rôle supérieur au tien");
+  }
+}
+
+/** Anti-escalade : on ne GÈRE (modifie/supprime/désactive) jamais un compte de
+    rang supérieur au sien. → un `superadmin` ne peut pas toucher un `owner`. */
+export function assertCanManageUser(actor: AuthUser, targetRole: Role): void {
+  if (RANK[targetRole] > RANK[actor.role]) {
+    throw forbidden("Tu ne peux pas gérer un compte de rang supérieur");
   }
 }

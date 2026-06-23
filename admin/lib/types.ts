@@ -1,6 +1,22 @@
 /* Types partagés côté admin (miroir des entités de l'API). */
 
-export type Role = "superadmin" | "animateur" | "lecteur";
+export type Role = "owner" | "superadmin" | "animateur" | "lecteur";
+
+/** Hiérarchie : owner > superadmin > animateur > lecteur (miroir de l'API). */
+export const ROLE_RANK: Record<Role, number> = { lecteur: 1, animateur: 2, superadmin: 3, owner: 4 };
+
+/** Le rôle est-il au moins de rang `min` ? (owner satisfait toujours superadmin). */
+export function roleAtLeast(role: Role | undefined | null, min: Role): boolean {
+  return !!role && ROLE_RANK[role] >= ROLE_RANK[min];
+}
+
+/** Libellés affichés (la valeur DB reste `superadmin`/`owner`). */
+export const ROLE_LABEL: Record<Role, string> = {
+  owner: "Propriétaire",
+  superadmin: "Admin",
+  animateur: "Animateur",
+  lecteur: "Lecteur",
+};
 export type SlotTag =
   | "morning"
   | "hitlist"

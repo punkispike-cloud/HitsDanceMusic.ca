@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
 import { Spinner, Empty } from "@/components/ui";
+import { roleAtLeast, ROLE_LABEL } from "@/lib/types";
 import type { AdminUser, Artist } from "@/lib/types";
 
 const columns: Column<AdminUser>[] = [
@@ -14,7 +15,7 @@ const columns: Column<AdminUser>[] = [
   {
     key: "role",
     label: "Rôle",
-    render: (r) => <span className={`role-badge role-${r.role}`}>{r.role}</span>,
+    render: (r) => <span className={`role-badge role-${r.role}`}>{ROLE_LABEL[r.role]}</span>,
   },
   {
     key: "isActive",
@@ -56,17 +57,26 @@ export default function UtilisateursPage() {
     api.get<Artist[]>("/v1/admin/artists").then(setArtists).catch(() => setArtists([]));
   }, []);
 
-  if (user?.role !== "superadmin") {
+  if (!user || !roleAtLeast(user.role, "superadmin")) {
     return (
       <div>
         <div className="page-head">
           <h1>Utilisateurs</h1>
         </div>
-        <Empty label="Réservé aux super-administrateurs." />
+        <Empty label="Réservé aux administrateurs." />
       </div>
     );
   }
   if (!artists) return <Spinner />;
+
+  // Le rôle « Propriétaire » (owner) n'est proposé qu'à un owner (anti-escalade,
+  // miroir du bornage côté API).
+  const roleOptions = [
+    ...(user.role === "owner" ? [{ value: "owner", label: ROLE_LABEL.owner }] : []),
+    { value: "superadmin", label: ROLE_LABEL.superadmin },
+    { value: "animateur", label: ROLE_LABEL.animateur },
+    { value: "lecteur", label: ROLE_LABEL.lecteur },
+  ];
 
   // Champs création (POST /users) : email + password requis ; édition gérée à part.
   const fields: FieldConfig[] = [
@@ -77,11 +87,7 @@ export default function UtilisateursPage() {
       label: "Rôle",
       type: "select",
       half: true,
-      options: [
-        { value: "superadmin", label: "Super admin" },
-        { value: "animateur", label: "Animateur" },
-        { value: "lecteur", label: "Lecteur" },
-      ],
+      options: roleOptions,
       default: "lecteur",
     },
     {
