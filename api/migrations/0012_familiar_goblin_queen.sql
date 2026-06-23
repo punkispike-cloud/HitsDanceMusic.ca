@@ -1,0 +1,1 @@
+ALTER TABLE "radios" ADD COLUMN "license_confirmed" boolean DEFAULT false NOT NULL;

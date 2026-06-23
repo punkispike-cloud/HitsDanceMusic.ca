@@ -92,6 +92,7 @@ ownerRoutes.get("/radios", async (c) => {
         contactName: r.contactName,
         contactEmail: r.contactEmail,
         contactPhone: r.contactPhone,
+        licenseConfirmed: r.licenseConfirmed,
         createdAt: r.createdAt,
         live: s?.live ?? 0,
         today: s?.today ?? 0,
@@ -115,6 +116,7 @@ const radioCreate = z.object({
   contactName: z.string().trim().max(120).nullish(),
   contactEmail: z.string().trim().max(254).nullish(),
   contactPhone: z.string().trim().max(40).nullish(),
+  licenseConfirmed: z.boolean().optional(),
 });
 
 /* POST /v1/owner/radios — crée une radio (tenant). Démarre en "provisioning".
@@ -155,6 +157,7 @@ ownerRoutes.post("/radios", async (c) => {
       contactName: body.contactName ?? null,
       contactEmail: body.contactEmail ?? null,
       contactPhone: body.contactPhone ?? null,
+      licenseConfirmed: body.licenseConfirmed ?? false,
       status: "provisioning",
     })
     .returning();
@@ -174,6 +177,7 @@ const radioPatch = z.object({
   contactName: z.string().trim().max(120).nullish(),
   contactEmail: z.string().trim().max(254).nullish(),
   contactPhone: z.string().trim().max(40).nullish(),
+  licenseConfirmed: z.boolean().optional(),
 });
 
 /* PATCH /v1/owner/radios/:id — gère une radio (statut, flux, forfait, note). */
@@ -213,4 +217,28 @@ ownerRoutes.get("/health", async (c) => {
     }),
   );
   return c.json(checks);
+});
+
+/* GET /v1/owner/timeseries?days=30&radio=<id?> — série quotidienne (visiteurs +
+   écoute). Agrégée sur tout le parc, ou scopée à une radio si `radio` fourni. */
+ownerRoutes.get("/timeseries", async (c) => {
+  const days = Math.min(180, Math.max(1, Number(c.req.query("days")) || 30));
+  const radio = c.req.query("radio");
+  const radioFilter = radio ? sql`AND s.radio_id = ${radio}` : sql``;
+  const result = await db.execute(sql`
+    SELECT to_char(d::date, 'YYYY-MM-DD') AS day,
+           count(s.id)::int AS sessions,
+           coalesce(sum(s.listen_sec), 0)::int AS listen_sec
+    FROM generate_series(
+           (now() AT TIME ZONE 'America/Toronto')::date - (${days - 1} || ' days')::interval,
+           (now() AT TIME ZONE 'America/Toronto')::date,
+           interval '1 day'
+         ) d
+    LEFT JOIN analytics_sessions s
+           ON date_trunc('day', s.first_seen AT TIME ZONE 'America/Toronto') = d
+          ${radioFilter}
+    GROUP BY d
+    ORDER BY d
+  `);
+  return c.json(result.rows);
 });

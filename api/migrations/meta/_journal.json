@@ -85,6 +85,13 @@
       "when": 1782237075312,
       "tag": "0011_glamorous_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1782237689331,
+      "tag": "0012_familiar_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

@@ -6,12 +6,21 @@
    Réservé au rôle owner (le backend refuse aussi pour les autres). */
 
 import { useEffect, useState, useCallback, type ReactNode, type FormEvent } from "react";
+import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
 import { useToast } from "@/components/toast";
 import { Spinner, Empty } from "@/components/ui";
-import { formatDuration, type RadioSummary, type OwnerOverview, type RadioStatus, type RadioHealth } from "@/lib/types";
+import { TrendChart, type TrendPoint } from "@/components/trend-chart";
+import {
+  formatDuration,
+  type RadioSummary,
+  type OwnerOverview,
+  type RadioStatus,
+  type RadioHealth,
+  type OwnerTimeseriesPoint,
+} from "@/lib/types";
 
 const STATUS_LABEL: Record<RadioStatus, string> = {
   active: "Active",
@@ -32,6 +41,7 @@ export default function ParcPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<RadioSummary | null>(null);
   const [health, setHealth] = useState<Record<string, RadioHealth>>({});
+  const [series, setSeries] = useState<TrendPoint[]>([]);
   const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
 
   const isOwner = user?.role === "owner";
@@ -43,6 +53,10 @@ export default function ParcPage() {
       .get<RadioHealth[]>("/v1/owner/health")
       .then((h) => setHealth(Object.fromEntries(h.map((x) => [x.id, x]))))
       .catch(() => setHealth({}));
+    api
+      .get<OwnerTimeseriesPoint[]>("/v1/owner/timeseries?days=30")
+      .then((rows) => setSeries(rows.map((r) => ({ day: r.day, value: r.sessions }))))
+      .catch(() => setSeries([]));
   }, []);
 
   useEffect(() => {
@@ -70,6 +84,32 @@ export default function ParcPage() {
     } catch (e) {
       toast((e as ApiError).message, "error");
     }
+  };
+
+  const exportCsv = () => {
+    if (!radios) return;
+    const esc = (v: unknown) => {
+      let s = v == null ? "" : String(v);
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const head = ["Radio", "Slug", "Statut", "Forfait", "Prix_$/mois", "Contact_nom", "Contact_courriel", "Contact_tel", "Auditeurs_jour", "Visiteurs_total", "Licences_OK"];
+    const lines = [head.join(",")];
+    for (const r of radios)
+      lines.push(
+        [r.name, r.slug, r.status, r.plan ?? "", r.monthlyPrice ?? "", r.contactName ?? "", r.contactEmail ?? "", r.contactPhone ?? "", r.today, r.sessions, r.licenseConfirmed ? "oui" : "non"]
+          .map(esc)
+          .join(","),
+      );
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "parc-en-ondes.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const createRadio = async (e: FormEvent) => {
@@ -119,6 +159,24 @@ export default function ParcPage() {
         <Kpi label="Écoute cumulée" value={formatDuration(overview.listenSec)} />
       </div>
 
+      <div
+        style={{
+          background: "var(--panel, #15151b)",
+          border: "1px solid var(--border, #2a2a33)",
+          borderRadius: 10,
+          padding: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <strong>Visiteurs — 30 derniers jours (tout le parc)</strong>
+          <button className="btn btn-sm btn-ghost" type="button" onClick={exportCsv}>
+            ⬇ Export CSV
+          </button>
+        </div>
+        <TrendChart points={series} />
+      </div>
+
       <table className="table">
         <thead>
           <tr>
@@ -136,7 +194,10 @@ export default function ParcPage() {
           {radios.map((r) => (
             <tr key={r.id} style={selectedId === r.id ? { outline: "1px solid var(--accent, #3aa0ff)" } : undefined}>
               <td>
-                <HealthDot h={health[r.id]} /> <strong>{r.name}</strong>
+                <HealthDot h={health[r.id]} />{" "}
+                <Link href={`/parc/${r.id}`} style={{ color: "var(--txt, #eee)", textDecoration: "underline" }}>
+                  <strong>{r.name}</strong>
+                </Link>
                 <br />
                 <span style={{ color: "#9aa", fontSize: 12 }}>
                   {r.slug}
@@ -241,6 +302,7 @@ function RadioEditPanel({
     contactName: radio.contactName ?? "",
     contactEmail: radio.contactEmail ?? "",
     contactPhone: radio.contactPhone ?? "",
+    licenseConfirmed: radio.licenseConfirmed,
   });
 
   const save = async (e: FormEvent) => {
@@ -259,6 +321,7 @@ function RadioEditPanel({
         contactName: f.contactName || null,
         contactEmail: f.contactEmail || null,
         contactPhone: f.contactPhone || null,
+        licenseConfirmed: f.licenseConfirmed,
       });
       toast("Radio enregistrée ✓", "ok");
       onSaved();
@@ -328,6 +391,14 @@ function RadioEditPanel({
             rows={2}
             style={{ ...inputStyle, resize: "vertical" }}
           />
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, gridColumn: "1 / -1", fontSize: 13, color: "var(--txt, #eee)" }}>
+          <input
+            type="checkbox"
+            checked={f.licenseConfirmed}
+            onChange={(e) => setF({ ...f, licenseConfirmed: e.target.checked })}
+          />
+          Licences SOCAN / Re:Sound reçues
         </label>
         <div style={{ gridColumn: "1 / -1", display: "flex", gap: 10, marginTop: 4 }}>
           <button className="btn" type="submit" disabled={saving || !f.name.trim()}>

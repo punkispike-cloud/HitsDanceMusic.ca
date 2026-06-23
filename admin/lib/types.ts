@@ -52,6 +52,7 @@ export interface RadioSummary {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  licenseConfirmed: boolean;
   createdAt: string;
   live: number;
   today: number;
@@ -59,6 +60,13 @@ export interface RadioSummary {
   listenSec: number;
   artists: number;
   shows: number;
+}
+
+/** Point de série quotidienne (console opérateur : courbes de tendance). */
+export interface OwnerTimeseriesPoint {
+  day: string;
+  sessions: number;
+  listen_sec: number;
 }
 
 /** Santé du flux d'une radio (ping now-playing/stream, console opérateur). */

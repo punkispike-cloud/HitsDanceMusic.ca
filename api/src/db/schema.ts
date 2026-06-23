@@ -69,6 +69,7 @@ export const radios = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
+    licenseConfirmed: boolean("license_confirmed").notNull().default(false), // SOCAN/Re:Sound reçues
     ...timestamps,
   },
   (t) => ({
