@@ -57,6 +57,13 @@
       "when": 1782217413473,
       "tag": "0007_wild_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782217908984,
+      "tag": "0008_dizzy_kree",
+      "breakpoints": true
     }
   ]
 }

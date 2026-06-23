@@ -87,6 +87,8 @@ export const env = {
   // Marque seedée : "hitsdance" → contenu démo Hits Dance. Tout autre valeur
   // (= nouveau client) → DB de contenu vierge, à remplir via l'admin.
   SEED_BRAND: optional("SEED_BRAND", "hitsdance"),
+  // Nom affiché de la radio (tenant). Défaut : dérivé de SEED_BRAND.
+  SEED_RADIO_NAME: optional("SEED_RADIO_NAME", ""),
 
   // URL publique du site (liens RSS, partage, emails). Sans slash final requis.
   PUBLIC_SITE_URL: optional("PUBLIC_SITE_URL", "https://hitsdancemusic.ca"),

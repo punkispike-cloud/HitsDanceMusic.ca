@@ -3,16 +3,30 @@
    - Créneaux : purge + ré-insertion (la grille est un tout cohérent).
    Lancer : `npm run seed`. */
 
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, isNull, and, ne } from "drizzle-orm";
 import { db, pool } from "./client.js";
-import { users, artists, shows, scheduleSlots } from "./schema.js";
+import {
+  users,
+  artists,
+  shows,
+  scheduleSlots,
+  radios,
+  episodes,
+  mixes,
+  analyticsSessions,
+  analyticsShowListen,
+  trackHistory,
+  pushSubscriptions,
+  auditLog,
+  uploadIntents,
+} from "./schema.js";
 import { hashPassword } from "../lib/password.js";
 import { toMinutes } from "../lib/validation.js";
 import { env } from "../env.js";
 import type { SeedArtist, SeedShow, ScheduleRow } from "./seed-data.js";
 import { loadSeedBundle } from "./seeds.js";
 
-async function seedSuperadmin() {
+async function seedSuperadmin(radioId: string) {
   if (!env.SEED_ADMIN_EMAIL || !env.SEED_ADMIN_PASSWORD) {
     console.warn("[seed] SEED_ADMIN_EMAIL/PASSWORD absents — superadmin non créé.");
     return;
@@ -32,6 +46,7 @@ async function seedSuperadmin() {
     passwordHash: await hashPassword(env.SEED_ADMIN_PASSWORD),
     displayName: "Super Admin",
     role: "superadmin",
+    radioId,
   });
   console.log(`[seed] superadmin créé : ${env.SEED_ADMIN_EMAIL}`);
 }
@@ -63,12 +78,50 @@ async function seedOwner() {
   console.log(`[seed] owner créé : ${env.SEED_OWNER_EMAIL}`);
 }
 
-async function seedArtists(seedArtistList: SeedArtist[]): Promise<Map<string, string>> {
+// Noms « jolis » connus pour les marques de départ ; sinon = le slug.
+const RADIO_NAMES: Record<string, string> = {
+  hitsdance: "Hits Dance Music",
+  rockradio: "Radio Rockfort",
+};
+
+/* Garantit la ligne `radios` du tenant de cette instance (1 radio par
+   déploiement, identifiée par SEED_BRAND). Idempotent. Renvoie son id. */
+async function ensureDefaultRadio(): Promise<string> {
+  const slug = env.SEED_BRAND;
+  const name = env.SEED_RADIO_NAME || RADIO_NAMES[slug] || slug;
+  const existing = await db.query.radios.findFirst({ where: eq(radios.slug, slug) });
+  if (existing) return existing.id;
+  const [row] = await db.insert(radios).values({ slug, name, status: "active" }).returning();
+  console.log(`[seed] radio (tenant) créée : ${slug} (${name})`);
+  return row!.id;
+}
+
+/* Back-remplit radio_id sur toute ligne orpheline (données créées AVANT le
+   multi-tenant, ex. la prod Hits Dance existante). Idempotent : ne touche QUE
+   radio_id IS NULL. Les comptes `owner` (cross-radio) restent à null. */
+async function backfillRadioId(radioId: string): Promise<void> {
+  await db.update(artists).set({ radioId }).where(isNull(artists.radioId));
+  await db.update(shows).set({ radioId }).where(isNull(shows.radioId));
+  await db.update(scheduleSlots).set({ radioId }).where(isNull(scheduleSlots.radioId));
+  await db.update(episodes).set({ radioId }).where(isNull(episodes.radioId));
+  await db.update(mixes).set({ radioId }).where(isNull(mixes.radioId));
+  await db.update(analyticsSessions).set({ radioId }).where(isNull(analyticsSessions.radioId));
+  await db.update(analyticsShowListen).set({ radioId }).where(isNull(analyticsShowListen.radioId));
+  await db.update(trackHistory).set({ radioId }).where(isNull(trackHistory.radioId));
+  await db.update(pushSubscriptions).set({ radioId }).where(isNull(pushSubscriptions.radioId));
+  await db.update(auditLog).set({ radioId }).where(isNull(auditLog.radioId));
+  await db.update(uploadIntents).set({ radioId }).where(isNull(uploadIntents.radioId));
+  await db.update(users).set({ radioId }).where(and(isNull(users.radioId), ne(users.role, "owner")));
+  console.log("[seed] radio_id back-rempli sur les lignes orphelines (idempotent).");
+}
+
+async function seedArtists(seedArtistList: SeedArtist[], radioId: string): Promise<Map<string, string>> {
   const bySlug = new Map<string, string>();
   for (const a of seedArtistList) {
     const [row] = await db
       .insert(artists)
       .values({
+        radioId,
         slug: a.slug,
         name: a.name,
         photoUrl: a.photoUrl,
@@ -98,13 +151,14 @@ async function seedArtists(seedArtistList: SeedArtist[]): Promise<Map<string, st
   return bySlug;
 }
 
-async function seedShows(seedShowList: SeedShow[], artistIdBySlug: Map<string, string>) {
+async function seedShows(seedShowList: SeedShow[], artistIdBySlug: Map<string, string>, radioId: string) {
   for (const s of seedShowList) {
     const slug = slugifyTitle(s.title);
     const artistId = s.artistSlug ? artistIdBySlug.get(s.artistSlug) ?? null : null;
     await db
       .insert(shows)
       .values({
+        radioId,
         slug,
         title: s.title,
         badge: s.badge,
@@ -135,12 +189,16 @@ async function seedSchedule(
   schedule: Record<number, ScheduleRow[]>,
   hostToArtistSlug: Record<string, string | null>,
   artistIdBySlug: Map<string, string>,
+  radioId: string,
 ) {
-  // Index titre d'émission → id (best-effort pour lier les créneaux).
-  const showRows = await db.select({ id: shows.id, title: shows.title }).from(shows);
+  // Index titre d'émission → id (best-effort pour lier les créneaux), scopé radio.
+  const showRows = await db
+    .select({ id: shows.id, title: shows.title })
+    .from(shows)
+    .where(eq(shows.radioId, radioId));
   const showIdByTitle = new Map(showRows.map((r) => [r.title.toLowerCase(), r.id]));
 
-  await db.delete(scheduleSlots);
+  await db.delete(scheduleSlots).where(eq(scheduleSlots.radioId, radioId));
   let count = 0;
   for (let day = 0; day <= 6; day++) {
     for (const [from, to, title, host, tag] of schedule[day] ?? []) {
@@ -154,6 +212,7 @@ async function seedSchedule(
       const artistId = artistSlug ? artistIdBySlug.get(artistSlug) ?? null : null;
       const showId = showIdByTitle.get(title.toLowerCase()) ?? null;
       await db.insert(scheduleSlots).values({
+        radioId,
         dayOfWeek: day,
         startMin,
         endMin,
@@ -186,9 +245,13 @@ async function main() {
   // Sanity : la DB répond ?
   await db.execute(sql`SELECT 1`);
 
+  // Tenant de cette instance (1 radio par déploiement). Tout le contenu + les
+  // comptes y sont rattachés via radio_id.
+  const radioId = await ensureDefaultRadio();
+
   // Le superadmin (admin de la radio) + le propriétaire En Ondes sont toujours
   // garantis (création/promotion idempotente).
-  await seedSuperadmin();
+  await seedSuperadmin(radioId);
   await seedOwner();
 
   // Le contenu (animateurs / émissions / grille) n'est seedé QUE si la base
@@ -205,10 +268,13 @@ async function main() {
     console.log(`[seed] marque "${env.SEED_BRAND}" — aucun seed de départ, contenu à saisir via l'admin.`);
   } else {
     console.log(`[seed] marque "${env.SEED_BRAND}" — seed de départ appliqué (éditable ensuite via l'admin).`);
-    const artistIdBySlug = await seedArtists(bundle.artists);
-    await seedShows(bundle.shows, artistIdBySlug);
-    await seedSchedule(bundle.schedule, bundle.hostToArtistSlug, artistIdBySlug);
+    const artistIdBySlug = await seedArtists(bundle.artists, radioId);
+    await seedShows(bundle.shows, artistIdBySlug, radioId);
+    await seedSchedule(bundle.schedule, bundle.hostToArtistSlug, artistIdBySlug, radioId);
   }
+
+  // Rattache toute ligne orpheline (prod existante) à la radio de cette instance.
+  await backfillRadioId(radioId);
 
   console.log("[seed] terminé ✓");
   await pool.end();

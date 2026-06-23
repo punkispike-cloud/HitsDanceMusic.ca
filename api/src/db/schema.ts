@@ -78,6 +78,7 @@ export const artists = pgTable(
   "artists",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     photoUrl: text("photo_url"),
@@ -93,6 +94,7 @@ export const artists = pgTable(
   (t) => ({
     slugIdx: uniqueIndex("artists_slug_idx").on(t.slug),
     sortIdx: index("artists_sort_idx").on(t.sortOrder),
+    radioIdx: index("artists_radio_idx").on(t.radioId),
   }),
 );
 
@@ -102,6 +104,8 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // null = compte `owner` (En Ondes, cross-radio) ; sinon = radio de rattachement.
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     displayName: text("display_name").notNull(),
@@ -115,6 +119,7 @@ export const users = pgTable(
   (t) => ({
     emailIdx: uniqueIndex("users_email_idx").on(t.email),
     artistIdx: index("users_artist_id_idx").on(t.artistId),
+    radioIdx: index("users_radio_idx").on(t.radioId),
   }),
 );
 
@@ -149,6 +154,7 @@ export const shows = pgTable(
   "shows",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     description: text("description"),
@@ -164,6 +170,7 @@ export const shows = pgTable(
     slugIdx: uniqueIndex("shows_slug_idx").on(t.slug),
     artistIdx: index("shows_artist_idx").on(t.artistId),
     tagIdx: index("shows_tag_idx").on(t.tag),
+    radioIdx: index("shows_radio_idx").on(t.radioId),
   }),
 );
 
@@ -175,6 +182,7 @@ export const scheduleSlots = pgTable(
   "schedule_slots",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     dayOfWeek: smallint("day_of_week").notNull(), // 0=dimanche .. 6=samedi
     startMin: smallint("start_min").notNull(),
     endMin: smallint("end_min").notNull(),
@@ -192,6 +200,7 @@ export const scheduleSlots = pgTable(
     artistIdx: index("schedule_artist_idx").on(t.artistId),
     dayChk: check("schedule_day_chk", sql`${t.dayOfWeek} BETWEEN 0 AND 6`),
     rangeChk: check("schedule_range_chk", sql`${t.startMin} < ${t.endMin} AND ${t.endMin} <= 1440`),
+    radioIdx: index("schedule_radio_idx").on(t.radioId),
   }),
 );
 
@@ -201,6 +210,7 @@ export const episodes = pgTable(
   "episodes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     showId: uuid("show_id").references(() => shows.id, { onDelete: "set null" }),
     artistId: uuid("artist_id")
@@ -225,6 +235,7 @@ export const episodes = pgTable(
     artistIdx: index("episodes_artist_idx").on(t.artistId),
     showIdx: index("episodes_show_idx").on(t.showId),
     statusIdx: index("episodes_status_published_idx").on(t.status, t.publishedAt),
+    radioIdx: index("episodes_radio_idx").on(t.radioId),
   }),
 );
 
@@ -234,6 +245,7 @@ export const mixes = pgTable(
   "mixes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     artistId: uuid("artist_id")
       .notNull()
@@ -257,6 +269,7 @@ export const mixes = pgTable(
     slugIdx: uniqueIndex("mixes_slug_idx").on(t.slug),
     artistIdx: index("mixes_artist_idx").on(t.artistId),
     statusIdx: index("mixes_status_idx").on(t.status),
+    radioIdx: index("mixes_radio_idx").on(t.radioId),
   }),
 );
 
@@ -266,6 +279,7 @@ export const uploadIntents = pgTable(
   "upload_intents",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -278,6 +292,7 @@ export const uploadIntents = pgTable(
   },
   (t) => ({
     userIdx: index("upload_intents_user_idx").on(t.userId),
+    radioIdx: index("upload_intents_radio_idx").on(t.radioId),
   }),
 );
 
@@ -290,6 +305,7 @@ export const analyticsSessions = pgTable(
   "analytics_sessions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     clientId: text("client_id").notNull(),
     ip: text("ip"),
     ipCountry: text("ip_country"),
@@ -307,6 +323,7 @@ export const analyticsSessions = pgTable(
   (t) => ({
     clientIdx: uniqueIndex("analytics_sessions_client_idx").on(t.clientId),
     lastSeenIdx: index("analytics_sessions_last_seen_idx").on(t.lastSeen),
+    radioIdx: index("analytics_sessions_radio_idx").on(t.radioId),
   }),
 );
 
@@ -317,6 +334,7 @@ export const analyticsShowListen = pgTable(
   "analytics_show_listen",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     showTitle: text("show_title").notNull(),
     clientId: text("client_id").notNull(),
     listenSec: integer("listen_sec").notNull().default(0),
@@ -325,6 +343,7 @@ export const analyticsShowListen = pgTable(
   (t) => ({
     pairIdx: uniqueIndex("analytics_show_listen_pair_idx").on(t.showTitle, t.clientId),
     showIdx: index("analytics_show_listen_show_idx").on(t.showTitle),
+    radioIdx: index("analytics_show_listen_radio_idx").on(t.radioId),
   }),
 );
 
@@ -336,12 +355,14 @@ export const trackHistory = pgTable(
   "track_history",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     artist: text("artist").notNull().default(""),
     title: text("title").notNull(),
     playedAt: timestamp("played_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     playedAtIdx: index("track_history_played_at_idx").on(t.playedAt),
+    radioIdx: index("track_history_radio_idx").on(t.radioId),
   }),
 );
 
@@ -353,6 +374,7 @@ export const pushSubscriptions = pgTable(
   "push_subscriptions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     endpoint: text("endpoint").notNull(),
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
@@ -365,6 +387,7 @@ export const pushSubscriptions = pgTable(
   (t) => ({
     endpointIdx: uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint),
     showIdx: index("push_subscriptions_show_idx").on(t.showSlug),
+    radioIdx: index("push_subscriptions_radio_idx").on(t.radioId),
   }),
 );
 
@@ -399,6 +422,7 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
     actorId: uuid("actor_id"), // pas de FK : la trace doit survivre à la suppression
     actorEmail: text("actor_email"),
     actorName: text("actor_name"),
@@ -413,6 +437,7 @@ export const auditLog = pgTable(
   (t) => ({
     createdIdx: index("audit_log_created_idx").on(t.createdAt),
     entityIdx: index("audit_log_entity_idx").on(t.entity, t.entityId),
+    radioIdx: index("audit_log_radio_idx").on(t.radioId),
   }),
 );
 
