@@ -35,6 +35,38 @@ export interface AuthUser {
   artistId: string | null;
 }
 
+export type RadioStatus = "active" | "provisioning" | "paused";
+
+/** Une radio (tenant) + ses KPIs, vue depuis la console opérateur (owner). */
+export interface RadioSummary {
+  id: string;
+  slug: string;
+  name: string;
+  status: RadioStatus;
+  plan: string | null;
+  domains: string[];
+  streamUrl: string | null;
+  nowPlayingUrl: string | null;
+  billingNote: string | null;
+  createdAt: string;
+  live: number;
+  today: number;
+  sessions: number;
+  listenSec: number;
+  artists: number;
+  shows: number;
+}
+
+/** Totaux agrégés sur tout le parc (console opérateur). */
+export interface OwnerOverview {
+  radios: number;
+  activeRadios: number;
+  sessions: number;
+  live: number;
+  today: number;
+  listenSec: number;
+}
+
 export interface Artist {
   id: string;
   slug: string;

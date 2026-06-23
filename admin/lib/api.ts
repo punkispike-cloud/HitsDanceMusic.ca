@@ -7,12 +7,21 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
 let accessToken: string | null = null;
 let onUnauthorized: (() => void) | null = null;
 let refreshing: Promise<boolean> | null = null;
+// Radio sélectionnée par l'owner (En Ondes) → en-tête X-Radio-Id sur l'admin.
+// Pour les non-owner, inutilisé (leur radio vient du JWT).
+let selectedRadioId: string | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 export function getAccessToken() {
   return accessToken;
+}
+export function setSelectedRadioId(id: string | null) {
+  selectedRadioId = id;
+}
+export function getSelectedRadioId() {
+  return selectedRadioId;
 }
 export function setOnUnauthorized(cb: (() => void) | null) {
   onUnauthorized = cb;
@@ -67,6 +76,7 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  if (selectedRadioId) headers["X-Radio-Id"] = selectedRadioId;
 
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -98,6 +108,7 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
 async function download(path: string, filename: string): Promise<void> {
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  if (selectedRadioId) headers["X-Radio-Id"] = selectedRadioId;
   let res = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
   if (res.status === 401 && (await tryRefresh())) {
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;

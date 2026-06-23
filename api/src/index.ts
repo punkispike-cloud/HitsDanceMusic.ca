@@ -24,6 +24,7 @@ import { pushRoutes } from "./routes/push.js";
 import { pushAdminRoutes } from "./routes/push-admin.js";
 import { auditAdminRoutes } from "./routes/audit-admin.js";
 import { nowPlayingRoutes } from "./routes/now-playing.js";
+import { ownerRoutes } from "./routes/owner.js";
 import { auditMiddleware } from "./middleware/audit.js";
 import { pingDb, closeDb } from "./db/client.js";
 import { startMaintenance } from "./services/maintenance.js";
@@ -72,6 +73,10 @@ app.route("/v1/admin/analytics", analyticsAdminRoutes);
 app.route("/v1/admin/audit", auditAdminRoutes);
 app.route("/v1/admin/push", pushAdminRoutes);
 app.route("/v1/admin/tracks", nowPlayingRoutes);
+
+// Console opérateur (owner En Ondes) — cross-radio, sans scoping single-radio.
+app.use("/v1/owner/*", requireAuth);
+app.route("/v1/owner", ownerRoutes);
 
 // Démarrage
 const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {

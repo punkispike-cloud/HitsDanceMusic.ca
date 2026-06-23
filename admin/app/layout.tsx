@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { RadioProvider } from "@/lib/radio";
 import { ToastProvider } from "@/components/toast";
 
 export const metadata: Metadata = {
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <RadioProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </RadioProvider>
         </AuthProvider>
       </body>
     </html>
