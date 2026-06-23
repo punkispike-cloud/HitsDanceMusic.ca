@@ -1,4 +1,4 @@
-/* Module partagé du parc Autologix : lecture du registre clients + ping santé +
+/* Module partagé du parc En Ondes : lecture du registre clients + ping santé +
  * agrégation. Réutilisé par scripts/status.mjs (CLI) et scripts/console.mjs
  * (cockpit web local) → une seule source de vérité pour « l'état du parc ».
  */

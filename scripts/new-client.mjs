@@ -1,4 +1,4 @@
-/* Autologix — Scaffold d'un nouveau client radio.
+/* En Ondes — Scaffold d'un nouveau client radio.
  *
  * Crée brand/<slug>.json (depuis un gabarit à compléter) + brand/<slug>/assets/,
  * puis affiche la checklist d'onboarding. Ne touche à rien d'autre.

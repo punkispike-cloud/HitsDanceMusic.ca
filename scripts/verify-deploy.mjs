@@ -1,4 +1,4 @@
-/* Autologix — Vérification post-déploiement d'un client.
+/* En Ondes — Vérification post-déploiement d'un client.
  * Teste les endpoints critiques de l'API d'un client et affiche un bilan clair.
  *
  * Usage :

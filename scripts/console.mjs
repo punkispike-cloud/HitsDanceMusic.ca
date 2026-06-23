@@ -1,4 +1,4 @@
-/* Autologix — Centre de contrôle opérateur (console web LOCALE).
+/* En Ondes — Centre de contrôle opérateur (console web LOCALE).
  * Sert operator/ + expose GET /api/parc (santé live du parc). Lié à 127.0.0.1
  * uniquement : aucune surface cloud, aucune auth, aucune écriture, aucun secret
  * (le registre ne contient que des domaines publics).
@@ -62,7 +62,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   const link = `http://${HOST}:${PORT}`;
-  console.log(`\n🎛️  Centre de contrôle Autologix → ${link}`);
+  console.log(`\n🎛️  Centre de contrôle En Ondes → ${link}`);
   console.log("   Local uniquement · Ctrl-C pour quitter\n");
   if (!process.argv.includes("--no-open")) openBrowser(link);
 });

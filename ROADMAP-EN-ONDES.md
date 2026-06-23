@@ -1,10 +1,9 @@
 # 🗺️ Roadmap — Plateforme Radio-as-a-Service
 
-> 📝 « Autologix » n'est qu'un **nom de travail** dans ce document — le nom final
-> de l'entreprise/marque reste **à choisir** (ce ne sera pas « Autologix »).
-> Dans les documents commerciaux, le placeholder est `[ENTREPRISE]`.
+> 📝 Nom de l'entreprise : **En Ondes** (choisi le 2026-06-22). Domaines à réserver :
+> enondes.ca + enondes.com. Le pack commercial privé (`_private/`) est déjà à ce nom.
 
-> **But** : tout outiller pour qu'Autologix **crée, déploie et gère** des sites de
+> **But** : tout outiller pour qu'En Ondes **crée, déploie et gère** des sites de
 > radio complets pour ses clients — facile pour nous (l'opérateur) ET pour les
 > utilisateurs (les radios). Hits Dance Music = client #0 + vitrine.
 >
@@ -36,8 +35,8 @@
 | 1 | Productisation : rendre le code **clonable** | ✅ fait |
 | 2 | Onboarding **turnkey** : créer un client vite | ✅ fait |
 | 3 | Gestion **centralisée** (côté opérateur) | ✅ outillée |
-| 4 | Périmètre client (contenu) vs **IP visuel Autologix** | 🔁 recadrée |
-| 5 | **Multi-tenant** + portail Autologix | ⬜ (à ~5 clients) |
+| 4 | Périmètre client (contenu) vs **IP visuel En Ondes** | 🔁 recadrée |
+| 5 | **Multi-tenant** + portail En Ondes | ⬜ (à ~5 clients) |
 | 6 | **Commercial** / go-to-market | 🔁 gabarits prêts |
 
 ---
@@ -97,23 +96,23 @@
 - [ ] (plus tard) Tableau de bord opérateur **web** (la version CLI suffit pour démarrer)
 - 📓 Bible opérateur : `OPERATIONS.md`
 
-## Phase 4 — Périmètre client vs IP Autologix (RECADRÉE 2026-06-19) ⬜
+## Phase 4 — Périmètre client vs IP En Ondes (RECADRÉE 2026-06-19) ⬜
 
-> **DÉCISION STRATÉGIQUE** : Autologix **conserve la propriété intellectuelle de la
+> **DÉCISION STRATÉGIQUE** : En Ondes **conserve la propriété intellectuelle de la
 > création et du visuel** de chaque radio. Le client ne modifie **pas** son
-> apparence — c'est l'actif d'Autologix (moat + dépendance = récurrent). On sépare
-> donc nettement ce qui est **au client** de ce qui reste **à Autologix**.
+> apparence — c'est l'actif d'En Ondes (moat + dépendance = récurrent). On sépare
+> donc nettement ce qui est **au client** de ce qui reste **à En Ondes**.
 
 **Au client (self-service) — CONTENU & opérationnel :**
 - [x] Animateurs, émissions, grille, podcasts, mixes (déjà via l'admin ✅)
 - [x] Statistiques d'audience, notifications, son mot de passe (déjà ✅)
 - [ ] (option) Coordonnées / réseaux sociaux (données opérationnelles, pas créatives)
 
-**À Autologix (contrôlé par l'opérateur) — CRÉATION & VISUEL = IP :**
+**À En Ondes (contrôlé par l'opérateur) — CRÉATION & VISUEL = IP :**
 - [ ] Le visuel reste **figé au build** (`brand/<client>.json`) — non exposé au client
 - [ ] (option) **Panneau opérateur** pour ajuster le visuel d'un client sans rebuild
-      manuel (réservé Autologix, pas le client)
-- [ ] ⚖️ **Clause de PI au contrat** : Autologix détient le design/visuel ; le client
+      manuel (réservé En Ondes, pas le client)
+- [ ] ⚖️ **Clause de PI au contrat** : En Ondes détient le design/visuel ; le client
       a une **licence d'utilisation** tant qu'il est abonné → **Phase 6 (légal)**
 
 > Conséquence : la grosse archi « réglages runtime éditables par le client » n'est
@@ -121,14 +120,14 @@
 > Ce qui prend de la valeur, c'est plutôt la **Phase 3** (toi, opérateur, qui
 > contrôles et gères tous les visuels/clients d'un seul endroit).
 
-## Phase 5 — Multi-tenant + portail Autologix ⬜ (à ~5 clients)
+## Phase 5 — Multi-tenant + portail En Ondes ⬜ (à ~5 clients)
 
 > **Pour QUI** : pour TOI (passage à l'échelle). Une seule plateforme héberge N
 > radios au lieu d'un déploiement par client → coût ops quasi fixe.
 
 - [ ] **Cloison des données par `radio_id`** (chaque requête sait quelle radio ;
       isolation stricte entre clients).
-- [ ] **Portail Autologix** : créer/configurer/suspendre un client via un formulaire
+- [ ] **Portail En Ondes** : créer/configurer/suspendre un client via un formulaire
       (plus de déploiement Railway manuel par client).
 - [ ] **Facturation Stripe** reliée aux paliers (abonnement + add-ons).
 - 🔑 *Quand* : seulement à ~5 clients réguliers. Avant, « 1 instance par client »
@@ -137,7 +136,7 @@
 ## Phase 6 — Commercial / go-to-market 🔁 gabarits prêts (dossier privé `_private/`)
 
 > **Pour QUI** : pour vendre. Tenu **hors du dépôt** (prix, contrats) → `_private/`
-> (gitignoré). Nom d'entreprise en placeholder `[ENTREPRISE]` (pas « Autologix »).
+> (gitignoré). Nom d'entreprise : **En Ondes**.
 
 - [x] **Contrat client** (`_private/CONTRAT-CLIENT.md`) — PI (visuel = au Prestataire,
       licence d'usage au Client), licences musicales, données, paiement, résiliation.
@@ -157,7 +156,7 @@
 > de la simplicité. Ces items irriguent toutes les phases.
 
 - [x] **⚖️ Licences musicales (P0 légal) — DÉCIDÉ (2026-06-19)** : **le client détient
-      SES licences** SOCAN (auteurs/éditeurs) + Ré:Sonne (artistes/labels). Autologix
+      SES licences** SOCAN (auteurs/éditeurs) + Ré:Sonne (artistes/labels). En Ondes
       **exige une attestation signée à l'onboarding** (case à cocher + champ dans le
       registre client) et n'héberge pas de diffusion non licenciée. → à intégrer dans
       `ONBOARDING-CLIENT.md` (Phase 2) et le registre clients (Phase 3).

@@ -128,7 +128,7 @@ Un backup jamais restauré n'est pas un backup.
 - [ ] Backups auto **activés** + **une restauration testée** (RTO noté)
 - [ ] Aucun secret n'a transité par un chat / commit / note en clair
 
-> Une fois tout coché : reporter ✅ dans `ROADMAP-AUTOLOGIX.md` (Phase 0 « Reste 🔒 »
+> Une fois tout coché : reporter ✅ dans `ROADMAP-EN-ONDES.md` (Phase 0 « Reste 🔒 »
 > et Phase 3 « Sauvegardes ») et `ETAT-DU-PROJET.md` §6.
 
 ---
@@ -137,4 +137,4 @@ Un backup jamais restauré n'est pas un backup.
 
 C'est de la **prod en ligne** : tant que des secrets potentiellement exposés y
 traînent, on ne devrait **pas onboarder de client payant**. Cette rotation lève le
-seul risque technique bloquant avant le démarrage commercial (cf. `ROADMAP-AUTOLOGIX.md`).
+seul risque technique bloquant avant le démarrage commercial (cf. `ROADMAP-EN-ONDES.md`).

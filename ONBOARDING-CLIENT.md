@@ -1,4 +1,4 @@
-# 🚀 Onboarding d'un client radio (runbook Autologix)
+# 🚀 Onboarding d'un client radio (runbook En Ondes)
 
 > Procédure **répétable** pour brancher une nouvelle radio cliente, de la collecte
 > d'infos à la livraison. Objectif : **< 1 journée**. Modèle « une instance par
@@ -20,7 +20,7 @@ Réunir auprès du client :
 - **Coordonnées** : téléphone studio, courriel, réseaux sociaux
 - ⚖️ **Attestation licences** : confirmation écrite que le client détient
   **SOCAN** (auteurs/éditeurs) **et Ré:Sonne** (artistes/labels). **Sans ça, on
-  n'héberge pas la diffusion.** (Posture Autologix : le client est responsable de
+  n'héberge pas la diffusion.** (Posture En Ondes : le client est responsable de
   ses licences.)
 
 ---

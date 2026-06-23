@@ -1,4 +1,4 @@
-# 🛠️ Opérations Autologix — gérer le parc de radios
+# 🛠️ Opérations En Ondes — gérer le parc de radios
 
 > La **bible de l'opérateur**. Comment gérer tous les clients d'un seul endroit :
 > registre, statut, mises à jour, monitoring, sauvegardes, sécurité. Le but :

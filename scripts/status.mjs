@@ -1,4 +1,4 @@
-/* Autologix — Statut de tous les clients (gestion centralisée).
+/* En Ondes — Statut de tous les clients (gestion centralisée).
  * Lit brand/clients.json et ping le /health de chaque client actif → tableau
  * up/down + DB + temps de réponse. La vue « santé de tout mon parc » en 1 commande.
  *
@@ -21,7 +21,7 @@ if (!clients.length) {
   process.exit(0);
 }
 
-console.log(`\n📡 Statut du parc Autologix — ${new Date().toLocaleString("fr-CA")}\n`);
+console.log(`\n📡 Statut du parc En Ondes — ${new Date().toLocaleString("fr-CA")}\n`);
 const pad = (s, n) => String(s).padEnd(n).slice(0, n);
 console.log(`  ${pad("Radio", 22)} ${pad("État", 8)} ${pad("DB", 6)} ${pad("Temps", 8)} Licences`);
 console.log(`  ${"-".repeat(60)}`);

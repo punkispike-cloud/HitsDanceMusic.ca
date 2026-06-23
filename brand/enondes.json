@@ -1,0 +1,36 @@
+{
+  "slug": "enondes",
+  "_type": "company-vitrine",
+  "_note": "Marque de l'ENTREPRISE En Ondes (l'hébergeur), pas une radio cliente. Sert à la page d'accueil/vitrine commerciale, pas au build d'un site radio. Palette tirée du logo (néon bleu→mauve sur fond sombre).",
+  "name": "En Ondes",
+  "shortName": "En Ondes",
+  "tagline": "Radio en direct · Podcast",
+  "description": "Ta radio en ligne, clé en main, en français. On s'occupe de toute la technique — toi, tu animes.",
+  "domain": "enondes.ca",
+  "domainsToReserve": ["enondes.ca", "enondes.com"],
+  "colors": {
+    "accent": "#3aa0ff",
+    "accentBright": "#5fb8ff",
+    "accentGlowRgb": "58, 160, 255",
+    "accent2": "#b86ce0",
+    "accent2Bright": "#cf8aff",
+    "accent2GlowRgb": "184, 108, 224",
+    "amber": "#b86ce0",
+    "amberSoft": "#cf8aff",
+    "themeColor": "#0d1320",
+    "bgColor": "#0a0e16"
+  },
+  "urls": {
+    "salesPage": "(à héberger)",
+    "demo": "https://hitsdancemusic.ca"
+  },
+  "contact": {
+    "phone": "",
+    "email": ""
+  },
+  "logo": {
+    "source": "brand/enondes/assets/logo.png",
+    "wordmark": "brand/enondes/assets/wordmark.png",
+    "note": "Logo généré par l'utilisateur (micro + table tournante, néon bleu→mauve). Déposer le PNG source ici → génération du jeu d'icônes."
+  }
+}

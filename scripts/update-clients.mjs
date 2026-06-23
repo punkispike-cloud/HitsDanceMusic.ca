@@ -1,4 +1,4 @@
-/* Autologix — Mises à jour mutualisées (guide généré).
+/* En Ondes — Mises à jour mutualisées (guide généré).
  * Le code est partagé : un correctif sur `main` doit être propagé à chaque client
  * (chacun a sa branche + son projet Railway). Ce script ne touche À RIEN : il
  * IMPRIME les commandes exactes à lancer par client, depuis le registre.

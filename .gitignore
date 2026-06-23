@@ -10,7 +10,7 @@ desktop.ini
 .idea/
 .claude/
 
-# Documents privés Autologix (prix, contrats, business) — NE JAMAIS pousser
+# Documents privés En Ondes (prix, contrats, business) — NE JAMAIS pousser
 _private/
 brand/clients.json
 
