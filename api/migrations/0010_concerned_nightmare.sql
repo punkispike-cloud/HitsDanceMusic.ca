@@ -1,0 +1,1 @@
+ALTER TABLE "radios" ADD COLUMN "monthly_price" integer;

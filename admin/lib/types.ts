@@ -48,6 +48,7 @@ export interface RadioSummary {
   streamUrl: string | null;
   nowPlayingUrl: string | null;
   billingNote: string | null;
+  monthlyPrice: number | null;
   createdAt: string;
   live: number;
   today: number;
@@ -61,6 +62,7 @@ export interface RadioSummary {
 export interface OwnerOverview {
   radios: number;
   activeRadios: number;
+  mrr: number;
   sessions: number;
   live: number;
   today: number;

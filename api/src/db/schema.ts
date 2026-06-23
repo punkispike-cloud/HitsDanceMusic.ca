@@ -65,6 +65,7 @@ export const radios = pgTable(
     streamUrl: text("stream_url"), // flux audio (AzuraCast/Icecast ou externe)
     nowPlayingUrl: text("now_playing_url"), // now-playing de la station
     billingNote: text("billing_note"),
+    monthlyPrice: integer("monthly_price"), // $ / mois (suivi MRR)
     ...timestamps,
   },
   (t) => ({

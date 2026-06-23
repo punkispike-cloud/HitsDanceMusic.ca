@@ -25,6 +25,7 @@ ownerRoutes.get("/overview", async (c) => {
     .select({
       total: sql<number>`count(*)::int`,
       active: sql<number>`count(*) filter (where ${radios.status} = 'active')::int`,
+      mrr: sql<number>`coalesce(sum(${radios.monthlyPrice}) filter (where ${radios.status} = 'active'), 0)::int`,
     })
     .from(radios);
   const [agg] = await db
@@ -38,6 +39,7 @@ ownerRoutes.get("/overview", async (c) => {
   return c.json({
     radios: rc?.total ?? 0,
     activeRadios: rc?.active ?? 0,
+    mrr: rc?.mrr ?? 0,
     sessions: agg?.sessions ?? 0,
     live: agg?.live ?? 0,
     today: agg?.today ?? 0,
@@ -86,6 +88,7 @@ ownerRoutes.get("/radios", async (c) => {
         streamUrl: r.streamUrl,
         nowPlayingUrl: r.nowPlayingUrl,
         billingNote: r.billingNote,
+        monthlyPrice: r.monthlyPrice,
         createdAt: r.createdAt,
         live: s?.live ?? 0,
         today: s?.today ?? 0,
@@ -105,6 +108,7 @@ const radioCreate = z.object({
   domains: z.array(z.string().trim().max(200)).optional(),
   streamUrl: z.string().trim().max(500).nullish(),
   nowPlayingUrl: z.string().trim().max(500).nullish(),
+  monthlyPrice: z.number().int().min(0).max(100000).nullish(),
 });
 
 /* POST /v1/owner/radios — crée une radio (tenant). Démarre en "provisioning".
@@ -141,6 +145,7 @@ ownerRoutes.post("/radios", async (c) => {
       domains: body.domains ?? [],
       streamUrl,
       nowPlayingUrl,
+      monthlyPrice: body.monthlyPrice ?? null,
       status: "provisioning",
     })
     .returning();
@@ -156,6 +161,7 @@ const radioPatch = z.object({
   streamUrl: z.string().trim().max(500).nullish(),
   nowPlayingUrl: z.string().trim().max(500).nullish(),
   billingNote: z.string().trim().max(2000).nullish(),
+  monthlyPrice: z.number().int().min(0).max(100000).nullish(),
 });
 
 /* PATCH /v1/owner/radios/:id — gère une radio (statut, flux, forfait, note). */
