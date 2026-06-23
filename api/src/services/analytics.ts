@@ -105,6 +105,7 @@ export function parseUserAgent(ua: string): { browser: string; device: string } 
 }
 
 export interface TrackInput {
+  radioId: string;
   clientId: string;
   type: "pageview" | "heartbeat" | "listen";
   showTitle?: string;
@@ -114,7 +115,7 @@ export interface TrackInput {
 }
 
 export async function ingestTrack(input: TrackInput): Promise<void> {
-  const { clientId, type, ip, userAgent } = input;
+  const { clientId, type, ip, userAgent, radioId } = input;
   const { browser, device } = parseUserAgent(userAgent);
   const now = new Date();
 
@@ -126,6 +127,7 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
   await db
     .insert(analyticsSessions)
     .values({
+      radioId,
       clientId,
       ip,
       userAgent,
@@ -172,7 +174,7 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
     const showTitle = input.showTitle.slice(0, 200);
     await db
       .insert(analyticsShowListen)
-      .values({ showTitle, clientId, listenSec: listenAdd, lastAt: now })
+      .values({ radioId, showTitle, clientId, listenSec: listenAdd, lastAt: now })
       .onConflictDoUpdate({
         target: [analyticsShowListen.showTitle, analyticsShowListen.clientId],
         set: {

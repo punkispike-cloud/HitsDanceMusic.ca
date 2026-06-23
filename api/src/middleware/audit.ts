@@ -62,6 +62,7 @@ export const auditMiddleware: MiddlewareHandler<AppBindings> = async (c, next) =
         : null;
 
       await db.insert(auditLog).values({
+        radioId: c.get("radioId") ?? null,
         actorId: auth?.userId ?? null,
         actorEmail: actor?.email ?? null,
         actorName: actor?.displayName ?? null,

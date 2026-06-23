@@ -2,9 +2,10 @@
    ~30 s et enregistre chaque changement de titre. Anti-doublon via la dernière
    ligne en DB (tolère l'instance unique Railway). Inactif si NOWPLAYING_URL absent. */
 
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { trackHistory } from "../db/schema.js";
+import { soleRadioId } from "./tenant.js";
 import { env } from "../env.js";
 
 const POLL_MS = 30_000;
@@ -59,14 +60,19 @@ async function tick(): Promise<void> {
     if (!r.ok) return;
     const parsed = parseNowPlaying(await r.text());
     if (!parsed || !parsed.title) return;
-    // Anti-doublon : ne rien insérer si identique au dernier titre enregistré.
+    // Poller global = mono-radio seulement ; en multi-radio chaque station a son
+    // propre now-playing (résolu au provisioning — Phase 9).
+    const radioId = await soleRadioId();
+    if (!radioId) return;
+    // Anti-doublon : rien si identique au dernier titre de la radio.
     const [last] = await db
       .select()
       .from(trackHistory)
+      .where(eq(trackHistory.radioId, radioId))
       .orderBy(desc(trackHistory.playedAt))
       .limit(1);
     if (last && last.artist === parsed.artist && last.title === parsed.title) return;
-    await db.insert(trackHistory).values({ artist: parsed.artist, title: parsed.title });
+    await db.insert(trackHistory).values({ radioId, artist: parsed.artist, title: parsed.title });
   } catch {
     /* best-effort — on ne fait jamais échouer le process pour le now-playing */
   } finally {

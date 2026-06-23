@@ -4,8 +4,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ingestTrack } from "../services/analytics.js";
+import type { AppBindings } from "../types.js";
 
-export const trackRoutes = new Hono();
+export const trackRoutes = new Hono<AppBindings>();
 
 const trackSchema = z.object({
   clientId: z.string().min(8).max(64).regex(/^[A-Za-z0-9_-]+$/),
@@ -32,9 +33,13 @@ trackRoutes.post("/track", async (c) => {
   const parsed = trackSchema.safeParse(body);
   if (!parsed.success) return c.body(null, 204); // on n'expose pas d'erreur aux visiteurs
 
+  const radioId = c.get("radioId");
+  if (!radioId) return c.body(null, 204); // hôte non rattaché à une radio → on ignore
+
   try {
     await ingestTrack({
       ...parsed.data,
+      radioId,
       ip: clientIp(c.req.raw.headers),
       userAgent: c.req.header("User-Agent") || "",
     });

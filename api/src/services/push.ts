@@ -2,7 +2,7 @@
    fournies. Génère les clés une fois avec `npm run vapid`. */
 
 import webpush from "web-push";
-import { eq, or, isNull } from "drizzle-orm";
+import { eq, and, or, isNull } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { pushSubscriptions } from "../db/schema.js";
 import { env, isPushConfigured } from "../env.js";
@@ -25,16 +25,22 @@ interface PushPayload {
 
 /** Envoie une notification à tous les abonnés d'une émission (ou globaux).
    Retire automatiquement les abonnements expirés (404/410). */
-export async function notifyShow(showSlug: string, payload: PushPayload): Promise<number> {
+export async function notifyShow(radioId: string, showSlug: string, payload: PushPayload): Promise<number> {
   if (!ready) return 0;
-  // "__all__" → diffusion à tout le monde ; sinon les abonnés de l'émission + les globaux.
+  // Toujours scopé à la radio. "__all__" → tous ses abonnés ; sinon les abonnés
+  // de l'émission + les abonnés globaux DE CETTE RADIO.
   const subs =
     showSlug === "__all__"
-      ? await db.select().from(pushSubscriptions)
+      ? await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.radioId, radioId))
       : await db
           .select()
           .from(pushSubscriptions)
-          .where(or(eq(pushSubscriptions.showSlug, showSlug), isNull(pushSubscriptions.showSlug)));
+          .where(
+            and(
+              eq(pushSubscriptions.radioId, radioId),
+              or(eq(pushSubscriptions.showSlug, showSlug), isNull(pushSubscriptions.showSlug)),
+            ),
+          );
 
   const body = JSON.stringify(payload);
   let sent = 0;

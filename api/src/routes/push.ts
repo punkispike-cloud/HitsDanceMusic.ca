@@ -7,8 +7,9 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { pushSubscriptions } from "../db/schema.js";
 import { env, isPushConfigured } from "../env.js";
+import type { AppBindings } from "../types.js";
 
-export const pushRoutes = new Hono();
+export const pushRoutes = new Hono<AppBindings>();
 
 /* GET /v1/push/vapid-public-key — clé publique pour s'abonner côté navigateur. */
 pushRoutes.get("/push/vapid-public-key", (c) => {
@@ -29,6 +30,7 @@ pushRoutes.post("/push/subscribe", async (c) => {
   await db
     .insert(pushSubscriptions)
     .values({
+      radioId: c.get("radioId") ?? null,
       endpoint: body.endpoint,
       p256dh: body.keys.p256dh,
       auth: body.keys.auth,

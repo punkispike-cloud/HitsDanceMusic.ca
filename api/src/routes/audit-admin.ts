@@ -6,20 +6,22 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { auditLog } from "../db/schema.js";
 import { requireMinRole } from "../middleware/rbac.js";
+import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
 export const auditAdminRoutes = new Hono<AppBindings>();
 
 auditAdminRoutes.get("/", requireMinRole("superadmin"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 100));
   const offset = Math.max(0, Number(c.req.query("offset")) || 0);
   const entity = c.req.query("entity");
   const action = c.req.query("action");
 
-  const conds: SQL[] = [];
+  const conds: SQL[] = [eq(auditLog.radioId, radioId)];
   if (entity) conds.push(eq(auditLog.entity, entity));
   if (action) conds.push(eq(auditLog.action, action));
-  const where = conds.length ? and(...conds) : undefined;
+  const where = and(...conds);
 
   const [rows, [count]] = await Promise.all([
     db.select().from(auditLog).where(where).orderBy(desc(auditLog.createdAt)).limit(limit).offset(offset),

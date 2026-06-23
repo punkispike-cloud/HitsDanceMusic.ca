@@ -3,10 +3,11 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { pushSubscriptions } from "../db/schema.js";
 import { requireMinRole } from "../middleware/rbac.js";
+import { requireRadioId } from "../services/tenant.js";
 import { notifyShow } from "../services/push.js";
 import { isPushConfigured } from "../env.js";
 import type { AppBindings } from "../types.js";
@@ -14,12 +15,14 @@ import type { AppBindings } from "../types.js";
 export const pushAdminRoutes = new Hono<AppBindings>();
 
 pushAdminRoutes.get("/stats", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const [agg] = await db
     .select({
       total: sql<number>`count(*)::int`,
       global: sql<number>`count(*) filter (where ${pushSubscriptions.showSlug} is null)::int`,
     })
-    .from(pushSubscriptions);
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.radioId, radioId));
   return c.json({ enabled: isPushConfigured(), total: agg?.total ?? 0, global: agg?.global ?? 0 });
 });
 
@@ -33,8 +36,9 @@ const notifySchema = z.object({
 /* POST /v1/admin/push/notify — diffuse une notification (superadmin). */
 pushAdminRoutes.post("/notify", requireMinRole("superadmin"), async (c) => {
   if (!isPushConfigured()) return c.json({ error: { code: "push_disabled", message: "Push non activé" } }, 503);
+  const radioId = requireRadioId(c.get("radioId"));
   const body = notifySchema.parse(await c.req.json());
-  const sent = await notifyShow(body.showSlug ?? "__all__", {
+  const sent = await notifyShow(radioId, body.showSlug ?? "__all__", {
     title: body.title,
     body: body.body,
     url: body.url,

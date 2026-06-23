@@ -36,11 +36,11 @@ async function tick(): Promise<void> {
         ? await db.query.shows.findFirst({ where: eq(shows.id, slot.showId) })
         : null;
       const slug = show?.slug;
-      if (!slug) continue; // pas d'émission liée → pas d'abonnés ciblables
+      if (!slug || !slot.radioId) continue; // pas d'émission/radio → pas d'abonnés ciblables
 
-      const sent = await notifyShow(slug, {
+      const sent = await notifyShow(slot.radioId, slug, {
         title: "🔴 Bientôt en ondes",
-        body: `${slot.title} commence dans ${LEAD_MIN} min sur Hits Dance Music.`,
+        body: `${slot.title} commence dans ${LEAD_MIN} min.`,
         url: env.PUBLIC_SITE_URL,
         tag: `show-${slug}`,
       });

@@ -1,12 +1,14 @@
-/* Lecture des statistiques d'audience (console admin). Monté sous /v1/admin,
-   donc déjà protégé par requireAuth. La liste des sessions expose les IP
+/* Lecture des statistiques d'audience (console admin). Monté sous /v1/admin →
+   déjà protégé par requireAuth + adminTenant. Tout est filtré par radio :
+   chaque radio ne voit QUE son audience. La liste des sessions expose les IP
    (donnée personnelle) → réservée au superadmin. */
 
 import { Hono } from "hono";
-import { sql, desc } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 import { requireMinRole } from "../middleware/rbac.js";
+import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
 export const analyticsAdminRoutes = new Hono<AppBindings>();
@@ -15,8 +17,6 @@ export const analyticsAdminRoutes = new Hono<AppBindings>();
    de formule (Excel/LibreOffice) sur les données d'origine externe. */
 function csvCell(v: unknown): string {
   let s = v == null ? "" : String(v);
-  // Anti-injection de formule : une cellule commençant par = + - @ tab ou CR
-  // est exécutée comme formule par les tableurs → on la préfixe d'une apostrophe.
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
@@ -26,8 +26,9 @@ function toCsv(headers: string[], rows: unknown[][]): string {
   return "﻿" + lines.join("\r\n"); // BOM → Excel ouvre l'UTF-8 correctement
 }
 
-/* GET /v1/admin/analytics/overview — chiffres clés. */
+/* GET /v1/admin/analytics/overview — chiffres clés (radio courante). */
 analyticsAdminRoutes.get("/overview", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const [agg] = await db
     .select({
       totalSessions: sql<number>`count(*)::int`,
@@ -37,7 +38,8 @@ analyticsAdminRoutes.get("/overview", async (c) => {
       sumListen: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
       pageViews: sql<number>`coalesce(sum(${analyticsSessions.pageViews}),0)::int`,
     })
-    .from(analyticsSessions);
+    .from(analyticsSessions)
+    .where(eq(analyticsSessions.radioId, radioId));
 
   const total = agg?.totalSessions ?? 0;
   return c.json({
@@ -52,8 +54,9 @@ analyticsAdminRoutes.get("/overview", async (c) => {
   });
 });
 
-/* GET /v1/admin/analytics/shows — temps d'écoute par émission. */
+/* GET /v1/admin/analytics/shows — temps d'écoute par émission (radio courante). */
 analyticsAdminRoutes.get("/shows", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const rows = await db
     .select({
       showTitle: analyticsShowListen.showTitle,
@@ -61,6 +64,7 @@ analyticsAdminRoutes.get("/shows", async (c) => {
       listeners: sql<number>`count(distinct ${analyticsShowListen.clientId})::int`,
     })
     .from(analyticsShowListen)
+    .where(eq(analyticsShowListen.radioId, radioId))
     .groupBy(analyticsShowListen.showTitle)
     .orderBy(sql`sum(${analyticsShowListen.listenSec}) desc`);
 
@@ -74,9 +78,9 @@ analyticsAdminRoutes.get("/shows", async (c) => {
   );
 });
 
-/* GET /v1/admin/analytics/timeseries?days=30 — série quotidienne (axe continu).
-   Nouveaux visiteurs / temps d'écoute / temps actif par jour. */
+/* GET /v1/admin/analytics/timeseries?days=30 — série quotidienne (radio courante). */
 analyticsAdminRoutes.get("/timeseries", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const days = Math.min(180, Math.max(1, Number(c.req.query("days")) || 30));
   const result = await db.execute(sql`
     SELECT to_char(d::date, 'YYYY-MM-DD') AS day,
@@ -91,24 +95,26 @@ analyticsAdminRoutes.get("/timeseries", async (c) => {
          ) d
     LEFT JOIN analytics_sessions s
            ON date_trunc('day', s.first_seen AT TIME ZONE 'America/Toronto') = d
+          AND s.radio_id = ${radioId}
     GROUP BY d
     ORDER BY d
   `);
   return c.json(result.rows);
 });
 
-/* GET /v1/admin/analytics/geo — points agrégés par ville (lat/lon) pour la carte
-   des visiteurs. N'expose PAS l'IP → accessible à tout admin authentifié. */
+/* GET /v1/admin/analytics/geo — points agrégés par ville (radio courante).
+   N'expose PAS l'IP → accessible à tout admin authentifié. */
 analyticsAdminRoutes.get("/geo", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const result = await db.execute(sql`
     SELECT ip_lat AS lat,
            ip_lon AS lon,
            ip_country AS label,
            count(*)::int AS sessions,
-           bool_or(${analyticsSessions.lastSeen} > now() - interval '60 seconds') AS live,
-           max(${analyticsSessions.lastSeen}) AS last_seen
+           bool_or(last_seen > now() - interval '60 seconds') AS live,
+           max(last_seen) AS last_seen
     FROM analytics_sessions
-    WHERE ip_lat IS NOT NULL AND ip_lon IS NOT NULL
+    WHERE radio_id = ${radioId} AND ip_lat IS NOT NULL AND ip_lon IS NOT NULL
     GROUP BY ip_lat, ip_lon, ip_country
     ORDER BY sessions DESC
     LIMIT 500
@@ -116,24 +122,24 @@ analyticsAdminRoutes.get("/geo", async (c) => {
   return c.json(result.rows);
 });
 
-/* GET /v1/admin/analytics/breakdown — répartitions (appareils, navigateurs,
-   top villes, nouveaux vs récurrents, activité par heure). Pas d'IP → tout admin. */
+/* GET /v1/admin/analytics/breakdown — répartitions (radio courante). */
 analyticsAdminRoutes.get("/breakdown", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const [devices, browsers, cities, retention, hourly] = await Promise.all([
     db.execute(sql`SELECT coalesce(device, '?') AS device, count(*)::int AS sessions
-                   FROM analytics_sessions GROUP BY device ORDER BY sessions DESC`),
+                   FROM analytics_sessions WHERE radio_id = ${radioId} GROUP BY device ORDER BY sessions DESC`),
     db.execute(sql`SELECT coalesce(browser, '?') AS browser, count(*)::int AS sessions
-                   FROM analytics_sessions GROUP BY browser ORDER BY sessions DESC`),
+                   FROM analytics_sessions WHERE radio_id = ${radioId} GROUP BY browser ORDER BY sessions DESC`),
     db.execute(sql`SELECT ip_country AS label, count(*)::int AS sessions
-                   FROM analytics_sessions WHERE ip_country IS NOT NULL
+                   FROM analytics_sessions WHERE radio_id = ${radioId} AND ip_country IS NOT NULL
                    GROUP BY ip_country ORDER BY sessions DESC LIMIT 10`),
     db.execute(sql`SELECT
                      count(*) FILTER (WHERE last_seen - first_seen > interval '1 day')::int AS returning,
                      count(*) FILTER (WHERE last_seen - first_seen <= interval '1 day')::int AS fresh
-                   FROM analytics_sessions`),
+                   FROM analytics_sessions WHERE radio_id = ${radioId}`),
     db.execute(sql`SELECT extract(hour FROM first_seen AT TIME ZONE 'America/Toronto')::int AS hour,
                           count(*)::int AS sessions
-                   FROM analytics_sessions GROUP BY hour ORDER BY hour`),
+                   FROM analytics_sessions WHERE radio_id = ${radioId} GROUP BY hour ORDER BY hour`),
   ]);
   return c.json({
     devices: devices.rows,
@@ -144,21 +150,22 @@ analyticsAdminRoutes.get("/breakdown", async (c) => {
   });
 });
 
-/* GET /v1/admin/analytics/sessions — détail des visiteurs (IP, navigateur…).
-   Superadmin uniquement (expose des données personnelles). */
+/* GET /v1/admin/analytics/sessions — détail des visiteurs (IP…). Superadmin. */
 analyticsAdminRoutes.get("/sessions", requireMinRole("superadmin"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const limit = Math.min(500, Math.max(1, Number(c.req.query("limit")) || 200));
   const rows = await db
     .select()
     .from(analyticsSessions)
+    .where(eq(analyticsSessions.radioId, radioId))
     .orderBy(desc(analyticsSessions.lastSeen))
     .limit(limit);
   return c.json(rows);
 });
 
-/* GET /v1/admin/analytics/export?type=sessions|shows — téléchargement CSV.
-   Superadmin uniquement. */
+/* GET /v1/admin/analytics/export?type=sessions|shows — CSV. Superadmin. */
 analyticsAdminRoutes.get("/export", requireMinRole("superadmin"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const type = c.req.query("type") === "shows" ? "shows" : "sessions";
   let csv: string;
   let filename: string;
@@ -171,6 +178,7 @@ analyticsAdminRoutes.get("/export", requireMinRole("superadmin"), async (c) => {
         listeners: sql<number>`count(distinct ${analyticsShowListen.clientId})::int`,
       })
       .from(analyticsShowListen)
+      .where(eq(analyticsShowListen.radioId, radioId))
       .groupBy(analyticsShowListen.showTitle)
       .orderBy(sql`sum(${analyticsShowListen.listenSec}) desc`);
     csv = toCsv(
@@ -184,7 +192,11 @@ analyticsAdminRoutes.get("/export", requireMinRole("superadmin"), async (c) => {
     );
     filename = "ecoute-par-emission.csv";
   } else {
-    const rows = await db.select().from(analyticsSessions).orderBy(desc(analyticsSessions.lastSeen));
+    const rows = await db
+      .select()
+      .from(analyticsSessions)
+      .where(eq(analyticsSessions.radioId, radioId))
+      .orderBy(desc(analyticsSessions.lastSeen));
     csv = toCsv(
       ["client_id", "ip", "pays", "navigateur", "appareil", "premier_vu", "dernier_vu", "actif_sec", "ecoute_sec", "pages"],
       rows.map((r) => [
