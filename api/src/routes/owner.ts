@@ -11,6 +11,7 @@ import { requireOwner } from "../middleware/rbac.js";
 import { conflict, notFound } from "../lib/errors.js";
 import { slugify } from "../lib/validation.js";
 import { invalidateRadioCache } from "../services/tenant.js";
+import { isAzuraCastConfigured, createStation } from "../services/azuracast.js";
 import type { AppBindings } from "../types.js";
 
 export const ownerRoutes = new Hono<AppBindings>();
@@ -113,6 +114,24 @@ ownerRoutes.post("/radios", async (c) => {
   const slug = slugify(body.slug || body.name);
   if (await db.query.radios.findFirst({ where: eq(radios.slug, slug) }))
     throw conflict("Slug déjà utilisé");
+
+  let streamUrl = body.streamUrl ?? null;
+  let nowPlayingUrl = body.nowPlayingUrl ?? null;
+  let station: { created: boolean; error?: string } = { created: false };
+  // Flux managé : si AzuraCast est configuré et qu'aucun flux n'est fourni à la
+  // main, on crée automatiquement la station (best-effort — n'empêche jamais la
+  // création du tenant).
+  if (isAzuraCastConfigured() && !streamUrl) {
+    try {
+      const s = await createStation(body.name, slug);
+      streamUrl = s.streamUrl;
+      nowPlayingUrl = s.nowPlayingUrl;
+      station = { created: true };
+    } catch (err) {
+      station = { created: false, error: (err as Error).message };
+    }
+  }
+
   const [row] = await db
     .insert(radios)
     .values({
@@ -120,13 +139,13 @@ ownerRoutes.post("/radios", async (c) => {
       name: body.name,
       plan: body.plan ?? null,
       domains: body.domains ?? [],
-      streamUrl: body.streamUrl ?? null,
-      nowPlayingUrl: body.nowPlayingUrl ?? null,
+      streamUrl,
+      nowPlayingUrl,
       status: "provisioning",
     })
     .returning();
   invalidateRadioCache();
-  return c.json(row, 201);
+  return c.json({ ...row, station }, 201);
 });
 
 const radioPatch = z.object({

@@ -113,6 +113,11 @@ export const env = {
   VAPID_PRIVATE_KEY: optional("VAPID_PRIVATE_KEY", ""),
   VAPID_SUBJECT: optional("VAPID_SUBJECT", "mailto:admin@hitsdancemusic.ca"),
 
+  // AzuraCast (flux managé derrière la marque) — inactif si non fourni.
+  // Le provisioning crée alors le tenant sans station de flux.
+  AZURACAST_BASE_URL: optional("AZURACAST_BASE_URL", ""),
+  AZURACAST_API_KEY: optional("AZURACAST_API_KEY", ""),
+
   // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés
   S3_REGION: optional("S3_REGION", ""),
   S3_BUCKET: optional("S3_BUCKET", ""),
