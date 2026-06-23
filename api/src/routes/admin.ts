@@ -25,6 +25,7 @@ import {
   assertCanAssignRole,
   assertCanManageUser,
   isAdminOrAbove,
+  RANK,
 } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import { createAuthToken } from "../services/auth-tokens.js";
@@ -477,6 +478,15 @@ adminRoutes.post("/users", requireMinRole("superadmin"), async (c) => {
   const actor = c.get("user");
   const body = userCreateSchema.parse(await c.req.json());
   assertCanAssignRole(actor, body.role); // anti-escalade : jamais un rôle au-dessus du sien
+  // Une fiche animateur liée doit appartenir à la radio du compte.
+  if (body.artistId) {
+    const targetRadio = body.role === "owner" ? null : radioId;
+    const art = await db.query.artists.findFirst({
+      where: eq(artists.id, body.artistId),
+      columns: { radioId: true },
+    });
+    if (!art || art.radioId !== targetRadio) throw badRequest("Fiche animateur d'une autre radio");
+  }
   if (await db.query.users.findFirst({ where: eq(users.email, body.email) }))
     throw conflict("Email déjà utilisé");
 
@@ -540,11 +550,25 @@ adminRoutes.patch("/users/:id", requireMinRole("superadmin"), async (c) => {
   // Anti-escalade : pas de gestion d'un rang supérieur, pas d'attribution au-dessus du sien.
   assertCanManageUser(actor, target.role);
   if (body.role) assertCanAssignRole(actor, body.role);
-  const [row] = await db
-    .update(users)
-    .set({ ...body, updatedAt: new Date() })
-    .where(eq(users.id, id))
-    .returning();
+  // Anti auto-blocage : on ne se désactive pas et on ne se rétrograde pas soi-même.
+  if (id === actor.userId && (body.isActive === false || (body.role && RANK[body.role] < RANK[actor.role]))) {
+    throw badRequest("Tu ne peux pas te désactiver ni te rétrograder toi-même");
+  }
+  const patch: Record<string, unknown> = { ...body, updatedAt: new Date() };
+  // Invariant : owner = cross-radio (radio_id NULL). On re-dérive radio_id si le rôle change.
+  if (body.role) {
+    patch.radioId = body.role === "owner" ? null : target.role === "owner" ? radioId : target.radioId;
+  }
+  // Une fiche animateur liée doit appartenir à la radio (effective) du compte.
+  if (body.artistId) {
+    const effectiveRadio = (patch.radioId as string | null | undefined) ?? target.radioId;
+    const art = await db.query.artists.findFirst({
+      where: eq(artists.id, body.artistId),
+      columns: { radioId: true },
+    });
+    if (!art || art.radioId !== effectiveRadio) throw badRequest("Fiche animateur d'une autre radio");
+  }
+  const [row] = await db.update(users).set(patch).where(eq(users.id, id)).returning();
   if (!row) throw notFound("Utilisateur introuvable");
   return c.json(publicUser(row));
 });

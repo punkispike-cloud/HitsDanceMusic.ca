@@ -10,6 +10,7 @@ import {
   setPasswordSchema,
   forgotPasswordSchema,
   registerSchema,
+  roleSchema,
   slotTagSchema,
 } from "../src/lib/validation.ts";
 
@@ -68,4 +69,11 @@ test("slotTagSchema : n'accepte que les tags connus", () => {
     assert.doesNotThrow(() => slotTagSchema.parse(t));
   }
   assert.throws(() => slotTagSchema.parse("inexistant"));
+});
+
+test("roleSchema : accepte owner/superadmin/animateur/lecteur, rejette le reste", () => {
+  for (const r of ["owner", "superadmin", "animateur", "lecteur"]) {
+    assert.doesNotThrow(() => roleSchema.parse(r));
+  }
+  assert.throws(() => roleSchema.parse("root"));
 });

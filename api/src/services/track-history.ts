@@ -4,8 +4,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { trackHistory } from "../db/schema.js";
-import { soleRadioId } from "./tenant.js";
+import { trackHistory, radios } from "../db/schema.js";
 import { env } from "../env.js";
 
 const POLL_MS = 30_000;
@@ -51,20 +50,17 @@ function parseNowPlaying(txt: string): { artist: string; title: string } | null 
   return splitArtistTitle((cols.length >= 7 ? cols.slice(6).join(",") : body).trim());
 }
 
-async function tick(): Promise<void> {
+/** Interroge le now-playing d'UNE radio et enregistre le titre s'il a changé. */
+async function pollRadio(radioId: string, url: string): Promise<void> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 5000);
   try {
     // Le timeout couvre AUSSI la lecture du corps (r.text()) : on ne clear qu'à la fin.
-    const r = await fetch(env.NOWPLAYING_URL, { signal: ctrl.signal });
+    const r = await fetch(url, { signal: ctrl.signal });
     if (!r.ok) return;
     const parsed = parseNowPlaying(await r.text());
     if (!parsed || !parsed.title) return;
-    // Poller global = mono-radio seulement ; en multi-radio chaque station a son
-    // propre now-playing (résolu au provisioning — Phase 9).
-    const radioId = await soleRadioId();
-    if (!radioId) return;
-    // Anti-doublon : rien si identique au dernier titre de la radio.
+    // Anti-doublon : rien si identique au dernier titre DE CETTE radio.
     const [last] = await db
       .select()
       .from(trackHistory)
@@ -80,12 +76,35 @@ async function tick(): Promise<void> {
   }
 }
 
-export function startTrackHistory(): void {
-  if (!env.NOWPLAYING_URL) {
-    console.warn("[track-history] NOWPLAYING_URL absent — historique des titres inactif.");
-    return;
+/** Cibles à interroger : chaque radio ACTIVE avec un now_playing_url. En
+   mono-radio sans URL en base, on retombe sur env.NOWPLAYING_URL (compat Hits Dance). */
+async function pollTargets(): Promise<{ radioId: string; url: string }[]> {
+  const rows = await db
+    .select({ id: radios.id, url: radios.nowPlayingUrl, status: radios.status })
+    .from(radios);
+  const active = rows.filter((r) => r.status === "active");
+  const out = active.filter((r) => r.url).map((r) => ({ radioId: r.id, url: r.url! }));
+  if (out.length === 0 && active.length === 1 && env.NOWPLAYING_URL) {
+    out.push({ radioId: active[0]!.id, url: env.NOWPLAYING_URL });
   }
+  return out;
+}
+
+async function tick(): Promise<void> {
+  let list: { radioId: string; url: string }[] = [];
+  try {
+    list = await pollTargets();
+  } catch {
+    return; // best-effort
+  }
+  // Sérialisé : on ne martèle pas N stations simultanément.
+  for (const { radioId, url } of list) {
+    await pollRadio(radioId, url);
+  }
+}
+
+export function startTrackHistory(): void {
   void tick();
   setInterval(() => void tick(), POLL_MS);
-  console.log(`[track-history] poller actif (${POLL_MS / 1000}s) → ${env.NOWPLAYING_URL}`);
+  console.log(`[track-history] poller actif (${POLL_MS / 1000}s, par radio active)`);
 }

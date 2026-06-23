@@ -11,15 +11,13 @@ import { users } from "../db/schema.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import {
   loginSchema,
-  registerSchema,
   changePasswordSchema,
   forgotPasswordSchema,
   setPasswordSchema,
 } from "../lib/validation.js";
-import { badRequest, unauthorized, conflict } from "../lib/errors.js";
+import { badRequest, unauthorized } from "../lib/errors.js";
 import { env } from "../env.js";
 import { requireAuth } from "../middleware/auth.js";
-import { requireMinRole, assertCanAssignRole } from "../middleware/rbac.js";
 import {
   issueTokenPair,
   rotateRefreshToken,
@@ -56,24 +54,8 @@ function tokenResponse(pair: TokenPair) {
 
 export const authRoutes = new Hono<AppBindings>();
 
-/* POST /auth/register — création de compte équipe (superadmin uniquement). */
-authRoutes.post("/register", requireAuth, requireMinRole("superadmin"), async (c) => {
-  const body = registerSchema.parse(await c.req.json());
-  assertCanAssignRole(c.get("user"), body.role); // anti-escalade : jamais un rôle au-dessus du sien
-  const existing = await db.query.users.findFirst({ where: eq(users.email, body.email) });
-  if (existing) throw conflict("Un compte existe déjà avec cet email", "email_taken");
-  const [created] = await db
-    .insert(users)
-    .values({
-      email: body.email,
-      passwordHash: await hashPassword(body.password),
-      displayName: body.displayName,
-      role: body.role,
-      artistId: body.artistId ?? null,
-    })
-    .returning();
-  return c.json({ user: publicUser(created!) }, 201);
-});
+/* La création de comptes équipe passe par POST /v1/admin/users (scopé radio).
+   Pas de /auth/register séparé : il créait des comptes hors-tenant (radio_id NULL). */
 
 /* POST /auth/login — vérifie les identifiants, émet une paire de tokens. */
 authRoutes.post("/login", async (c) => {

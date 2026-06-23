@@ -42,15 +42,23 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       .get<RadioSummary[]>("/v1/owner/radios")
       .then((rows) => {
         setRadios(rows);
+        const cur = localStorage.getItem(KEY);
         // Sélection devenue invalide (radio supprimée) → on nettoie.
-        setSelectedId((cur) => {
-          if (cur && !rows.some((r) => r.id === cur)) {
-            localStorage.removeItem(KEY);
-            setSelectedRadioId(null);
-            return null;
-          }
-          return cur;
-        });
+        if (cur && !rows.some((r) => r.id === cur)) {
+          localStorage.removeItem(KEY);
+          setSelectedRadioId(null);
+          setSelectedId(null);
+          return;
+        }
+        // 1er login owner avec PLUSIEURS radios et aucune sélection : on
+        // auto-sélectionne la 1re (sinon tout l'admin tombe en 404, faute de
+        // X-Radio-Id) et on recharge pour que les pages requêtent la bonne radio.
+        // En mono-radio, inutile : le backend retombe sur l'unique radio.
+        if (!cur && rows.length > 1) {
+          localStorage.setItem(KEY, rows[0]!.id);
+          setSelectedRadioId(rows[0]!.id);
+          window.location.reload();
+        }
       })
       .catch(() => setRadios([]));
   }, [isOwner]);

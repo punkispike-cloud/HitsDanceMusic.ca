@@ -132,7 +132,7 @@ async function seedArtists(seedArtistList: SeedArtist[], radioId: string): Promi
         sortOrder: a.sortOrder,
       })
       .onConflictDoUpdate({
-        target: artists.slug,
+        target: [artists.radioId, artists.slug],
         set: {
           name: a.name,
           photoUrl: a.photoUrl,
@@ -169,7 +169,7 @@ async function seedShows(seedShowList: SeedShow[], artistIdBySlug: Map<string, s
         sortOrder: s.sortOrder,
       })
       .onConflictDoUpdate({
-        target: shows.slug,
+        target: [shows.radioId, shows.slug],
         set: {
           title: s.title,
           badge: s.badge,

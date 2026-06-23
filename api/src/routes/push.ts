@@ -3,7 +3,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { pushSubscriptions } from "../db/schema.js";
 import { env, isPushConfigured } from "../env.js";
@@ -26,11 +26,14 @@ const subSchema = z.object({
 /* POST /v1/push/subscribe — enregistre (ou met à jour) un abonnement. */
 pushRoutes.post("/push/subscribe", async (c) => {
   if (!isPushConfigured()) return c.json({ error: { code: "push_disabled", message: "Push non activé" } }, 503);
+  // Hôte non rattaché à une radio (multi-radio) → on n'enregistre pas d'orphelin.
+  const radioId = c.get("radioId");
+  if (!radioId) return c.json({ error: { code: "radio_unresolved", message: "Hôte inconnu" } }, 404);
   const body = subSchema.parse(await c.req.json());
   await db
     .insert(pushSubscriptions)
     .values({
-      radioId: c.get("radioId") ?? null,
+      radioId,
       endpoint: body.endpoint,
       p256dh: body.keys.p256dh,
       auth: body.keys.auth,
@@ -39,15 +42,23 @@ pushRoutes.post("/push/subscribe", async (c) => {
       userAgent: c.req.header("User-Agent") ?? null,
     })
     .onConflictDoUpdate({
-      target: pushSubscriptions.endpoint,
+      // Unicité par (radio, endpoint) : le même appareil peut s'abonner à plusieurs radios.
+      target: [pushSubscriptions.radioId, pushSubscriptions.endpoint],
       set: { p256dh: body.keys.p256dh, auth: body.keys.auth, showSlug: body.showSlug ?? null },
     });
   return c.json({ ok: true });
 });
 
-/* POST /v1/push/unsubscribe — retire un abonnement. */
+/* POST /v1/push/unsubscribe — retire l'abonnement (scopé à la radio de l'hôte). */
 pushRoutes.post("/push/unsubscribe", async (c) => {
+  const radioId = c.get("radioId");
   const body = z.object({ endpoint: z.string().url().max(1000) }).parse(await c.req.json());
-  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, body.endpoint));
+  await db
+    .delete(pushSubscriptions)
+    .where(
+      radioId
+        ? and(eq(pushSubscriptions.endpoint, body.endpoint), eq(pushSubscriptions.radioId, radioId))
+        : eq(pushSubscriptions.endpoint, body.endpoint),
+    );
   return c.json({ ok: true });
 });

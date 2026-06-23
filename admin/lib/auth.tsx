@@ -5,7 +5,7 @@
    cookie refresh valide existe, la session reprend sans re-login. */
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
-import { api, setAccessToken, setOnUnauthorized, API_BASE } from "./api";
+import { api, setAccessToken, setSelectedRadioId, setOnUnauthorized, API_BASE } from "./api";
 import type { AuthUser } from "./types";
 
 interface AuthState {
@@ -59,17 +59,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setOnUnauthorized(null);
   }, []);
 
+  // Repart d'un contexte radio propre (évite d'hériter de la sélection d'un
+  // autre compte sur un poste partagé).
+  const resetRadio = () => {
+    setSelectedRadioId(null);
+    try {
+      localStorage.removeItem("enondes_radio");
+    } catch {
+      /* SSR / pas de localStorage */
+    }
+  };
+
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.post<{ accessToken: string; user: AuthUser }>("/auth/login", {
       email,
       password,
     });
+    resetRadio();
     setAccessToken(data.accessToken);
     setUser(data.user);
   }, []);
 
   const logout = useCallback(async () => {
     await api.post("/auth/logout").catch(() => {});
+    resetRadio();
     setAccessToken(null);
     setUser(null);
   }, []);

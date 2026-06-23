@@ -2,7 +2,7 @@
    temps d'écoute par émission. Conçu pour des « beacons » légers envoyés par
    le front (pageview, heartbeat, listen). Valeurs bornées côté serveur. */
 
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 
@@ -63,7 +63,7 @@ async function lookupGeo(ip: string): Promise<GeoResult | null> {
   return null;
 }
 
-async function resolveCountry(ip: string, clientId: string): Promise<void> {
+async function resolveCountry(ip: string, clientId: string, radioId: string): Promise<void> {
   if (!ip || PRIVATE_IP.test(ip)) return;
   try {
     const geo = await lookupGeo(ip);
@@ -78,7 +78,10 @@ async function resolveCountry(ip: string, clientId: string): Promise<void> {
       patch.ipLon = geo.lon;
     }
     if (Object.keys(patch).length) {
-      await db.update(analyticsSessions).set(patch).where(eq(analyticsSessions.clientId, clientId));
+      await db
+        .update(analyticsSessions)
+        .set(patch)
+        .where(and(eq(analyticsSessions.radioId, radioId), eq(analyticsSessions.clientId, clientId)));
     }
   } catch {
     /* best effort — on ne bloque jamais l'ingestion */
@@ -140,7 +143,7 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
       pageViews: pageAdd,
     })
     .onConflictDoUpdate({
-      target: analyticsSessions.clientId,
+      target: [analyticsSessions.radioId, analyticsSessions.clientId],
       set: {
         ip,
         userAgent,
@@ -166,7 +169,7 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
       }
     }
     _geoAttempted.add(clientId);
-    void resolveCountry(ip, clientId);
+    void resolveCountry(ip, clientId, radioId);
   }
 
   // Temps d'écoute par émission (agrégat par paire émission/visiteur).
@@ -176,7 +179,7 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
       .insert(analyticsShowListen)
       .values({ radioId, showTitle, clientId, listenSec: listenAdd, lastAt: now })
       .onConflictDoUpdate({
-        target: [analyticsShowListen.showTitle, analyticsShowListen.clientId],
+        target: [analyticsShowListen.radioId, analyticsShowListen.showTitle, analyticsShowListen.clientId],
         set: {
           listenSec: sql`${analyticsShowListen.listenSec} + ${listenAdd}`,
           lastAt: now,

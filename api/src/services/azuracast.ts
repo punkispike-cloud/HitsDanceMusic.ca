@@ -40,8 +40,15 @@ async function acFetch(path: string, init?: RequestInit): Promise<unknown> {
         ...(init?.headers ?? {}),
       },
     });
-    if (!r.ok) throw new Error(`AzuraCast ${path} → ${r.status} ${r.statusText}`);
+    if (!r.ok) {
+      // Inclure le corps : AzuraCast renvoie un detail JSON utile au diagnostic.
+      const detail = await r.text().catch(() => "");
+      throw new Error(`AzuraCast ${path} → ${r.status} ${r.statusText} ${detail.slice(0, 500)}`.trim());
+    }
     return r.status === 204 ? null : await r.json();
+  } catch (err) {
+    if ((err as Error).name === "AbortError") throw new Error(`AzuraCast ${path} → timeout (15s)`);
+    throw err;
   } finally {
     clearTimeout(t);
   }

@@ -92,7 +92,7 @@ export const artists = pgTable(
     ...timestamps,
   },
   (t) => ({
-    slugIdx: uniqueIndex("artists_slug_idx").on(t.slug),
+    slugIdx: uniqueIndex("artists_slug_idx").on(t.radioId, t.slug),
     sortIdx: index("artists_sort_idx").on(t.sortOrder),
     radioIdx: index("artists_radio_idx").on(t.radioId),
   }),
@@ -167,7 +167,7 @@ export const shows = pgTable(
     ...timestamps,
   },
   (t) => ({
-    slugIdx: uniqueIndex("shows_slug_idx").on(t.slug),
+    slugIdx: uniqueIndex("shows_slug_idx").on(t.radioId, t.slug),
     artistIdx: index("shows_artist_idx").on(t.artistId),
     tagIdx: index("shows_tag_idx").on(t.tag),
     radioIdx: index("shows_radio_idx").on(t.radioId),
@@ -231,7 +231,7 @@ export const episodes = pgTable(
     ...timestamps,
   },
   (t) => ({
-    slugIdx: uniqueIndex("episodes_slug_idx").on(t.slug),
+    slugIdx: uniqueIndex("episodes_slug_idx").on(t.radioId, t.slug),
     artistIdx: index("episodes_artist_idx").on(t.artistId),
     showIdx: index("episodes_show_idx").on(t.showId),
     statusIdx: index("episodes_status_published_idx").on(t.status, t.publishedAt),
@@ -266,7 +266,7 @@ export const mixes = pgTable(
     ...timestamps,
   },
   (t) => ({
-    slugIdx: uniqueIndex("mixes_slug_idx").on(t.slug),
+    slugIdx: uniqueIndex("mixes_slug_idx").on(t.radioId, t.slug),
     artistIdx: index("mixes_artist_idx").on(t.artistId),
     statusIdx: index("mixes_status_idx").on(t.status),
     radioIdx: index("mixes_radio_idx").on(t.radioId),
@@ -321,7 +321,7 @@ export const analyticsSessions = pgTable(
     pageViews: integer("page_views").notNull().default(0),
   },
   (t) => ({
-    clientIdx: uniqueIndex("analytics_sessions_client_idx").on(t.clientId),
+    clientIdx: uniqueIndex("analytics_sessions_client_idx").on(t.radioId, t.clientId),
     lastSeenIdx: index("analytics_sessions_last_seen_idx").on(t.lastSeen),
     radioIdx: index("analytics_sessions_radio_idx").on(t.radioId),
   }),
@@ -341,7 +341,7 @@ export const analyticsShowListen = pgTable(
     lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    pairIdx: uniqueIndex("analytics_show_listen_pair_idx").on(t.showTitle, t.clientId),
+    pairIdx: uniqueIndex("analytics_show_listen_pair_idx").on(t.radioId, t.showTitle, t.clientId),
     showIdx: index("analytics_show_listen_show_idx").on(t.showTitle),
     radioIdx: index("analytics_show_listen_radio_idx").on(t.radioId),
   }),
@@ -385,7 +385,7 @@ export const pushSubscriptions = pgTable(
     lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
   },
   (t) => ({
-    endpointIdx: uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint),
+    endpointIdx: uniqueIndex("push_subscriptions_endpoint_idx").on(t.radioId, t.endpoint),
     showIdx: index("push_subscriptions_show_idx").on(t.showSlug),
     radioIdx: index("push_subscriptions_radio_idx").on(t.radioId),
   }),
