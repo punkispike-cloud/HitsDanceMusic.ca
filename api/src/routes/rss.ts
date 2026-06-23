@@ -8,9 +8,11 @@ import { eq, and, asc, desc, isNotNull } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { shows, episodes, artists } from "../db/schema.js";
 import { notFound } from "../lib/errors.js";
+import { requireRadioId } from "../services/tenant.js";
 import { env } from "../env.js";
+import type { AppBindings } from "../types.js";
 
-export const rssRoutes = new Hono();
+export const rssRoutes = new Hono<AppBindings>();
 
 /** Échappe le texte pour insertion dans du XML. */
 function xml(s: string | null | undefined): string {
@@ -35,9 +37,10 @@ function hhmmss(total: number | null | undefined): string {
 
 /* GET /v1/rss/:showSlug */
 rssRoutes.get("/rss/:showSlug", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const slug = c.req.param("showSlug");
   const show = await db.query.shows.findFirst({
-    where: and(eq(shows.slug, slug), eq(shows.isPublished, true)),
+    where: and(eq(shows.radioId, radioId), eq(shows.slug, slug), eq(shows.isPublished, true)),
   });
   if (!show) throw notFound("Émission introuvable");
 
@@ -51,6 +54,7 @@ rssRoutes.get("/rss/:showSlug", async (c) => {
     .from(episodes)
     .where(
       and(
+        eq(episodes.radioId, radioId),
         eq(episodes.showId, show.id),
         eq(episodes.status, "published"),
         isNotNull(episodes.audioUrl),

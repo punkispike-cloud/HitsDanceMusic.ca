@@ -12,6 +12,11 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   if (!match) throw unauthorized("Token d'accès manquant");
   const claims = await verifyAccessToken(match[1]!);
   if (!claims) throw unauthorized("Token d'accès invalide ou expiré", "invalid_token");
-  c.set("user", { userId: claims.sub, role: claims.role, artistId: claims.artistId });
+  c.set("user", {
+    userId: claims.sub,
+    role: claims.role,
+    artistId: claims.artistId,
+    radioId: claims.radioId,
+  });
   await next();
 };

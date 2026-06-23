@@ -2,7 +2,7 @@
    { "0": [[from, to, title, host, tag], ...], ... "6": [...] }
    où from/to sont "HH:MM" (et "24:00" pour minuit fin de journée). */
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, and } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { scheduleSlots, type ScheduleSlot } from "../db/schema.js";
 import { fromMinutes } from "../lib/validation.js";
@@ -15,10 +15,11 @@ function tupleOf(s: ScheduleSlot): ScheduleTuple {
 }
 
 /** Construit l'objet SCHEDULE complet (jours 0..6, triés par heure). */
-export async function getScheduleShape(): Promise<ScheduleShape> {
+export async function getScheduleShape(radioId: string): Promise<ScheduleShape> {
   const rows = await db
     .select()
     .from(scheduleSlots)
+    .where(eq(scheduleSlots.radioId, radioId))
     .orderBy(asc(scheduleSlots.dayOfWeek), asc(scheduleSlots.startMin));
 
   const shape: ScheduleShape = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
@@ -29,12 +30,13 @@ export async function getScheduleShape(): Promise<ScheduleShape> {
 }
 
 /** Slot courant pour l'heure de Montréal (≈ getCurrentSlot du front). */
-export async function getCurrentSlot(now = new Date()): Promise<ScheduleSlot | null> {
+export async function getCurrentSlot(radioId: string, now = new Date()): Promise<ScheduleSlot | null> {
   const parts = montrealParts(now);
   const nowMin = parts.hour * 60 + parts.minute;
   const rows = await db
     .select()
     .from(scheduleSlots)
+    .where(eq(scheduleSlots.radioId, radioId))
     .orderBy(asc(scheduleSlots.dayOfWeek), asc(scheduleSlots.startMin));
   for (const r of rows) {
     if (r.dayOfWeek === parts.day && nowMin >= r.startMin && nowMin < r.endMin) return r;
@@ -44,11 +46,11 @@ export async function getCurrentSlot(now = new Date()): Promise<ScheduleSlot | n
 
 /** Prochains passages d'un animateur (via le VRAI lien artist_id de la grille,
    pas un matching de chaînes). Renvoie les N prochains créneaux de la semaine. */
-export async function getUpcomingSlotsForArtist(artistId: string, limit = 6) {
+export async function getUpcomingSlotsForArtist(artistId: string, radioId: string, limit = 6) {
   const rows = await db
     .select()
     .from(scheduleSlots)
-    .where(eq(scheduleSlots.artistId, artistId))
+    .where(and(eq(scheduleSlots.artistId, artistId), eq(scheduleSlots.radioId, radioId)))
     .orderBy(asc(scheduleSlots.dayOfWeek), asc(scheduleSlots.startMin));
   if (!rows.length) return [];
   const { day, hour, minute } = montrealParts(new Date());

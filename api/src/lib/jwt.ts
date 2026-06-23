@@ -15,10 +15,11 @@ export interface AccessClaims {
   sub: string;
   role: Role;
   artistId: string | null;
+  radioId: string | null;
 }
 
 export async function signAccessToken(claims: AccessClaims): Promise<string> {
-  return new SignJWT({ role: claims.role, artistId: claims.artistId })
+  return new SignJWT({ role: claims.role, artistId: claims.artistId, radioId: claims.radioId })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(claims.sub)
     .setIssuer(ISSUER)
@@ -35,6 +36,7 @@ export async function verifyAccessToken(token: string): Promise<AccessClaims | n
       sub: payload.sub,
       role: payload.role as Role,
       artistId: (payload.artistId as string | null) ?? null,
+      radioId: (payload.radioId as string | null) ?? null,
     };
   } catch {
     return null;

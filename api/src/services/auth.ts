@@ -23,6 +23,7 @@ export async function issueTokenPair(user: User, userAgent?: string): Promise<To
     sub: user.id,
     role: user.role,
     artistId: user.artistId,
+    radioId: user.radioId,
   });
   const refreshToken = generateRefreshToken();
   const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_TTL * 1000);

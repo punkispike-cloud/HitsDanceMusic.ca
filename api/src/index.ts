@@ -10,6 +10,7 @@ import { corsMiddleware } from "./middleware/cors.js";
 import { onError, notFoundHandler } from "./middleware/error.js";
 import { globalRateLimit, authRateLimit } from "./middleware/rateLimit.js";
 import { requireAuth } from "./middleware/auth.js";
+import { publicTenant, adminTenant } from "./middleware/tenant.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { publicRoutes } from "./routes/public.js";
@@ -53,14 +54,17 @@ app.use("/auth/*", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
 app.route("/auth", authRoutes);
 
 // Lecture publique + ingestion analytics (beacons anonymes)
+// Résout la radio depuis l'hôte HTTP (mono-radio → l'unique radio).
+app.use("/v1/*", publicTenant);
 app.route("/v1", publicRoutes);
 app.route("/v1", trackRoutes);
 app.route("/v1", rssRoutes); // GET /v1/rss/:showSlug
 app.route("/v1", shareRoutes); // GET /v1/share/...
 app.route("/v1", pushRoutes); // abonnement Web Push (public)
 
-// Admin — auth obligatoire + journal d'audit sur tout /v1/admin
+// Admin — auth obligatoire + résolution de la radio + journal d'audit
 app.use("/v1/admin/*", requireAuth);
+app.use("/v1/admin/*", adminTenant);
 app.use("/v1/admin/*", auditMiddleware);
 app.route("/v1/admin", adminRoutes);
 app.route("/v1/admin/uploads", uploadRoutes);

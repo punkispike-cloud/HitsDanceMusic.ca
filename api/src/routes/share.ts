@@ -8,9 +8,11 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { artists, shows, episodes, mixes } from "../db/schema.js";
 import { notFound } from "../lib/errors.js";
+import { requireRadioId } from "../services/tenant.js";
 import { env } from "../env.js";
+import type { AppBindings } from "../types.js";
 
-export const shareRoutes = new Hono();
+export const shareRoutes = new Hono<AppBindings>();
 
 function esc(s: string | null | undefined): string {
   if (!s) return "";
@@ -58,9 +60,10 @@ function html(c: Context, body: string) {
 }
 
 shareRoutes.get("/share/artist/:slug", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const slug = c.req.param("slug");
   const a = await db.query.artists.findFirst({
-    where: and(eq(artists.slug, slug), eq(artists.isPublished, true)),
+    where: and(eq(artists.radioId, radioId), eq(artists.slug, slug), eq(artists.isPublished, true)),
   });
   if (!a) throw notFound("Animateur introuvable");
   return html(
@@ -76,9 +79,10 @@ shareRoutes.get("/share/artist/:slug", async (c) => {
 });
 
 shareRoutes.get("/share/show/:slug", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const slug = c.req.param("slug");
   const s = await db.query.shows.findFirst({
-    where: and(eq(shows.slug, slug), eq(shows.isPublished, true)),
+    where: and(eq(shows.radioId, radioId), eq(shows.slug, slug), eq(shows.isPublished, true)),
   });
   if (!s) throw notFound("Émission introuvable");
   return html(
@@ -93,9 +97,10 @@ shareRoutes.get("/share/show/:slug", async (c) => {
 });
 
 shareRoutes.get("/share/episode/:slug", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const slug = c.req.param("slug");
   const e = await db.query.episodes.findFirst({
-    where: and(eq(episodes.slug, slug), eq(episodes.status, "published")),
+    where: and(eq(episodes.radioId, radioId), eq(episodes.slug, slug), eq(episodes.status, "published")),
   });
   if (!e) throw notFound("Épisode introuvable");
   return html(
@@ -111,9 +116,10 @@ shareRoutes.get("/share/episode/:slug", async (c) => {
 });
 
 shareRoutes.get("/share/mix/:slug", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
   const slug = c.req.param("slug");
   const m = await db.query.mixes.findFirst({
-    where: and(eq(mixes.slug, slug), eq(mixes.status, "published")),
+    where: and(eq(mixes.radioId, radioId), eq(mixes.slug, slug), eq(mixes.status, "published")),
   });
   if (!m) throw notFound("Mix introuvable");
   return html(
