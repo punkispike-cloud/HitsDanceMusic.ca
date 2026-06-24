@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Rockfort">
+  <defs>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2d18a"/>
+      <stop offset=".5" stop-color="#e6b85c"/>
+      <stop offset="1" stop-color="#cf9b3f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".44" r=".58">
+      <stop offset="0" stop-color="#cf9b3f" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#cf9b3f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0b0908"/>
+  <circle cx="256" cy="232" r="210" fill="url(#glow)"/>
+  <path d="M150 196 C150 174 169 165 191 161 C214 157 298 157 321 161 C343 165 362 174 362 196 C362 251 319 351 267 392 C259 398 253 398 245 392 C193 351 150 251 150 196 Z" fill="url(#amber)"/>
+  <ellipse cx="206" cy="200" rx="34" ry="19" fill="#ffffff" opacity=".17" transform="rotate(-22 206 200)"/>
+</svg>
