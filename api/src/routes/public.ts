@@ -3,16 +3,18 @@
    publicTenant). En mono-radio, c'est toujours l'unique radio ⇒ zéro drift. */
 
 import { Hono } from "hono";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, desc, and, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { artists, shows, episodes, mixes } from "../db/schema.js";
-import { notFound } from "../lib/errors.js";
+import { artists, shows, episodes, mixes, trackHistory, trackLikes } from "../db/schema.js";
+import { notFound, badRequest } from "../lib/errors.js";
 import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist } from "../services/schedule.js";
 import { requireRadioId } from "../services/tenant.js";
 import { fromMinutes } from "../lib/validation.js";
 import type { AppBindings } from "../types.js";
 
 export const publicRoutes = new Hono<AppBindings>();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* GET /v1/schedule — format SCHEDULE exact. */
 publicRoutes.get("/schedule", async (c) => {
@@ -132,4 +134,72 @@ publicRoutes.get("/mixes/:slug", async (c) => {
   });
   if (!row) throw notFound("Mix introuvable");
   return c.json(row);
+});
+
+/* ───────── Historique public des titres + 🤘 j'aime ─────────
+   Réutilise le poller track-history (services/track-history.ts). Likes anonymes
+   par client_id (même UUID que presence/analytics). Tout scopé à la radio. */
+
+function readClientId(c: { req: { query: (k: string) => string | undefined } }): string {
+  const id = (c.req.query("clientId") ?? "").trim();
+  if (!id || id.length > 64) throw badRequest("clientId manquant ou invalide");
+  return id;
+}
+
+async function likeCount(trackId: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(trackLikes)
+    .where(eq(trackLikes.trackId, trackId));
+  return r?.n ?? 0;
+}
+
+/* GET /v1/tracks/recent?limit=50 — derniers titres joués + compteur de likes. */
+publicRoutes.get("/tracks/recent", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 50));
+  const rows = await db
+    .select({
+      id: trackHistory.id,
+      artist: trackHistory.artist,
+      title: trackHistory.title,
+      playedAt: trackHistory.playedAt,
+      likes: sql<number>`count(${trackLikes.id})::int`,
+    })
+    .from(trackHistory)
+    .leftJoin(trackLikes, eq(trackLikes.trackId, trackHistory.id))
+    .where(eq(trackHistory.radioId, radioId))
+    .groupBy(trackHistory.id)
+    .orderBy(desc(trackHistory.playedAt))
+    .limit(limit);
+  c.header("Cache-Control", "public, max-age=15");
+  return c.json(rows);
+});
+
+/* POST /v1/tracks/:id/like?clientId=… — aime un titre (idempotent). */
+publicRoutes.post("/tracks/:id/like", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const trackId = c.req.param("id");
+  if (!UUID_RE.test(trackId)) throw notFound("Titre introuvable");
+  const clientId = readClientId(c);
+  const track = await db.query.trackHistory.findFirst({
+    where: and(eq(trackHistory.id, trackId), eq(trackHistory.radioId, radioId)),
+  });
+  if (!track) throw notFound("Titre introuvable");
+  await db.insert(trackLikes).values({ radioId, trackId, clientId }).onConflictDoNothing();
+  return c.json({ liked: true, likes: await likeCount(trackId) });
+});
+
+/* DELETE /v1/tracks/:id/like?clientId=… — retire son like. */
+publicRoutes.delete("/tracks/:id/like", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const trackId = c.req.param("id");
+  if (!UUID_RE.test(trackId)) throw notFound("Titre introuvable");
+  const clientId = readClientId(c);
+  await db
+    .delete(trackLikes)
+    .where(
+      and(eq(trackLikes.radioId, radioId), eq(trackLikes.trackId, trackId), eq(trackLikes.clientId, clientId)),
+    );
+  return c.json({ liked: false, likes: await likeCount(trackId) });
 });

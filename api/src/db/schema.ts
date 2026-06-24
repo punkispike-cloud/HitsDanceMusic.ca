@@ -70,6 +70,11 @@ export const radios = pgTable(
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
     licenseConfirmed: boolean("license_confirmed").notNull().default(false), // SOCAN/Re:Sound reçues
+    // Surveillance du flux (dead-air / injoignable) — alimenté par services/monitor.ts.
+    healthStatus: text("health_status").notNull().default("unknown"), // up | down | silent | unknown
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    lastAlertAt: timestamp("last_alert_at", { withTimezone: true }),
+    lastAlertKind: text("last_alert_kind"), // down | silent
     ...timestamps,
   },
   (t) => ({
@@ -371,6 +376,28 @@ export const trackHistory = pgTable(
   }),
 );
 
+/* ───────────────────────── track_likes (🤘 j'aime un titre) ─────────────────────────
+   Un like par (titre, visiteur). client_id = même UUID stable que presence/analytics.
+   Anonyme, sans compte. Sert au compteur public + au feedback de programmation. */
+
+export const trackLikes = pgTable(
+  "track_likes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => trackHistory.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqIdx: uniqueIndex("track_likes_uniq_idx").on(t.trackId, t.clientId),
+    radioIdx: index("track_likes_radio_idx").on(t.radioId),
+    trackIdx: index("track_likes_track_idx").on(t.trackId),
+  }),
+);
+
 /* ───────────────────────── push_subscriptions (rappels d'émission) ─────────────────────────
    Abonnement Web Push (PushSubscription du navigateur). showSlug null = tous
    les rappels ; sinon limité à une émission. client_id = même UUID que presence/analytics. */
@@ -446,6 +473,26 @@ export const auditLog = pgTable(
   }),
 );
 
+/* ───────────────────────── report_log (rapports mensuels envoyés) ─────────────────────────
+   Idempotence des rapports auto : une ligne par (radio, période "YYYY-MM") déjà
+   envoyée ⇒ jamais de doublon, même si le job tourne plusieurs fois dans le mois. */
+
+export const reportLog = pgTable(
+  "report_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id")
+      .notNull()
+      .references(() => radios.id, { onDelete: "cascade" }),
+    period: text("period").notNull(), // "2026-05"
+    recipients: text("recipients"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqIdx: uniqueIndex("report_log_uniq_idx").on(t.radioId, t.period),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({
@@ -503,3 +550,5 @@ export type AuthToken = typeof authTokens.$inferSelect;
 export type Radio = typeof radios.$inferSelect;
 export type NewRadio = typeof radios.$inferInsert;
 export type RadioStatus = (typeof radioStatus.enumValues)[number];
+export type TrackLike = typeof trackLikes.$inferSelect;
+export type ReportLog = typeof reportLog.$inferSelect;

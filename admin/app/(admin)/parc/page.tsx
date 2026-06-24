@@ -441,6 +441,8 @@ function AlertsPanel({ radios, health }: { radios: RadioSummary[]; health: Recor
   for (const r of radios) {
     if (r.status === "active" && health[r.id]?.status === "down")
       alerts.push({ id: r.id, name: r.name, high: true, msg: "Flux injoignable" });
+    if (r.status === "active" && r.healthStatus === "silent")
+      alerts.push({ id: r.id, name: r.name, high: true, msg: "Silence détecté (dead-air)" });
     if (r.status === "active" && !r.licenseConfirmed)
       alerts.push({ id: r.id, name: r.name, high: true, msg: "Licences SOCAN / Re:Sound non confirmées" });
     if (r.status === "provisioning")
