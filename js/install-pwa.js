@@ -3,6 +3,7 @@
 
 import { $$ } from "./util.js";
 import { toast } from "./toast.js";
+import { activateModalTrap } from "./a11y-modal.js";
 
 let deferredInstallPrompt = null;
 const ua = navigator.userAgent || "";
@@ -98,6 +99,7 @@ function showInstallSheet(platform, brave) {
   sheet.id = "installSheet";
   sheet.className = "ios-install-sheet";
   sheet.setAttribute("role", "dialog");
+  sheet.setAttribute("aria-modal", "true");
   sheet.setAttribute("aria-label", title);
   sheet.innerHTML = `
     <div class="ios-install-card">
@@ -107,12 +109,20 @@ function showInstallSheet(platform, brave) {
     </div>
   `;
   document.body.appendChild(sheet);
-  const close = () => sheet.remove();
-  sheet.querySelector(".ios-install-close").addEventListener("click", close);
+  // a11y : mémorise le focus, piège Tab dans la modale, restaure à la fermeture.
+  const previousFocus = document.activeElement;
+  const closeBtn = sheet.querySelector(".ios-install-close");
+  const release = activateModalTrap(sheet, { closeBtn, previousFocus });
+  let escHandler = null;
+  const close = () => {
+    release();
+    if (escHandler) document.removeEventListener("keydown", escHandler);
+    sheet.remove();
+  };
+  closeBtn.addEventListener("click", close);
   sheet.addEventListener("click", (e) => { if (e.target === sheet) close(); });
-  document.addEventListener("keydown", function esc(e) {
-    if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); }
-  });
+  escHandler = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", escHandler);
 }
 
 export function wireInstallButtons() {
