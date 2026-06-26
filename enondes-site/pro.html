@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>En Ondes — Ta radio en ligne, clé en main</title>
+  <meta name="description" content="En Ondes crée et gère ta radio en ligne, clé en main et en français : site pro, lecteur en direct, podcasts, statistiques. Toi, tu animes." />
+  <meta name="theme-color" content="#06080f" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="canonical" href="https://enondes.ca/pro.html" />
+  <meta property="og:title" content="En Ondes — Ta radio en ligne, clé en main" />
+  <meta property="og:description" content="Site pro, lecteur en direct, podcasts, statistiques — on s'occupe de toute la technique. Toi, tu animes." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://enondes.ca/pro.html" />
+  <meta property="og:site_name" content="En Ondes" />
+  <meta property="og:locale" content="fr_CA" />
+  <meta property="og:image" content="https://enondes.ca/assets/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="En Ondes — studio radio, micro et platine en néon" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","@id":"https://enondes.ca/#org","name":"En Ondes","url":"https://enondes.ca/","email":"bonjour@enondes.ca","areaServed":"CA-QC"},
+    {"@type":"Service","name":"En Ondes — Radio clé en main","serviceType":"Création et gestion de radio en ligne","provider":{"@id":"https://enondes.ca/#org"},"areaServed":"CA-QC","availableLanguage":"fr-CA"}
+  ]}
+  </script>
+  <style>
+    :root {
+      --bg: #06080f; --bg-soft: #0b0f1b;
+      --surface: rgba(255,255,255,0.04); --surface-2: rgba(255,255,255,0.065);
+      --hairline: rgba(255,255,255,0.09); --hairline-strong: rgba(255,255,255,0.16);
+      --txt: #eef2fb; --muted: #97a3bd; --faint: #8693ad;
+      --blue: #38c6ff; --purple: #9d6cf2; --pink: #ff5db1;
+      --accent-bright: #7ad6ff; --on-accent: #08111f; --live: #ff3b5c;
+      --blue-12: rgba(56,198,255,0.12); --blue-32: rgba(56,198,255,0.32); --blue-45: rgba(56,198,255,0.45); --blue-60: rgba(56,198,255,0.6);
+      --brand-grad: linear-gradient(100deg, var(--blue) 0%, var(--purple) 52%, var(--pink) 100%);
+      --r-md: 18px; --r-lg: 24px; --r-pill: 999px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --font: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      font-family: var(--font); background: var(--bg); color: var(--txt); line-height: 1.6;
+      -webkit-font-smoothing: antialiased; overflow-x: hidden; position: relative; min-height: 100dvh;
+    }
+    ::selection { background: var(--blue-32); color: #fff; }
+    a { color: var(--accent-bright); text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    .wrap { max-width: 1140px; margin: 0 auto; padding: 0 22px; }
+    .grad { background: var(--brand-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+
+    /* Accessibilité : libellé réservé aux lecteurs d'écran */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    /* Icônes SVG inline (remplacent les emojis-icônes) */
+    .icn { width: 24px; height: 24px; flex: 0 0 auto; vertical-align: middle; }
+
+    /* Décor */
+    .ambient { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+    .ambient span { position: absolute; border-radius: 50%; filter: blur(95px); opacity: 0.45; }
+    .ambient .o1 { width: 56vw; height: 56vw; left: -12vw; top: -20vw; background: radial-gradient(circle, rgba(56,198,255,0.5), transparent 65%); }
+    .ambient .o2 { width: 50vw; height: 50vw; right: -14vw; top: -6vw; background: radial-gradient(circle, rgba(157,108,242,0.4), transparent 65%); }
+    .ambient .o3 { width: 44vw; height: 44vw; left: 32vw; bottom: -22vw; background: radial-gradient(circle, rgba(255,93,177,0.24), transparent 65%); }
+    body::after { content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.05;
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.5) 0 1px, transparent 1px 3px); }
+
+    /* En-tête */
+    header.top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 14px 22px; max-width: 1140px; margin: 0 auto;
+      padding-top: calc(14px + env(safe-area-inset-top));
+      padding-left: calc(22px + env(safe-area-inset-left)); padding-right: calc(22px + env(safe-area-inset-right));
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    .brand { display: flex; align-items: center; gap: 9px; }
+    .brand .spark { color: var(--purple); font-size: 0.8rem; filter: drop-shadow(0 0 6px rgba(157,108,242,0.7)); }
+    .brand .wordmark { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+    .nav-listen { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 0.86rem; font-weight: 600;
+      color: var(--on-accent); background: var(--brand-grad); padding: 9px 16px;
+      border-radius: var(--r-pill); white-space: nowrap; box-shadow: 0 8px 24px -10px var(--blue-60);
+      touch-action: manipulation; transition: transform 0.2s var(--ease); }
+    .nav-listen:hover { transform: translateY(-2px); }
+    .nav-listen:active { transform: translateY(0) scale(0.98); }
+
+    /* Boutons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-family: inherit;
+      padding: 14px 26px; border-radius: 14px; font-weight: 700; font-size: 1rem; touch-action: manipulation;
+      cursor: pointer; transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), border-color 0.15s var(--ease); border: 0; }
+    .btn-primary { color: var(--on-accent); background: var(--brand-grad); box-shadow: 0 10px 30px -10px var(--blue-60); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 44px -12px rgba(255,93,177,0.55); }
+    .btn-primary:active { transform: translateY(0) scale(0.98); }
+    .btn-ghost { color: var(--txt); background: var(--surface); border: 1px solid var(--hairline); }
+    .btn-ghost:hover { border-color: var(--blue-60); transform: translateY(-2px); }
+    .btn-ghost:active { transform: translateY(0) scale(0.98); }
+    /* Accessibilité clavier (socle L1) */
+    a:focus-visible, .btn:focus-visible, summary:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; border-radius: 6px; }
+
+    /* Héro cinématique */
+    .hero-cine { position: relative; width: 100%; overflow: hidden; background: linear-gradient(180deg, #0b1020, var(--bg)); }
+    .hero-cine img { width: 100%; height: clamp(300px, 42vh, 460px); object-fit: cover; object-position: center 56%; }
+    .hero-cine::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(180deg, rgba(6,8,15,0.3) 0%, rgba(6,8,15,0) 22%, rgba(6,8,15,0) 70%, rgba(6,8,15,0.7) 90%, var(--bg) 100%); }
+    .hero-onair { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; pointer-events: none; }
+    .hero-onair-inner { width: 100%; max-width: 1140px; padding: 0 22px 18px; display: flex; align-items: center; gap: 12px; }
+    .hero-onair .live { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; font-size: 0.68rem; color: #fff; background: rgba(255,59,92,0.18);
+      border: 1px solid rgba(255,59,92,0.65); border-radius: var(--r-pill); padding: 6px 12px; }
+    .hero-onair .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 10px var(--live); }
+    .hero-onair .meta { color: var(--muted); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 14px rgba(0,0,0,0.7); }
+    .hero-onair .meta b { color: var(--accent-bright); }
+
+    .hero-lead { padding: 30px 0 8px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 14px; }
+    .eyebrow::before, .eyebrow::after { content: "✦"; color: var(--purple); filter: drop-shadow(0 0 6px rgba(157,108,242,0.8)); }
+    .hero-lead h1 { font-size: clamp(2rem, 5.2vw, 3.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; max-width: 18ch; }
+    .hero-lead .sub { color: var(--muted); font-size: 1.12rem; max-width: 54ch; margin: 14px 0 26px; }
+    .cta-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .proof { margin-top: 22px; color: var(--muted); font-size: 0.92rem; }
+    .proof b { color: var(--accent-bright); }
+    /* Bande de preuve sociale honnête (pré-lancement) */
+    .prelaunch { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 18px;
+      padding: 12px 16px; border: 1px solid rgba(157,108,242,0.4); border-radius: var(--r-md);
+      background: linear-gradient(120deg, var(--blue-12), rgba(255,93,177,0.08)); font-size: 0.9rem; color: var(--txt); }
+    .prelaunch .tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; font-size: 0.66rem; color: var(--on-accent); background: var(--brand-grad);
+      border-radius: var(--r-pill); padding: 4px 10px; }
+
+    /* Sections */
+    section { padding: 64px 0; }
+    .hex { display: inline-block; width: 13px; height: 15px; background: var(--blue); vertical-align: middle; margin-right: 10px;
+      -webkit-clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+      box-shadow: 0 0 12px rgba(56,198,255,0.8); }
+    h2 { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .lead { color: var(--muted); font-size: 1.05rem; max-width: 60ch; margin-bottom: 32px; }
+    .alt { background: linear-gradient(180deg, var(--bg-soft), var(--bg)); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+
+    /* Cartes */
+    .grid { display: grid; gap: 16px; }
+    .cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); }
+    .cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
+    .card { position: relative; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 22px;
+      transition: border-color 0.25s var(--ease), transform 0.25s var(--ease), background 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+    .card:hover { border-color: var(--blue-45); transform: translateY(-4px); background: var(--surface-2);
+      box-shadow: 0 18px 50px -24px rgba(56,198,255,0.5); }
+    .card .ico { display: inline-flex; color: var(--blue); margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(157,108,242,0.4)); }
+    .card .ico .icn { width: 28px; height: 28px; }
+    .card h3 { font-size: 1.08rem; margin-bottom: 6px; font-weight: 700; }
+    .card p { color: var(--muted); font-size: 0.96rem; }
+
+    /* Tableau comparatif */
+    .tbl-wrap { overflow-x: auto; border-radius: var(--r-md); border: 1px solid var(--hairline); }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 560px; }
+    .tbl th, .tbl td { padding: 13px 12px; text-align: center; border-bottom: 1px solid var(--hairline); }
+    .tbl th:first-child, .tbl td:first-child { text-align: left; color: var(--muted); }
+    .tbl thead th { font-weight: 700; background: rgba(255,255,255,0.02); }
+    .tbl tbody tr:last-child td { border-bottom: 0; }
+    .tbl .us { background: linear-gradient(180deg, var(--blue-12), rgba(157,108,242,0.1)); font-weight: 700; color: #fff; }
+    .tbl thead .us { color: var(--accent-bright); }
+    /* Statut accessible dans le tableau comparatif (ne repose pas sur la couleur seule) */
+    .stat { display: inline-flex; align-items: center; gap: 6px; font-size: 0.86rem; font-weight: 600; white-space: nowrap; }
+    .stat .icn { width: 18px; height: 18px; }
+    .stat-yes { color: #6fe3a8; } .stat-yes .icn { color: #6fe3a8; }
+    .stat-mid { color: #ffc25e; } .stat-mid .icn { color: #ffc25e; }
+    .stat-no  { color: #ff8aa0; } .stat-no .icn { color: #ff8aa0; }
+    .tbl .us .stat-yes { color: #b6f0d2; } .tbl .us .stat-yes .icn { color: #b6f0d2; }
+
+    /* Étapes */
+    .step { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+    .step .n { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
+      background: var(--brand-grad); color: var(--on-accent); box-shadow: 0 8px 22px -10px var(--blue-60); }
+    .step h3 { font-size: 1.05rem; font-weight: 700; }
+    .step p { color: var(--muted); }
+
+    /* Offre */
+    .offer { text-align: center; }
+    .price-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+    .price { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 20px 28px; }
+    .price .big { font-size: 1.6rem; font-weight: 700; }
+    .price .big .grad { -webkit-text-fill-color: transparent; }
+    .founder { margin: 26px auto 0; max-width: 660px; border-radius: var(--r-lg); padding: 24px;
+      border: 1px solid rgba(157,108,242,0.45); background: linear-gradient(120deg, rgba(56,198,255,0.1), rgba(255,93,177,0.1)); }
+    .founder h3 { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .founder b { color: #cf8aff; }
+    /* Rappel de rareté près du CTA final */
+    .scarcity { display: inline-flex; align-items: center; gap: 8px; margin: 16px auto 0; padding: 8px 16px;
+      border: 1px solid rgba(157,108,242,0.5); border-radius: var(--r-pill); color: var(--txt); font-size: 0.9rem; font-weight: 600; }
+    .scarcity .icn { color: var(--purple); }
+
+    /* Garanties */
+    .guar { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+    .guar li { padding-left: 30px; position: relative; color: var(--txt); }
+    .guar li::before { content: "✓"; position: absolute; left: 0; top: -1px; width: 20px; height: 20px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; color: var(--on-accent); background: var(--brand-grad); }
+
+    /* FAQ */
+    details { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 4px 18px; margin-bottom: 10px; background: var(--surface); }
+    details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px;
+      cursor: pointer; font-weight: 600; list-style: none; touch-action: manipulation; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::after { content: ""; flex: 0 0 auto; width: 11px; height: 11px; border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin-top: -4px; transition: transform 0.2s var(--ease); }
+    details[open] summary { color: var(--accent-bright); }
+    details[open] summary::after { transform: rotate(-135deg); margin-top: 2px; border-color: var(--accent-bright); }
+    details p { color: var(--muted); margin: 0 0 12px; }
+
+    /* Footer */
+    footer { text-align: center; padding: 54px 0 40px; color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--hairline); }
+    footer .wordmark { font-size: 1.6rem; font-weight: 700; }
+    footer p { margin-top: 8px; }
+    footer p.fine { color: var(--faint); }
+    .foot-legal { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: center; }
+    .foot-legal a { color: var(--muted); }
+    .foot-legal a:hover { color: var(--accent-bright); }
+    .foot-legal .sep { color: var(--faint); }
+
+    @media (max-width: 600px) { section { padding: 48px 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+      details summary::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient" aria-hidden="true"><span class="o1"></span><span class="o2"></span><span class="o3"></span></div>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="En Ondes — accueil">
+      <span class="spark" aria-hidden="true">✦</span>
+      <span class="wordmark grad">En Ondes</span>
+    </a>
+    <a class="nav-listen" href="./">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z"/><path d="M20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"/></svg>
+      Écouter le réseau&nbsp;→</a>
+  </header>
+
+  <main>
+    <!-- ===== HÉRO ===== -->
+    <section class="hero-cine" aria-label="En Ondes — studio">
+      <img src="assets/studio-bg.jpg" alt="En Ondes — studio radio, en direct et podcast" width="1280" height="720" decoding="async" />
+      <div class="hero-onair">
+        <div class="hero-onair-inner">
+          <span class="live">En ondes</span>
+          <span class="meta"><b>Hits Dance Music</b> · sur la plateforme, 24/7</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero-lead">
+      <div class="wrap">
+        <span class="eyebrow">Radio-as-a-service · en français</span>
+        <h1>Ta radio en ligne, <span class="grad">clé en main</span>.</h1>
+        <p class="sub">Site pro, lecteur en direct, podcasts, et un <b>tableau d'audience</b> qui
+          prouve ton écoute. On s'occupe de toute la technique. <b>Toi, tu animes.</b></p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contact">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            Parlons de ta radio</a>
+          <a class="btn btn-ghost" href="./">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z"/><path d="M20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"/></svg>
+            Écouter les radios en direct</a>
+        </div>
+        <p class="proof">Déjà en ondes : <b>Hits Dance Music</b> tourne sur la plateforme, 24/7. <a href="./">Écouter le réseau →</a></p>
+        <p class="prelaunch">
+          <span class="tag">Pré-lancement</span>
+          <span>Sois l'une des <b>3 premières radios</b> du réseau. <b>Hits Dance Music</b> tourne déjà 24/7 sur la plateforme.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== POUR QUI ===== -->
+    <section>
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>C'est <span class="grad">toi</span> ?</h2>
+        <p class="lead">Tu veux une belle radio en ligne — pas devenir informaticien.</p>
+        <div class="grid cols-2">
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/><path d="M8 22h8"/></svg></div><h3>Radio communautaire / campus</h3><p>Un site vieillissant à moderniser, sans équipe technique.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z"/><path d="M20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"/></svg></div><h3>DJ ou collectif</h3><p>Tu diffuses sur Mixlr/Radioking et tu veux enfin un vrai chez-toi pro.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg></div><h3>OBNL, festival, centre culturel</h3><p>Tu veux lancer une radio web qui prolonge ta mission toute l'année.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17"/><path d="M3.5 15h17"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></svg></div><h3>Communauté culturelle / religieuse</h3><p>Tu veux diffuser simplement, en français, sans casse-tête.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SOLUTION ===== -->
+    <section class="alt">
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>Une radio complète, <span class="grad">à ton image</span></h2>
+        <p class="lead">On la crée et on la gère pour toi — du serveur au lecteur.</p>
+        <div class="grid cols-3">
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z"/><path d="M20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"/></svg></div><h3>Lecteur en direct</h3><p>Page d'écoute soignée, mobile + appli installable.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v18"/><path d="M12 3v18"/><path d="M18 3v18"/><circle cx="6" cy="9" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="18" cy="7" r="2"/></svg></div><h3>Console simple</h3><p>Animateurs, émissions, horaire — en quelques clics.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><h3>Podcasts &amp; mixes</h3><p>À la demande + diffusion Apple/Spotify (RSS).</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg></div><h3>Audience en direct</h3><p>Carte des auditeurs, villes, appareils, temps d'écoute.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><h3>Rappels d'émission</h3><p>Notifications push pour faire revenir tes auditeurs.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path d="M4 13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z"/><path d="M20 13a2 2 0 0 0-2 2v2a2 2 0 0 0 1 1.73V20a2 2 0 0 1-2 2h-3"/><path d="M9 7.5c1-1.2 4-1.2 5 0"/></svg></div><h3>Support en français</h3><p>Par quelqu'un qui comprend la radio.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PREUVE D'AUDIENCE (ROI) ===== -->
+    <section>
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>De quoi <span class="grad">prouver</span> ta radio</h2>
+        <p class="lead">La seule plateforme radio qui te donne de quoi <b>vendre</b> ta station —
+          pas juste la diffuser. Ton abonnement se rembourse au premier commanditaire.</p>
+        <div class="grid cols-3">
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 7h6v6"/></svg></div><h3>Tes chiffres, noir sur blanc</h3><p>Auditeurs en direct, villes, appareils, temps d'écoute — exportables en un clic.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12 5.5 9.5a2.12 2.12 0 0 1 3-3L11 9l3-3 3 3 2 2"/><path d="m11 13 2 2 3-3"/><path d="M2 14l4 4"/><path d="M22 10l-4-4"/></svg></div><h3>Convaincs tes commanditaires</h3><p>Montre une vraie audience mesurée. Une commandite locale paie ton abonnement.</p></div>
+          <div class="card"><div class="ico"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v3h6V3"/><path d="M8 11h8"/><path d="M8 15h6"/></svg></div><h3>Appuie tes subventions</h3><p>OBNL ? Tes statistiques deviennent la preuve d'impact de tes demandes de financement.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== POURQUOI NOUS ===== -->
+    <section>
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>Pourquoi <span class="grad">En Ondes</span></h2>
+        <p class="lead">Sur-mesure, pensé pour la radio, en français — et tu ne touches jamais la technique.</p>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th></th><th>Soi-même / AzuraCast</th><th>Plateforme générique</th><th>Agence web</th><th class="us">En Ondes</th></tr></thead>
+            <tbody>
+              <tr><td>Technique à gérer</td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Toi</span></span></td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>En partie</span></span></td>
+                <td><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Eux</span></span></td>
+                <td class="us"><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Nous</span></span></td></tr>
+              <tr><td>Sur-mesure à ton image</td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>Partiel</span></span></td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Générique</span></span></td>
+                <td><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Oui</span></span></td>
+                <td class="us"><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Oui</span></span></td></tr>
+              <tr><td>Pensé pour la radio</td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>Partiel</span></span></td>
+                <td><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Oui</span></span></td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Non</span></span></td>
+                <td class="us"><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Oui</span></span></td></tr>
+              <tr><td>Stats à montrer (commandites)</td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>Brutes</span></span></td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>Limitées</span></span></td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Rarement</span></span></td>
+                <td class="us"><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Prêtes à présenter</span></span></td></tr>
+              <tr><td>Français / Québec</td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Non</span></span></td>
+                <td><span class="stat stat-no"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>Non</span></span></td>
+                <td><span class="stat stat-mid"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/></svg><span>Partiel</span></span></td>
+                <td class="us"><span class="stat stat-yes"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Oui</span></span></td></tr>
+              <tr><td>Prix de départ</td><td>$$ + ton temps</td><td>$ mais limité</td><td>$$$$</td><td class="us">$$ tout inclus</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== COMMENT ÇA MARCHE ===== -->
+    <section class="alt">
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>Comment ça <span class="grad">marche</span></h2>
+        <p class="lead">En ligne en quelques jours.</p>
+        <div class="steps">
+          <div class="step"><div class="n">1</div><div><h3>On discute (15 min)</h3><p>Ta radio, ton style, ton flux, ton visuel.</p></div></div>
+          <div class="step"><div class="n">2</div><div><h3>On la monte</h3><p>En ligne en quelques jours, on te forme à la console.</p></div></div>
+          <div class="step"><div class="n">3</div><div><h3>Tu animes</h3><p>On gère serveurs, mises à jour, sécurité, sauvegardes.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== OFFRE ===== -->
+    <section>
+      <div class="wrap offer">
+        <h2>Une <span class="grad">offre simple</span></h2>
+        <div class="price-row">
+          <div class="price"><div class="big"><span class="grad">dès 1 500 $</span></div><div class="lead" style="margin:6px 0 0">Création (selon les fonctions)</div></div>
+          <div class="price"><div class="big"><span class="grad">dès 49 $</span><span style="font-size:.9rem; color:var(--muted)">/mois</span></div><div class="lead" style="margin:6px 0 0">Abonnement (selon l'audience)</div></div>
+        </div>
+        <p class="lead" style="margin:0 auto">Add-ons : appli mobile, distribution podcasts, hébergement du flux, listing annuaires.</p>
+        <div class="founder">
+          <h3><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 7.1-1.01L12 2Z"/></svg> Offre « client fondateur » — les 3 premiers</h3>
+          <p style="color:var(--muted); margin-top:8px">Tarif de création <b>réduit</b> + <b>2 mois d'abonnement offerts</b>, en échange d'un témoignage. <i>3 places seulement — premier arrivé, premier servi.</i></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== GARANTIES ===== -->
+    <section class="alt">
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>Sans <span class="grad">risque</span></h2>
+        <ul class="guar">
+          <li><b>Ton contenu et ton nom t'appartiennent.</b> On t'exporte tout si tu pars.</li>
+          <li><b>Sans engagement long</b> : préavis simple, pas de piège.</li>
+          <li><b>Démo réelle avant de payer</b> : tu vois ce que tu achètes.</li>
+          <li><b>On ne te lâche pas</b> : support humain, en français.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section>
+      <div class="wrap">
+        <h2><span class="hex" aria-hidden="true"></span>Questions <span class="grad">fréquentes</span></h2>
+        <details><summary>Faut-il des connaissances techniques ?</summary><p>Non. Console simple ; on gère tout le reste.</p></details>
+        <details><summary>Et les droits de la musique ?</summary><p>Tu détiens tes licences (SOCAN, Ré:Sonne). On te guide, mais la diffusion reste sous ta responsabilité.</p></details>
+        <details><summary>À qui appartient le site ?</summary><p>Ton contenu et ton nom = à toi. Le design et la plateforme = à En Ondes (usage pendant ton abonnement).</p></details>
+        <details><summary>Puis-je partir ?</summary><p>Oui, avec préavis. On t'exporte ton contenu et tes données.</p></details>
+        <details><summary>Sur quel appareil ça marche ?</summary><p>Web, mobile, appli installable. À venir : enceintes connectées, voiture.</p></details>
+        <details><summary>Combien de temps pour être en ligne ?</summary><p>Quelques jours après notre appel, selon ton contenu.</p></details>
+      </div>
+    </section>
+
+    <!-- ===== CTA FINAL ===== -->
+    <section class="alt" id="contact">
+      <div class="wrap offer">
+        <h2>Prête, <span class="grad">ta radio</span> ? On la met en ondes cette semaine.</h2>
+        <div class="cta-row" style="justify-content:center; margin-top:22px">
+          <a class="btn btn-primary" href="mailto:bonjour@enondes.ca?subject=Je%20veux%20ma%20radio&body=Bonjour%20En%20Ondes%2C%0A%0AJ%27aimerais%20parler%20de%20ma%20radio.%0A%0A-%20Nom%20%3A%20%0A-%20Nom%20de%20la%20radio%20%3A%20%0A-%20Type%20(communautaire%2C%20DJ%2Fcollectif%2C%20OBNL%2Ffestival%2C%20communaut%C3%A9)%20%3A%20%0A-%20Mon%20besoin%20(en%20quelques%20mots)%20%3A%20%0A%0AMerci%20!">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            Écris-nous (courriel pré-rempli)</a>
+          <!-- TODO: lien de réservation Cal.com/Calendly — remplacer href="#" et retirer data-todo -->
+          <a class="btn btn-ghost" href="#" data-todo="rdv-calendrier">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+            Choisir un créneau</a>
+        </div>
+        <p class="scarcity">
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 7.1-1.01L12 2Z"/></svg>
+          <span><b>3 places fondateur</b> seulement — premier arrivé, premier servi.</span>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="wordmark grad">En Ondes</div>
+      <p>Radio en direct · Podcast — clé en main, en français.</p>
+      <nav class="foot-legal" aria-label="Mentions légales">
+        <a href="confidentialite.html">Confidentialité (Loi 25)</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <!-- TODO: page Conditions d'utilisation — remplacer href="#" -->
+        <a href="#" data-todo="conditions">Conditions</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="mailto:bonjour@enondes.ca">bonjour@enondes.ca</a>
+      </nav>
+      <p class="fine">© <span id="y"></span> En Ondes · enondes.ca</p>
+    </div>
+  </footer>
+
+  <script src="pro.js" defer></script>
+</body>
+</html>

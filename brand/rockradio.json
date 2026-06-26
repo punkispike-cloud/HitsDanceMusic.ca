@@ -2,7 +2,8 @@
   "slug": "rockradio",
   "name": "Rockfort",
   "shortName": "Rockfort",
-  "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé, 24/7.",
+  "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé. Bientôt en ondes.",
+  "genre": "Rock vintage",
   "domain": "rockfort.example",
   "colors": {
     "accent": "#cf9b3f",

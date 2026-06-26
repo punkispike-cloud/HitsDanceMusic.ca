@@ -1,291 +1,166 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr-CA">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>En Ondes — Ta radio en ligne, clé en main</title>
-  <meta name="description" content="En Ondes crée et gère ta radio en ligne, clé en main et en français : site pro, lecteur en direct, podcasts, statistiques. Toi, tu animes." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>En Ondes — Écoute tes radios en direct</title>
+  <meta name="description" content="Le réseau En Ondes : écoute toutes nos radios en direct depuis une seule page. Choisis ta station, le son te suit pendant que tu navigues." />
+  <meta name="theme-color" content="#06080f" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
-  <!-- Partage réseaux sociaux -->
-  <meta property="og:title" content="En Ondes — Ta radio en ligne, clé en main" />
-  <meta property="og:description" content="Site pro, lecteur en direct, podcasts, statistiques — on s'occupe de toute la technique. Toi, tu animes." />
-  <meta property="og:image" content="assets/og-image.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="En Ondes" />
+  <link rel="canonical" href="https://enondes.ca/" />
+  <meta property="og:title" content="En Ondes — Écoute tes radios en direct" />
+  <meta property="og:description" content="Choisis ta station, écoute en direct. Le réseau de radios En Ondes." />
   <meta property="og:type" content="website" />
-  <style>
-    :root {
-      --bg: #0a0e16;
-      --bg2: #0d1320;
-      --card: rgba(255,255,255,0.035);
-      --border: rgba(255,255,255,0.08);
-      --txt: #e7edf7;
-      --muted: #9aa6bd;
-      --blue: #3aa0ff;
-      --blue-bright: #5fb8ff;
-      --purple: #b86ce0;
-      --purple-bright: #cf8aff;
-      --ok: #19c37d;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--txt);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
-    a { color: var(--blue-bright); text-decoration: none; }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
-    .grad {
-      background: linear-gradient(100deg, var(--blue) 0%, var(--purple) 100%);
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent; color: transparent;
-    }
-    section { padding: 70px 0; }
-    h2 { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
-    .lead { color: var(--muted); font-size: 1.05rem; max-width: 60ch; margin-bottom: 32px; }
-
-    /* ---- Boutons ---- */
-    .btn {
-      display: inline-block; padding: 14px 26px; border-radius: 12px; font-weight: 700;
-      font-size: 1rem; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; border: 0;
-    }
-    .btn-primary {
-      color: #06121f;
-      background: linear-gradient(100deg, var(--blue-bright), var(--purple-bright));
-      box-shadow: 0 8px 30px rgba(58,160,255,0.35);
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(184,108,224,0.45); }
-    .btn-ghost { color: var(--txt); background: var(--card); border: 1px solid var(--border); }
-    .btn-ghost:hover { border-color: var(--blue); transform: translateY(-2px); }
-
-    /* ---- Hero ---- */
-    .hero {
-      position: relative; text-align: center; padding: 70px 0 60px;
-      background:
-        radial-gradient(900px 500px at 50% -10%, rgba(58,160,255,0.18), transparent 60%),
-        radial-gradient(700px 500px at 80% 20%, rgba(184,108,224,0.16), transparent 60%);
-    }
-    .hero img.logo { max-width: 280px; width: 60%; height: auto; margin: 0 auto 8px; display: block; filter: drop-shadow(0 10px 40px rgba(58,160,255,0.25)); }
-    .wordmark { font-size: clamp(2.6rem, 9vw, 4.2rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
-    .tagline { color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; font-size: 0.78rem; margin-top: 6px; }
-    .hero h1 { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.02em; margin: 28px auto 14px; max-width: 18ch; }
-    .hero .sub { color: var(--muted); font-size: 1.12rem; max-width: 52ch; margin: 0 auto 30px; }
-    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .proof { margin-top: 26px; color: var(--muted); font-size: 0.9rem; }
-    .proof b { color: var(--blue-bright); }
-
-    /* ---- Cartes ---- */
-    .grid { display: grid; gap: 16px; }
-    .cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); }
-    .cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
-    .card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px;
-      transition: border-color .2s ease, transform .2s ease;
-    }
-    .card:hover { border-color: rgba(58,160,255,0.4); transform: translateY(-3px); }
-    .card .ico { font-size: 1.6rem; margin-bottom: 8px; }
-    .card h3 { font-size: 1.08rem; margin-bottom: 6px; }
-    .card p { color: var(--muted); font-size: 0.96rem; }
-
-    .alt { background: linear-gradient(180deg, var(--bg2), var(--bg)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-
-    /* ---- Tableau comparatif ---- */
-    .tbl { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.95rem; }
-    .tbl th, .tbl td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--border); }
-    .tbl th:first-child, .tbl td:first-child { text-align: left; color: var(--muted); }
-    .tbl thead th { font-weight: 700; }
-    .tbl .us { background: rgba(58,160,255,0.08); font-weight: 700; }
-    .tbl-wrap { overflow-x: auto; }
-
-    /* ---- Étapes ---- */
-    .steps { counter-reset: s; }
-    .step { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
-    .step .n {
-      flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
-      display: grid; place-items: center; font-weight: 800;
-      background: linear-gradient(100deg, var(--blue), var(--purple)); color: #06121f;
-    }
-    .step h3 { font-size: 1.05rem; }
-    .step p { color: var(--muted); }
-
-    /* ---- Offre ---- */
-    .offer { text-align: center; }
-    .price-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 18px 0; }
-    .price { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 26px; }
-    .price .big { font-size: 1.5rem; font-weight: 800; }
-    .founder {
-      margin: 24px auto 0; max-width: 640px; border-radius: 16px; padding: 22px;
-      border: 1px solid rgba(184,108,224,0.4);
-      background: linear-gradient(120deg, rgba(58,160,255,0.10), rgba(184,108,224,0.10));
-    }
-    .founder b { color: var(--purple-bright); }
-
-    /* ---- Garanties ---- */
-    .guar { list-style: none; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
-    .guar li { padding-left: 28px; position: relative; color: var(--txt); }
-    .guar li::before { content: "✅"; position: absolute; left: 0; }
-
-    /* ---- FAQ ---- */
-    details { border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; background: var(--card); }
-    details summary { cursor: pointer; font-weight: 600; list-style: none; }
-    details summary::-webkit-details-marker { display: none; }
-    details[open] summary { color: var(--blue-bright); }
-    details p { color: var(--muted); margin-top: 10px; }
-
-    /* ---- Footer ---- */
-    footer { text-align: center; padding: 50px 0 40px; color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--border); }
-    .final { text-align: center; }
-    .final h2 { margin-bottom: 22px; }
-
-    @media (max-width: 600px) { section { padding: 50px 0; } }
-  </style>
+  <meta property="og:url" content="https://enondes.ca/" />
+  <meta property="og:site_name" content="En Ondes" />
+  <meta property="og:locale" content="fr_CA" />
+  <meta property="og:image" content="https://enondes.ca/assets/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="En Ondes — studio radio, micro et platine en néon" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://itunes.apple.com" />
+  <link rel="dns-prefetch" href="https://itunes.apple.com" />
+  <link rel="preload" as="image" href="assets/studio-bg.jpg" fetchpriority="high" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="hub.css" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","@id":"https://enondes.ca/#org","name":"En Ondes","url":"https://enondes.ca/","email":"bonjour@enondes.ca","slogan":"Radio en direct · Podcast — clé en main, en français","areaServed":"CA-QC"},
+    {"@type":"WebSite","@id":"https://enondes.ca/#site","url":"https://enondes.ca/","name":"En Ondes","inLanguage":"fr-CA","publisher":{"@id":"https://enondes.ca/#org"}},
+    {"@type":"RadioStation","name":"Hits Dance Music","genre":["Dance","House"],"url":"https://hitsdancemusic.ca","inLanguage":"fr-CA","broadcastDisplayName":"Hits Dance Music"}
+  ]}
+  </script>
 </head>
 <body>
+  <a class="skip" href="#grid">Aller aux stations</a>
 
-  <!-- ===== HERO ===== -->
-  <header class="hero">
-    <div class="wrap">
-      <img class="logo" src="assets/logo.png" alt="En Ondes" onerror="this.style.display='none'" />
-      <div class="wordmark grad">En Ondes</div>
-      <div class="tagline">Radio en direct · Podcast</div>
+  <div class="ambient" aria-hidden="true"><span class="o1"></span><span class="o2"></span><span class="o3"></span></div>
 
-      <h1>Ta radio en ligne, <span class="grad">clé en main</span>. En français.</h1>
-      <p class="sub">Site pro, lecteur en direct, podcasts, statistiques — on s'occupe de
-        toute la technique. <b>Toi, tu animes.</b></p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="https://hitsdancemusic.ca" target="_blank" rel="noopener">🎧 Voir une démo en direct</a>
-        <a class="btn btn-ghost" href="#contact">📞 Réserver un appel</a>
-      </div>
-      <p class="proof">Déjà en ondes : <b>Hits Dance Music</b> tourne sur la plateforme, 24/7.</p>
+  <header class="top">
+    <a class="brand" href="./" aria-label="En Ondes — accueil">
+      <span class="spark">✦</span>
+      <span class="wordmark grad">En Ondes</span>
+    </a>
+    <div class="studio-meta">
+      <span class="onair"><span class="dot"></span><span>En ondes</span></span>
+      <time class="studio-clock" id="clock" aria-label="Heure de Montréal">--:--<b>:--</b></time>
     </div>
+    <a class="pro-link" href="pro.html">🎙️ Lancer ta radio&nbsp;→</a>
   </header>
 
-  <!-- ===== POUR QUI ===== -->
-  <section>
+  <div id="netbar" role="status" hidden>Hors-ligne — lecture en direct indisponible</div>
+
+  <main>
+    <section class="hero-cine" aria-label="En Ondes — studio">
+      <img id="heroBanner" src="assets/studio-bg.jpg" alt="En Ondes — studio radio, en direct et podcast" width="1280" height="720" fetchpriority="high" decoding="async" />
+      <div class="hero-onair" id="heroOnair">
+        <div class="hero-onair-inner">
+          <span class="live">En ondes</span>
+          <span class="meta" aria-live="polite"><b id="heroStation">En Ondes</b><span id="heroTrack"> · choisis une station</span></span>
+        </div>
+      </div>
+    </section>
+
     <div class="wrap">
-      <h2>C'est <span class="grad">toi</span> ?</h2>
-      <p class="lead">Tu veux une belle radio en ligne — pas devenir informaticien.</p>
-      <div class="grid cols-2">
-        <div class="card"><div class="ico">🎙️</div><h3>Radio communautaire / campus</h3><p>Un site vieillissant à moderniser, sans équipe technique.</p></div>
-        <div class="card"><div class="ico">🎧</div><h3>DJ ou collectif</h3><p>Tu diffuses sur Mixlr/Radioking et tu veux enfin un vrai chez-toi pro.</p></div>
-        <div class="card"><div class="ico">🏛️</div><h3>OBNL, festival, centre culturel</h3><p>Tu veux lancer une radio web qui prolonge ta mission toute l'année.</p></div>
-        <div class="card"><div class="ico">⛪</div><h3>Communauté culturelle / religieuse</h3><p>Tu veux diffuser simplement, en français, sans casse-tête.</p></div>
+      <section class="hero-intro">
+        <span class="eyebrow">Le réseau En Ondes</span>
+        <h1>Écoute tes radios, <span class="grad">en direct</span>.</h1>
+        <p class="sub">Choisis une station — le son continue de jouer pendant que tu passes de l'une à l'autre.</p>
+        <div class="controls" aria-label="Recherche et filtres">
+          <div class="search">
+            <svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+            <input id="q" type="search" placeholder="Chercher une station ou un genre…" aria-label="Chercher une station" autocomplete="off" />
+          </div>
+          <div class="genres" id="genres" role="group" aria-label="Filtrer par genre"></div>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <h2><span class="hex" aria-hidden="true"></span>À l'antenne</h2>
+        <span class="count" id="count"></span>
+      </div>
+      <section id="grid" class="grid" aria-label="Stations"></section>
+      <p id="eoLive" class="sr-only" role="status" aria-live="polite"></p>
+
+      <footer>
+        <div class="wordmark grad">En Ondes</div>
+        <p>Le réseau de radios en direct · en français.</p>
+        <p class="fine">© <span id="y"></span> En Ondes · <a href="pro.html">Lancer ta radio</a></p>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Barre de lecture persistante -->
+  <div class="player" id="player" role="region" aria-label="Lecteur">
+    <div class="player-inner">
+      <button class="np-area" id="pInfo" type="button" aria-label="Détails de la station en cours">
+        <span class="cover" id="pCover"><span class="mono">EO</span></span>
+        <span class="np" aria-live="polite" aria-atomic="true">
+          <span class="st" id="pStation">En Ondes</span>
+          <span class="track" id="pTrack">Choisis une station</span>
+          <span class="sub" id="pSub" aria-live="polite">En direct</span>
+        </span>
+      </button>
+      <div class="vu" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="player-ctls">
+        <button class="ctl prev" id="pPrev" type="button" aria-label="Station précédente">
+          <svg viewBox="0 0 24 24"><path d="M7 6h2v12H7zM20 6l-9 6 9 6z"/></svg>
+        </button>
+        <button class="ctl play" id="pPlay" type="button" aria-label="Lecture">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="ctl next" id="pNext" type="button" aria-label="Station suivante">
+          <svg viewBox="0 0 24 24"><path d="M15 6h2v12h-2zM4 6l9 6-9 6z"/></svg>
+        </button>
+      </div>
+      <div class="vol">
+        <svg class="vicon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+        <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ===== SOLUTION ===== -->
-  <section class="alt">
-    <div class="wrap">
-      <h2>Une radio complète, <span class="grad">à ton image</span></h2>
-      <p class="lead">On la crée et on la gère pour toi — du serveur au lecteur.</p>
-      <div class="grid cols-3">
-        <div class="card"><div class="ico">🎧</div><h3>Lecteur en direct</h3><p>Page d'écoute soignée, mobile + appli installable.</p></div>
-        <div class="card"><div class="ico">🎚️</div><h3>Console simple</h3><p>Animateurs, émissions, horaire — en quelques clics.</p></div>
-        <div class="card"><div class="ico">🎵</div><h3>Podcasts & mixes</h3><p>À la demande + diffusion Apple/Spotify (RSS).</p></div>
-        <div class="card"><div class="ico">📊</div><h3>Audience en direct</h3><p>Carte des auditeurs, villes, appareils, temps d'écoute.</p></div>
-        <div class="card"><div class="ico">🔔</div><h3>Rappels d'émission</h3><p>Notifications push pour faire revenir tes auditeurs.</p></div>
-        <div class="card"><div class="ico">🇫🇷</div><h3>Support en français</h3><p>Par quelqu'un qui comprend la radio.</p></div>
+  <!-- Fiche station / now-playing étendu -->
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetName" aria-hidden="true">
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+    <div class="sheet-panel">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <button class="sheet-close" id="sheetClose" type="button" aria-label="Fermer">✕</button>
+      <div class="sheet-art" id="sheetArt"><span class="mono">EO</span></div>
+      <div class="sheet-head">
+        <h2 id="sheetName">Station</h2>
+        <p class="genre" id="sheetGenre"></p>
+      </div>
+      <div class="sheet-now">
+        <div class="lbl">En ce moment</div>
+        <div class="track" id="sheetTrack">En direct</div>
+        <div class="artist" id="sheetArtist"></div>
+      </div>
+      <p class="sheet-desc" id="sheetDesc"></p>
+      <p class="sheet-coming" id="sheetComing" hidden><span class="coming-dot" aria-hidden="true"></span>Cette station n'est pas encore en ondes.</p>
+      <div class="sheet-actions">
+        <button class="ctl play" id="sheetPlay" type="button" aria-label="Lecture">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <a class="sheet-site" id="sheetSite" target="_blank" rel="noopener" hidden>Site complet&nbsp;→</a>
+      </div>
+      <div class="sheet-switch-wrap">
+        <div class="sheet-switch-label">Changer de station</div>
+        <div class="sheet-switch" id="sheetSwitch"></div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ===== POURQUOI NOUS ===== -->
-  <section>
-    <div class="wrap">
-      <h2>Pourquoi <span class="grad">En Ondes</span></h2>
-      <p class="lead">Sur-mesure, pensé pour la radio, en français — et tu ne touches jamais la technique.</p>
-      <div class="tbl-wrap">
-        <table class="tbl">
-          <thead><tr><th></th><th>Soi-même / AzuraCast</th><th>Plateforme générique</th><th>Agence web</th><th class="us">En Ondes</th></tr></thead>
-          <tbody>
-            <tr><td>Technique à gérer</td><td>🔴 Toi</td><td>🟠 En partie</td><td>🟢 Eux</td><td class="us">🟢 Nous</td></tr>
-            <tr><td>Sur-mesure à ton image</td><td>🟠</td><td>🔴 Générique</td><td>🟢</td><td class="us">🟢 Oui</td></tr>
-            <tr><td>Pensé pour la radio</td><td>🟠</td><td>🟢</td><td>🔴</td><td class="us">🟢 Oui</td></tr>
-            <tr><td>Français / Québec</td><td>🔴</td><td>🔴</td><td>🟠</td><td class="us">🟢 Oui</td></tr>
-            <tr><td>Prix de départ</td><td>$$ + ton temps</td><td>$ mais limité</td><td>$$$$</td><td class="us">$$ tout inclus</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== COMMENT ÇA MARCHE ===== -->
-  <section class="alt">
-    <div class="wrap">
-      <h2>Comment ça <span class="grad">marche</span></h2>
-      <p class="lead">En ligne en quelques jours.</p>
-      <div class="steps">
-        <div class="step"><div class="n">1</div><div><h3>On discute (15 min)</h3><p>Ta radio, ton style, ton flux, ton visuel.</p></div></div>
-        <div class="step"><div class="n">2</div><div><h3>On la monte</h3><p>En ligne en quelques jours, on te forme à la console.</p></div></div>
-        <div class="step"><div class="n">3</div><div><h3>Tu animes</h3><p>On gère serveurs, mises à jour, sécurité, sauvegardes.</p></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== OFFRE ===== -->
-  <section>
-    <div class="wrap offer">
-      <h2>Une <span class="grad">offre simple</span></h2>
-      <div class="price-row">
-        <div class="price"><div class="big">dès 1 500 $</div><div class="lead" style="margin:0">Création (selon les fonctions)</div></div>
-        <div class="price"><div class="big">dès 49 $<span style="font-size:.9rem">/mois</span></div><div class="lead" style="margin:0">Abonnement (selon l'audience)</div></div>
-      </div>
-      <p class="lead" style="margin:0 auto">Add-ons : appli mobile, distribution podcasts, hébergement du flux, listing annuaires.</p>
-      <div class="founder">
-        <h3>⭐ Offre « client fondateur » — les 3 premiers</h3>
-        <p style="color:var(--muted); margin-top:8px">Tarif de création <b>réduit</b> + <b>2 mois d'abonnement offerts</b>, en échange d'un témoignage. <i>Places limitées.</i></p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== GARANTIES ===== -->
-  <section class="alt">
-    <div class="wrap">
-      <h2>Sans <span class="grad">risque</span></h2>
-      <ul class="guar">
-        <li><b>Ton contenu et ton nom t'appartiennent.</b> On t'exporte tout si tu pars.</li>
-        <li><b>Sans engagement long</b> : préavis simple, pas de piège.</li>
-        <li><b>Démo réelle avant de payer</b> : tu vois ce que tu achètes.</li>
-        <li><b>On ne te lâche pas</b> : support humain, en français.</li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ===== FAQ ===== -->
-  <section>
-    <div class="wrap">
-      <h2>Questions <span class="grad">fréquentes</span></h2>
-      <details><summary>Faut-il des connaissances techniques ?</summary><p>Non. Console simple ; on gère tout le reste.</p></details>
-      <details><summary>Et les droits de la musique ?</summary><p>Tu détiens tes licences (SOCAN, Ré:Sonne). On te guide, mais la diffusion reste sous ta responsabilité.</p></details>
-      <details><summary>À qui appartient le site ?</summary><p>Ton contenu et ton nom = à toi. Le design et la plateforme = à En Ondes (usage pendant ton abonnement).</p></details>
-      <details><summary>Puis-je partir ?</summary><p>Oui, avec préavis. On t'exporte ton contenu et tes données.</p></details>
-      <details><summary>Sur quel appareil ça marche ?</summary><p>Web, mobile, appli installable. À venir : enceintes connectées, voiture.</p></details>
-      <details><summary>Combien de temps pour être en ligne ?</summary><p>Quelques jours après notre appel, selon ton contenu.</p></details>
-    </div>
-  </section>
-
-  <!-- ===== CTA FINAL ===== -->
-  <section class="alt final" id="contact">
-    <div class="wrap">
-      <h2>Prête, <span class="grad">ta radio</span> ? On la met en ondes cette semaine.</h2>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="mailto:bonjour@enondes.ca?subject=Je%20veux%20ma%20radio">📞 Réserver un appel</a>
-        <a class="btn btn-ghost" href="https://hitsdancemusic.ca" target="_blank" rel="noopener">🎧 Voir la démo</a>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <div class="wrap">
-      <div class="wordmark grad" style="font-size:1.6rem">En Ondes</div>
-      <p style="margin-top:6px">Radio en direct · Podcast — clé en main, en français.</p>
-      <p style="margin-top:10px; opacity:.7">© <span id="y"></span> En Ondes · enondes.ca</p>
-    </div>
-  </footer>
-
-  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  <script type="module" src="hub.js"></script>
+  <script src="sw-register.js" defer></script>
 </body>
 </html>

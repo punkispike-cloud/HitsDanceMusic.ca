@@ -1,0 +1,42 @@
+{
+  "_generated": "scripts/build-stations.mjs — NE PAS ÉDITER À LA MAIN",
+  "network": "En Ondes",
+  "stations": [
+    {
+      "slug": "hitsdance",
+      "name": "Hits Dance Music",
+      "shortName": "Hits Dance",
+      "genre": "Dance · House",
+      "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+      "status": "live",
+      "owned": true,
+      "site": "https://hitsdancemusic.ca",
+      "colors": {
+        "accent": "#c8102e",
+        "accentBright": "#e8192e",
+        "bg": "#0a0a0a",
+        "glowRgb": "220, 20, 48"
+      },
+      "stream": "https://cast5.asurahosting.com/proxy/hitsdanc/stream",
+      "nowPlaying": "/np/hitsdance"
+    },
+    {
+      "slug": "rockradio",
+      "name": "Rockfort",
+      "shortName": "Rockfort",
+      "genre": "Rock vintage",
+      "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé. Bientôt en ondes.",
+      "status": "coming",
+      "owned": true,
+      "site": null,
+      "colors": {
+        "accent": "#cf9b3f",
+        "accentBright": "#e6b85c",
+        "bg": "#0b0908",
+        "glowRgb": "207, 155, 63"
+      },
+      "stream": null,
+      "nowPlaying": null
+    }
+  ]
+}
