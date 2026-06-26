@@ -7,6 +7,7 @@ import { escapeHtml } from "./util.js";
 import { API_BASE } from "./api-config.js";
 import { SLOT_TAGS } from "./schedule.js";
 import { DAY_NAMES } from "./time.js";
+import { activateModalTrap } from "./a11y-modal.js";
 
 const SOCIAL_LABELS = [
   ["instagram", "Instagram"],
@@ -39,7 +40,9 @@ function close() {
   ov.classList.remove("is-open");
   setTimeout(() => ov.remove(), 200);
   document.removeEventListener("keydown", onKey);
-  if (_lastFocus && _lastFocus.focus) _lastFocus.focus();
+  // Libère le piège de focus + l'inert de l'arrière-plan (restaure _lastFocus).
+  if (typeof ov._releaseTrap === "function") ov._releaseTrap();
+  else if (_lastFocus && _lastFocus.focus) _lastFocus.focus();
 }
 
 function onKey(e) {
@@ -93,20 +96,26 @@ function render(detail) {
 }
 
 function mount(detail) {
+  // Sur un re-montage (repli → données API), conserve le focus d'origine
+  // (la carte) pour le restaurer correctement à la fermeture.
+  const prevFocus = _overlay ? _lastFocus : document.activeElement;
   if (_overlay) close();
-  _lastFocus = document.activeElement;
+  _lastFocus = prevFocus;
   const overlay = document.createElement("div");
   overlay.className = "adetail-overlay";
   overlay.innerHTML = render(detail);
   overlay.addEventListener("mousedown", (e) => {
     if (e.target === overlay) close();
   });
-  overlay.querySelector(".adetail-close").addEventListener("click", close);
+  const closeBtn = overlay.querySelector(".adetail-close");
+  closeBtn.addEventListener("click", close);
   document.body.appendChild(overlay);
   _overlay = overlay;
   requestAnimationFrame(() => overlay.classList.add("is-open"));
   document.addEventListener("keydown", onKey);
-  overlay.querySelector(".adetail-close")?.focus();
+  // a11y : piège Tab dans la fiche + inert sur l'arrière-plan, focus au bouton
+  // fermer, restauration de _lastFocus à la fermeture.
+  overlay._releaseTrap = activateModalTrap(overlay, { closeBtn, previousFocus: _lastFocus });
 }
 
 /* Ouvre la fiche par slug. fallback = objet animateur déjà en mémoire (rendu

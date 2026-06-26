@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Spinner, Empty } from "@/components/ui";
+import { Spinner, Forbidden, ErrorState } from "@/components/ui";
 import { roleAtLeast, ROLE_LABEL } from "@/lib/types";
 import type { AdminUser, Artist } from "@/lib/types";
 
@@ -38,6 +38,18 @@ export default function UtilisateursPage() {
   const { user } = useAuth();
   const toast = useToast();
   const [artists, setArtists] = useState<Artist[] | null>(null);
+  const [artistsError, setArtistsError] = useState<string | null>(null);
+
+  const loadArtists = useCallback(() => {
+    // En cas d'échec on NE renvoie PAS un tableau vide (qui ferait passer une
+    // panne pour « aucun animateur ») → artists reste null + état erreur.
+    setArtistsError(null);
+    setArtists(null);
+    api
+      .get<Artist[]>("/v1/admin/artists")
+      .then(setArtists)
+      .catch(() => setArtistsError("Impossible de charger les fiches animateurs."));
+  }, []);
 
   const sendInvite = async (id: string) => {
     try {
@@ -54,8 +66,8 @@ export default function UtilisateursPage() {
   };
 
   useEffect(() => {
-    api.get<Artist[]>("/v1/admin/artists").then(setArtists).catch(() => setArtists([]));
-  }, []);
+    loadArtists();
+  }, [loadArtists]);
 
   if (!user || !roleAtLeast(user.role, "superadmin")) {
     return (
@@ -63,11 +75,12 @@ export default function UtilisateursPage() {
         <div className="page-head">
           <h1>Utilisateurs</h1>
         </div>
-        <Empty label="Réservé aux administrateurs." />
+        <Forbidden label="Réservé aux super-administrateurs." hint="La gestion des comptes n'est accessible qu'aux super-administrateurs." />
       </div>
     );
   }
-  if (!artists) return <Spinner />;
+  if (artistsError) return <ErrorState message={artistsError} onRetry={loadArtists} />;
+  if (!artists) return <Spinner label="Chargement des comptes…" />;
 
   // Le rôle « Propriétaire » (owner) n'est proposé qu'à un owner (anti-escalade,
   // miroir du bornage côté API).

@@ -32,6 +32,8 @@ import { initMonitoring } from "./services/monitoring.js";
 import { initPush } from "./services/push.js";
 import { startReminders } from "./services/reminders.js";
 import { startTrackHistory } from "./services/track-history.js";
+import { startMonitor } from "./services/monitor.js";
+import { startMonthlyReports } from "./services/reports.js";
 import type { AppBindings } from "./types.js";
 
 // Monitoring d'abord (capture les erreurs dès le boot, si SENTRY_DSN présent).
@@ -88,6 +90,8 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, async (info) => {
   initPush();
   startReminders();
   startTrackHistory();
+  startMonitor();
+  startMonthlyReports();
 });
 
 // Arrêt gracieux

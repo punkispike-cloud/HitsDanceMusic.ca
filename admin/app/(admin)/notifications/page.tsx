@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Spinner, Empty, Field } from "@/components/ui";
+import { Spinner, Field, Forbidden, ErrorState } from "@/components/ui";
 import type { PushStats, Show } from "@/lib/types";
 
 export default function NotificationsPage() {
@@ -16,8 +16,13 @@ export default function NotificationsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    // En cas d'échec on NE fabrique PAS un état « inactif/0 » (qui ferait passer
+    // une panne pour Web Push désactivé) → stats reste null + état erreur.
+    setError(null);
+    setStats(null);
     try {
       const [s, sh] = await Promise.all([
         api.get<PushStats>("/v1/admin/push/stats"),
@@ -26,7 +31,7 @@ export default function NotificationsPage() {
       setStats(s);
       setShows(sh);
     } catch {
-      setStats({ enabled: false, total: 0, global: 0 });
+      setError("Impossible de charger l'état des notifications.");
     }
   }, []);
 
@@ -62,25 +67,32 @@ export default function NotificationsPage() {
         <div className="page-head">
           <h1>Notifications</h1>
         </div>
-        <Empty label="Réservé aux super-administrateurs." />
+        <Forbidden label="Réservé aux super-administrateurs." hint="L'envoi de notifications push n'est accessible qu'aux super-administrateurs." />
       </div>
     );
   }
 
-  if (!stats) return <Spinner />;
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (!stats) return <Spinner label="Chargement des notifications…" />;
 
   return (
     <div>
       <div className="page-head">
         <h1>Notifications push</h1>
-        <button className="btn btn-ghost btn-sm" onClick={() => void load()}>
-          ↻ Rafraîchir
+        <button className="btn btn-ghost btn-sm" onClick={() => void load()}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+          Rafraîchir
         </button>
       </div>
 
       {!stats.enabled && (
-        <p className="muted" style={{ marginBottom: 16 }}>
-          ⚠️ Web Push n&apos;est pas encore activé. Génère les clés VAPID
+        <p className="muted" role="status" style={{ marginBottom: 16 }}>
+          <span aria-hidden="true">⚠️</span> Web Push n&apos;est pas encore activé. Génère les clés VAPID
           (<code>npm run vapid</code> dans le dossier api) et ajoute{" "}
           <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code> aux variables du service api.
         </p>
@@ -97,7 +109,9 @@ export default function NotificationsPage() {
         </div>
         <div className="card stat-card" style={{ borderLeft: `4px solid ${stats.enabled ? "var(--ok)" : "var(--danger)"}` }}>
           <div className="label">État</div>
-          <div className="value" style={{ fontSize: "1rem" }}>{stats.enabled ? "Actif ✓" : "Inactif"}</div>
+          <div className="value" style={{ fontSize: "1rem" }}>
+            {stats.enabled ? <>Actif <span aria-hidden="true">✓</span></> : "Inactif"}
+          </div>
         </div>
       </div>
 

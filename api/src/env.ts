@@ -100,6 +100,13 @@ export const env = {
   // Rétention analytics (Loi 25) : purge des sessions/écoutes plus vieilles que N jours.
   ANALYTICS_RETENTION_DAYS: intOpt("ANALYTICS_RETENTION_DAYS", 180),
 
+  // Surveillance du flux (dead-air / injoignable). Le monitor met toujours à jour
+  // l'état de santé ; les ALERTES (courriel) ne partent que si Resend est configuré.
+  MONITOR_ENABLED: optional("MONITOR_ENABLED", "true"),
+  MONITOR_INTERVAL_MS: intOpt("MONITOR_INTERVAL_MS", 120_000), // 2 min
+  STREAM_SILENCE_MIN: intOpt("STREAM_SILENCE_MIN", 30), // titre inchangé > N min ⇒ dead-air suspecté
+  ALERT_DEBOUNCE_MIN: intOpt("ALERT_DEBOUNCE_MIN", 60), // pas de ré-alerte avant N min
+
   // Sentry (monitoring d'erreurs) — inactif tant que le DSN n'est pas fourni.
   SENTRY_DSN: optional("SENTRY_DSN", ""),
 
@@ -145,4 +152,9 @@ export function isResendConfigured(): boolean {
 /** Web Push (VAPID) actif ? */
 export function isPushConfigured(): boolean {
   return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+}
+
+/** Surveillance du flux active ? (sinon aucun suivi de santé en arrière-plan) */
+export function isMonitorEnabled(): boolean {
+  return env.MONITOR_ENABLED === "true";
 }

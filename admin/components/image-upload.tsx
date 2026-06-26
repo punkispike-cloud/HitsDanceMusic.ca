@@ -47,7 +47,7 @@ export function ImageUpload({ onUploaded }: { onUploaded: (url: string) => void 
         intentId: presign.intentId,
       });
       onUploaded(res.url);
-      toast("Photo téléversée ✓", "ok");
+      toast("Photo téléversée", "ok");
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : (e as Error).message;
       toast(msg || "Échec du téléversement", "error");
@@ -59,9 +59,16 @@ export function ImageUpload({ onUploaded }: { onUploaded: (url: string) => void 
 
   return (
     <>
-      <input ref={ref} type="file" accept="image/*" hidden onChange={onChange} />
-      <button type="button" className="btn btn-sm btn-ghost" onClick={pick} disabled={busy}>
-        {busy ? "Envoi…" : "⬆ Téléverser une photo"}
+      <input ref={ref} type="file" accept="image/*" hidden onChange={onChange} aria-label="Choisir une photo à téléverser" />
+      <button type="button" className="btn btn-sm btn-ghost" onClick={pick} disabled={busy} aria-busy={busy}>
+        {!busy && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 16V4" />
+            <path d="m6 10 6-6 6 6" />
+            <path d="M4 20h16" />
+          </svg>
+        )}
+        {busy ? "Envoi…" : "Téléverser une photo"}
       </button>
     </>
   );

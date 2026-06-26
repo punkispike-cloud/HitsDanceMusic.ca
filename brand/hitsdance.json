@@ -1,8 +1,9 @@
 {
   "slug": "hitsdance",
   "name": "Hits Dance Music",
-  "shortName": "Hits Dance Music",
+  "shortName": "Hits Dance",
   "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+  "genre": "Dance · House",
   "domain": "hitsdancemusic.ca",
   "colors": {
     "accent": "#c8102e",

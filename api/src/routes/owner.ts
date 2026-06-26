@@ -4,7 +4,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { radios, artists, shows, analyticsSessions } from "../db/schema.js";
 import { requireOwner } from "../middleware/rbac.js";
@@ -12,6 +12,7 @@ import { conflict, notFound } from "../lib/errors.js";
 import { slugify } from "../lib/validation.js";
 import { invalidateRadioCache } from "../services/tenant.js";
 import { isAzuraCastConfigured, createStation } from "../services/azuracast.js";
+import { buildMonthlyReport } from "../services/reports.js";
 import type { AppBindings } from "../types.js";
 
 export const ownerRoutes = new Hono<AppBindings>();
@@ -93,6 +94,8 @@ ownerRoutes.get("/radios", async (c) => {
         contactEmail: r.contactEmail,
         contactPhone: r.contactPhone,
         licenseConfirmed: r.licenseConfirmed,
+        healthStatus: r.healthStatus,
+        lastCheckedAt: r.lastCheckedAt,
         createdAt: r.createdAt,
         live: s?.live ?? 0,
         today: s?.today ?? 0,
@@ -217,6 +220,37 @@ ownerRoutes.get("/health", async (c) => {
     }),
   );
   return c.json(checks);
+});
+
+/* GET /v1/owner/alerts — radios actives en état problématique (flux down / silence),
+   alimenté par le service de surveillance (services/monitor.ts). */
+ownerRoutes.get("/alerts", async (c) => {
+  const rows = await db
+    .select({
+      id: radios.id,
+      name: radios.name,
+      slug: radios.slug,
+      healthStatus: radios.healthStatus,
+      lastCheckedAt: radios.lastCheckedAt,
+      lastAlertAt: radios.lastAlertAt,
+      lastAlertKind: radios.lastAlertKind,
+    })
+    .from(radios)
+    .where(and(eq(radios.status, "active"), inArray(radios.healthStatus, ["down", "silent"])))
+    .orderBy(desc(radios.lastAlertAt));
+  return c.json(rows);
+});
+
+/* GET /v1/owner/radios/:id/report?year=&month= — aperçu du rapport mensuel (JSON,
+   sans envoi). Défaut : mois précédent. Sert à tester / prévisualiser. */
+ownerRoutes.get("/radios/:id/report", async (c) => {
+  const now = new Date();
+  const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const year = Number(c.req.query("year")) || prev.getUTCFullYear();
+  const month = Number(c.req.query("month")) || prev.getUTCMonth() + 1;
+  const data = await buildMonthlyReport(c.req.param("id"), year, month);
+  if (!data) throw notFound("Radio introuvable");
+  return c.json(data);
 });
 
 /* GET /v1/owner/timeseries?days=30&radio=<id?> — série quotidienne (visiteurs +

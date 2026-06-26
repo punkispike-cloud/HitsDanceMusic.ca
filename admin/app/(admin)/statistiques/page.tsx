@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Spinner, Empty } from "@/components/ui";
+import { Empty, ErrorState, TableSkeleton } from "@/components/ui";
 import {
   formatDuration,
   type AnalyticsOverview,
@@ -16,9 +16,72 @@ import {
 } from "@/lib/types";
 import VisitorMap from "./VisitorMap";
 
+/* Icônes inline (24x24, currentColor, stroke ~1.75) — accompagnent un libellé
+   texte ou un aria-label sur le bouton parent ; décoratives ici. */
+const svgBase = {
+  width: 18,
+  height: 18,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+  focusable: false,
+};
+function IconDownload() {
+  return (
+    <svg {...svgBase}>
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+function IconRefresh() {
+  return (
+    <svg {...svgBase}>
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 4v5h-5" />
+    </svg>
+  );
+}
+function IconPause() {
+  return (
+    <svg {...svgBase}>
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+function IconPlay() {
+  return (
+    <svg {...svgBase}>
+      <path d="M7 4.5v15l13-7.5-13-7.5Z" />
+    </svg>
+  );
+}
+function IconBell() {
+  return (
+    <svg {...svgBase}>
+      <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg {...svgBase} width={16} height={16}>
+      <path d="m20 6-11 11L4 12" />
+    </svg>
+  );
+}
+
 /* Mini graphe à barres (SVG, sans dépendance) du temps d'écoute par jour. */
 function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   const max = Math.max(1, ...data.map((d) => d.listen_sec));
+  const peak = data.reduce<AnalyticsPoint | null>((a, d) => (!a || d.listen_sec > a.listen_sec ? d : a), null);
   const W = 720;
   const H = 140;
   const gap = 2;
@@ -26,17 +89,24 @@ function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   return (
     <div className="card" style={{ overflowX: "auto" }}>
       <svg viewBox={`0 0 ${W} ${H + 22}`} width="100%" height={H + 22} role="img"
-        aria-label="Temps d'écoute par jour">
+        aria-label={`Temps d'écoute par jour. Pic : ${peak ? `${formatDuration(peak.listen_sec)} le ${peak.day}` : "—"}.`}>
+        {/* Axe horizontal de base, visible (pas porté par la couleur seule). */}
+        <line x1={0} y1={H} x2={W} y2={H} stroke="var(--line)" strokeWidth={1} />
         {data.map((d, i) => {
           const h = Math.round((d.listen_sec / max) * H);
           const x = i * (bw + gap);
+          const isPeak = d === peak;
           return (
             <g key={d.day}>
-              <rect x={x} y={H - h} width={bw} height={h} rx={2} fill="var(--accent)">
-                <title>{`${d.day} — ${formatDuration(d.listen_sec)} écoute · ${d.sessions} visiteur(s)`}</title>
+              {/* Le pic est souligné par une opacité pleine + une marque, pas seulement par la couleur. */}
+              <rect x={x} y={H - h} width={bw} height={h} rx={2} fill="var(--accent)" opacity={isPeak ? 1 : 0.78}>
+                <title>{`${d.day} — ${formatDuration(d.listen_sec)} écoute · ${d.sessions} visiteur(s)${isPeak ? " · pic" : ""}`}</title>
               </rect>
+              {isPeak && h > 0 && (
+                <circle cx={x + bw / 2} cy={H - h - 4} r={2.4} fill="var(--accent)" />
+              )}
               {i % Math.ceil(data.length / 10 || 1) === 0 && (
-                <text x={x + bw / 2} y={H + 14} fontSize="9" fill="var(--muted)" textAnchor="middle">
+                <text x={x + bw / 2} y={H + 14} fontSize="9" fill="var(--txt-dim)" textAnchor="middle">
                   {d.day.slice(5)}
                 </text>
               )}
@@ -44,27 +114,71 @@ function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
           );
         })}
       </svg>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
+      <table className="sr-only">
+        <caption>Temps d&apos;écoute par jour</caption>
+        <thead>
+          <tr>
+            <th scope="col">Jour</th>
+            <th scope="col">Écoute</th>
+            <th scope="col">Visiteurs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d) => (
+            <tr key={d.day}>
+              <th scope="row">{d.day}</th>
+              <td>{formatDuration(d.listen_sec)}</td>
+              <td>{d.sessions}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/* Liste à barres : libellé · barre proportionnelle · valeur. */
-function BarList({ items }: { items: { label: string; value: number }[] }) {
+/* Liste à barres : libellé · barre proportionnelle · valeur.
+   `caption` décrit la série pour l'alternative tabulaire lecteurs d'écran. */
+function BarList({ items, caption }: { items: { label: string; value: number }[]; caption?: string }) {
   const max = Math.max(1, ...items.map((i) => i.value));
+  const total = items.reduce((a, i) => a + i.value, 0);
   if (!items.length) return <Empty label="Pas encore de données." />;
   return (
     <div className="card">
-      {items.map((it) => (
-        <div key={it.label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <span style={{ width: 140, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {it.label}
-          </span>
-          <span style={{ flex: 1, height: 8, background: "rgba(127,127,127,0.18)", borderRadius: 4 }}>
-            <span style={{ display: "block", width: `${(it.value / max) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 4, minWidth: 3 }} />
-          </span>
-          <span className="muted" style={{ fontSize: "0.8rem", width: 36, textAlign: "right" }}>{it.value}</span>
-        </div>
-      ))}
+      <div aria-hidden="true">
+        {items.map((it) => (
+          <div key={it.label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ width: 140, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {it.label}
+            </span>
+            <span style={{ flex: 1, height: 8, background: "var(--panel-2)", borderRadius: 4 }}>
+              <span style={{ display: "block", width: `${(it.value / max) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 4, minWidth: 3 }} />
+            </span>
+            <span className="muted" style={{ fontSize: "0.8rem", width: 36, textAlign: "right" }}>{it.value}</span>
+          </div>
+        ))}
+      </div>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran (avec part en %). */}
+      <table className="sr-only">
+        {caption && <caption>{caption}</caption>}
+        <thead>
+          <tr>
+            <th scope="col">Libellé</th>
+            <th scope="col">Sessions</th>
+            <th scope="col">Part</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it) => (
+            <tr key={it.label}>
+              <th scope="row">{it.label}</th>
+              <td>{it.value}</td>
+              <td>{total ? `${Math.round((it.value / total) * 100)} %` : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -74,18 +188,42 @@ function HourlyChart({ data }: { data: { hour: number; sessions: number }[] }) {
   const byHour = new Array(24).fill(0) as number[];
   for (const d of data) if (d.hour >= 0 && d.hour < 24) byHour[d.hour] = d.sessions;
   const max = Math.max(1, ...byHour);
+  const peakHour = byHour.indexOf(max);
   return (
     <div className="card">
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 90 }}>
+      <div
+        role="img"
+        aria-label={`Activité par heure (heure de Montréal). Pic à ${peakHour} h avec ${max} visite(s).`}
+        style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 90, borderBottom: "1px solid var(--line)" }}
+      >
         {byHour.map((v, h) => (
           <div key={h} title={`${h} h — ${v} visite(s)`} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-            <div style={{ height: `${(v / max) * 100}%`, background: "var(--accent)", borderRadius: 2, minHeight: v ? 2 : 0 }} />
+            {/* Le pic est marqué par une opacité pleine (les autres barres atténuées). */}
+            <div style={{ height: `${(v / max) * 100}%`, background: "var(--accent)", opacity: h === peakHour && v > 0 ? 1 : 0.78, borderRadius: 2, minHeight: v ? 2 : 0 }} />
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--muted)", marginTop: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--txt-dim)", marginTop: 4 }}>
         <span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span>
       </div>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
+      <table className="sr-only">
+        <caption>Activité par heure (heure de Montréal)</caption>
+        <thead>
+          <tr>
+            <th scope="col">Heure</th>
+            <th scope="col">Visites</th>
+          </tr>
+        </thead>
+        <tbody>
+          {byHour.map((v, h) => (
+            <tr key={h}>
+              <th scope="row">{h} h</th>
+              <td>{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -114,6 +252,7 @@ export default function StatistiquesPage() {
   const [geo, setGeo] = useState<GeoPoint[] | null>(null);
   const [breakdown, setBreakdown] = useState<AnalyticsBreakdown | null>(null);
   const [days, setDays] = useState(30);
+  const [error, setError] = useState<string | null>(null);
   const [auto, setAuto] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -135,8 +274,15 @@ export default function StatistiquesPage() {
         setSessions(await api.get<AnalyticsSession[]>("/v1/admin/analytics/sessions"));
       }
       setUpdatedAt(Date.now());
+      setError(null);
     } catch {
-      /* on garde l'affichage précédent — pas de page blanche sur un hoquet réseau */
+      /* on garde l'affichage précédent — pas de page blanche sur un hoquet réseau.
+         L'erreur n'est REMONTÉE que si l'on n'a encore aucune donnée à afficher
+         (1er chargement raté) → distingue l'erreur du vide. */
+      setOverview((prev) => {
+        if (prev === null) setError("Impossible de charger les statistiques.");
+        return prev;
+      });
     }
   }, [isAdmin]);
 
@@ -258,6 +404,7 @@ export default function StatistiquesPage() {
   };
 
   const maxShow = shows?.[0]?.totalListenSec || 1;
+  const totalShowSec = (shows ?? []).reduce((a, s) => a + s.totalListenSec, 0);
 
   return (
     <div>
@@ -271,12 +418,12 @@ export default function StatistiquesPage() {
           </select>
           {isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => void exportCsv("shows")}>
-              ⬇ CSV émissions
+              <IconDownload /> CSV émissions
             </button>
           )}
           {isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => void exportCsv("sessions")}>
-              ⬇ CSV sessions
+              <IconDownload /> CSV sessions
             </button>
           )}
           <span
@@ -292,10 +439,15 @@ export default function StatistiquesPage() {
             onClick={() => setAuto((a) => !a)}
             title={auto ? "Mettre le direct en pause" : "Reprendre le direct"}
           >
-            {auto ? "⏸ Pause" : "▶ Reprendre le direct"}
+            {auto ? <IconPause /> : <IconPlay />} {auto ? "Pause" : "Reprendre le direct"}
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={refreshAll} title="Rafraîchir maintenant">
-            ↻
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={refreshAll}
+            title="Rafraîchir maintenant"
+            aria-label="Rafraîchir maintenant"
+          >
+            <IconRefresh />
           </button>
         </div>
       </div>
@@ -309,13 +461,15 @@ export default function StatistiquesPage() {
         @keyframes statsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(25,195,125,.55);} 50%{ box-shadow:0 0 0 5px rgba(25,195,125,0);} }
       `}</style>
 
-      {!overview ? (
-        <Spinner />
+      {!overview && error ? (
+        <ErrorState message={error} onRetry={refreshAll} />
+      ) : !overview ? (
+        <TableSkeleton cols={4} rows={6} />
       ) : (
         <>
           <div className="cards-grid">
             <div className="card stat-card" style={{ borderLeft: "4px solid var(--ok)" }}>
-              <div className="label">● En direct (60 s)</div>
+              <div className="label"><span aria-hidden="true">● </span>En direct (60 s)</div>
               <div className="value">{overview.live}</div>
             </div>
             <div className="card stat-card">
@@ -353,7 +507,7 @@ export default function StatistiquesPage() {
 
           <h2 style={{ marginTop: 28 }}>Détails de l&apos;audience</h2>
           <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
-            <strong>🔔 Alertes</strong>
+            <strong style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><IconBell /> Alertes</strong>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem" }}>
               M&apos;alerter si ≥
               <input
@@ -371,7 +525,9 @@ export default function StatistiquesPage() {
                 Activer les notifications navigateur
               </button>
             ) : (
-              <span style={{ color: "var(--ok)", fontSize: "0.8rem" }}>✓ Notifications actives</span>
+              <span style={{ color: "var(--ok)", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <IconCheck /> Notifications actives
+              </span>
             )}
           </div>
 
@@ -400,15 +556,15 @@ export default function StatistiquesPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 12 }}>
                 <div>
                   <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Appareils</h3>
-                  <BarList items={breakdown.devices.map((d) => ({ label: d.device, value: d.sessions }))} />
+                  <BarList caption="Sessions par appareil" items={breakdown.devices.map((d) => ({ label: d.device, value: d.sessions }))} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Navigateurs</h3>
-                  <BarList items={breakdown.browsers.map((b) => ({ label: b.browser, value: b.sessions }))} />
+                  <BarList caption="Sessions par navigateur" items={breakdown.browsers.map((b) => ({ label: b.browser, value: b.sessions }))} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Top villes</h3>
-                  <BarList items={breakdown.topCities.map((ci) => ({ label: ci.label, value: ci.sessions }))} />
+                  <BarList caption="Sessions par ville" items={breakdown.topCities.map((ci) => ({ label: ci.label, value: ci.sessions }))} />
                 </div>
               </div>
 
@@ -432,34 +588,43 @@ export default function StatistiquesPage() {
               <table className="data">
                 <thead>
                   <tr>
-                    <th>Émission</th>
-                    <th>Écoute totale</th>
-                    <th>Auditeurs</th>
-                    <th>Moy. / auditeur</th>
-                    <th style={{ width: "30%" }}>Part</th>
+                    <th scope="col">Émission</th>
+                    <th scope="col">Écoute totale</th>
+                    <th scope="col">Auditeurs</th>
+                    <th scope="col">Moy. / auditeur</th>
+                    <th scope="col" style={{ width: "30%" }}>Part</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {shows.map((s) => (
+                  {shows.map((s) => {
+                    const part = totalShowSec ? Math.round((s.totalListenSec / totalShowSec) * 100) : 0;
+                    return (
                     <tr key={s.showTitle}>
-                      <td>{s.showTitle}</td>
+                      <th scope="row">{s.showTitle}</th>
                       <td>{formatDuration(s.totalListenSec)}</td>
                       <td>{s.listeners}</td>
                       <td>{formatDuration(s.avgListenSec)}</td>
                       <td>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            height: 8,
-                            borderRadius: 4,
-                            background: "var(--accent)",
-                            width: `${Math.round((s.totalListenSec / maxShow) * 100)}%`,
-                            minWidth: 4,
-                          }}
-                        />
+                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span aria-hidden="true" style={{ flex: 1, height: 8, background: "var(--panel-2)", borderRadius: 4 }}>
+                            <span
+                              style={{
+                                display: "block",
+                                height: "100%",
+                                borderRadius: 4,
+                                background: "var(--accent)",
+                                width: `${Math.round((s.totalListenSec / maxShow) * 100)}%`,
+                                minWidth: 4,
+                              }}
+                            />
+                          </span>
+                          {/* La valeur n'est plus portée par la seule barre : % explicite. */}
+                          <span style={{ fontVariantNumeric: "tabular-nums", width: 42, textAlign: "right" }}>{part} %</span>
+                        </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -475,21 +640,21 @@ export default function StatistiquesPage() {
           ) : (
             <>
               <p className="muted" style={{ fontSize: "0.82rem", marginBottom: 10 }}>
-                ⚖️ Les adresses IP sont des données personnelles (Loi 25). Pense à l&apos;indiquer
+                <span aria-hidden="true">⚖️ </span>Les adresses IP sont des données personnelles (Loi 25). Pense à l&apos;indiquer
                 dans ta politique de confidentialité et à définir une durée de conservation.
               </p>
               <div className="table-wrap">
                 <table className="data">
                   <thead>
                     <tr>
-                      <th>IP</th>
-                      <th>Localisation</th>
-                      <th>Appareil</th>
-                      <th>Navigateur</th>
-                      <th>Pages</th>
-                      <th>Sur le site</th>
-                      <th>Écoute</th>
-                      <th>Dernière activité</th>
+                      <th scope="col">IP</th>
+                      <th scope="col">Localisation</th>
+                      <th scope="col">Appareil</th>
+                      <th scope="col">Navigateur</th>
+                      <th scope="col">Pages</th>
+                      <th scope="col">Sur le site</th>
+                      <th scope="col">Écoute</th>
+                      <th scope="col">Dernière activité</th>
                     </tr>
                   </thead>
                   <tbody>

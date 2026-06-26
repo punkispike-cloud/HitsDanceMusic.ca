@@ -53,6 +53,8 @@ export interface RadioSummary {
   contactEmail: string | null;
   contactPhone: string | null;
   licenseConfirmed: boolean;
+  healthStatus?: "up" | "down" | "silent" | "unknown" | null;
+  lastCheckedAt?: string | null;
   createdAt: string;
   live: number;
   today: number;

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
-import { Field } from "@/components/ui";
+import { Field, PasswordField } from "@/components/ui";
 
 export default function LoginPage() {
   const { user, ready, login } = useAuth();
@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  // Ref pour focaliser le champ email après une erreur.
+  const emailRef = useRef<HTMLInputElement>(null);
 
   // Déjà connecté → dashboard
   useEffect(() => {
@@ -23,7 +25,11 @@ export default function LoginPage() {
   const forgot = async () => {
     setError("");
     setNotice("");
-    if (!email) return setError("Entre ton email d'abord.");
+    if (!email) {
+      setError("Entre ton email d'abord.");
+      emailRef.current?.focus();
+      return;
+    }
     try {
       await api.post("/auth/forgot-password", { email });
       setNotice("Si un compte existe, un lien de réinitialisation vient d'être envoyé.");
@@ -42,6 +48,8 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Connexion impossible";
       setError(msg);
+      // Identifiants rejetés → on renvoie le focus sur le 1er champ.
+      emailRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -59,6 +67,7 @@ export default function LoginPage() {
         <form onSubmit={submit}>
           <Field label="Email">
             <input
+              ref={emailRef}
               type="email"
               autoComplete="username"
               value={email}
@@ -66,18 +75,22 @@ export default function LoginPage() {
               required
             />
           </Field>
-          <Field label="Mot de passe">
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Field>
-          {error && <p className="error-text">{error}</p>}
-          {notice && <p style={{ color: "var(--ok)", fontSize: "0.85rem" }}>{notice}</p>}
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} disabled={busy}>
+          <PasswordField
+            label="Mot de passe"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+          />
+          {error && <p className="error-text" role="alert">{error}</p>}
+          {notice && (
+            <p role="status" style={{ color: "var(--ok)", fontSize: "0.85rem" }}>{notice}</p>
+          )}
+          <button
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: 8 }}
+            disabled={busy}
+            aria-busy={busy}
+          >
             {busy ? "Connexion…" : "Se connecter"}
           </button>
         </form>

@@ -95,49 +95,50 @@
 
       <section class="section">
         <div class="talent-grid extended">
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="alain-perron" aria-label="Voir le profil de Alain Perron">
             <div class="avatar has-photo"><img src="assets/alain-perron.webp" alt="Alain Perron" loading="lazy" /></div>
             <p>Alain Perron</p>
             <strong>Les matins d’Alain (live)</strong>
             <span>Lun–Ven · 07h00–09h00</span>
             <small>Réveil dance &amp; house, lien direct avec les auditeurs en semaine.</small>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="dj-pierre-jutras" aria-label="Voir le profil de DJ Pierre Jutras">
             <div class="avatar has-photo"><img src="assets/pierre-jutras.webp" alt="DJ Pierre Jutras" loading="lazy" /></div>
             <p>DJ Pierre Jutras</p>
             <strong>Hommage au Limelight Montréal</strong>
             <span>Mer., ven., sam., dim.</span>
             <small>Sets hommage au club légendaire — plusieurs créneaux dans la grille.</small>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="dj-jumpoff" aria-label="Voir le profil de DJ JÜMPOFF">
             <div class="avatar has-photo"><img src="assets/jumpoff.webp" alt="DJ JÜMPOFF" loading="lazy" /></div>
             <p>DJ JÜMPOFF</p>
             <strong>JÜMPOFFproject — mix club &amp; live</strong>
             <span>Mer., jeu., ven., sam., dim.</span>
             <small>Transitions club, soirées et blocs énergie dance.</small>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="dj-oskana" aria-label="Voir le profil de DJ OSKANA">
             <div class="avatar has-photo"><img src="assets/dj-red-headphones.webp" alt="DJ OSKANA" loading="lazy" /></div>
             <p>DJ OSKANA</p>
             <strong>Show mix européen</strong>
             <span>Jeu. 21h · Sam. 21h</span>
             <small>Sélection house &amp; dance orientée Europe.</small>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="dj-isael-soccaras" aria-label="Voir le profil de DJ Isael Soccaras">
             <div class="avatar has-photo"><img src="assets/isael-soccaras.webp" alt="DJ Isael Soccaras" loading="lazy" /></div>
             <p>DJ Isael Soccaras</p>
             <strong>DJ invité — sets dance &amp; club</strong>
             <span>Créneaux à venir</span>
             <small>Nouvelle signature DJ de la programmation 2026.</small>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" tabindex="0" role="button" data-slug="pee-jee" aria-label="Voir le profil de Pee Jee">
             <div class="avatar">Pg</div>
             <p>Pee Jee</p>
             <strong>Pee Jee Radio Show</strong>
             <span>Dim. 19h00–20h00</span>
             <small>Format dédié le dimanche soir.</small>
           </article>
-          <article class="talent-card">
+          <!-- Carte sans fiche profil : non interactive (pas de tabindex/role). -->
+          <article class="talent-card talent-card--static" style="cursor:default">
             <div class="avatar">BR</div>
             <p>Best DJ’s international</p>
             <strong>Nuits BeatRadioWorld</strong>
@@ -164,5 +165,13 @@
     </footer>
 
     <script type="module" src="js/main.js"></script>
+    <!-- Rend les cartes statiques (repli sans API) cliquables/clavier dès le chargement.
+         Indépendant de l'API : wireTalentCards fonctionne par data-slug (fetch à l'ouverture). -->
+    <script type="module">
+      import { wireTalentCards } from "./js/animateur-detail.js";
+      const wire = () => wireTalentCards(document.querySelector(".talent-grid.extended"), []);
+      if (document.readyState !== "loading") wire();
+      else document.addEventListener("DOMContentLoaded", wire, { once: true });
+    </script>
   </body>
 </html>

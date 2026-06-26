@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Modal, Field, Spinner, ConfirmDelete } from "@/components/ui";
+import { Modal, Field, Spinner, ConfirmDelete, Empty, ErrorState } from "@/components/ui";
 import {
   SLOT_TAGS,
   DAY_NAMES,
@@ -46,6 +46,7 @@ export default function GrillePage() {
 
   const [slots, setSlots] = useState<ScheduleSlot[] | null>(null);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState(1);
   const [editing, setEditing] = useState<ScheduleSlot | "new" | null>(null);
   const [form, setForm] = useState<SlotForm>(EMPTY_FORM);
@@ -53,6 +54,7 @@ export default function GrillePage() {
   const [deleting, setDeleting] = useState<ScheduleSlot | null>(null);
 
   const load = async () => {
+    setError(null);
     try {
       const [s, a] = await Promise.all([
         api.get<ScheduleSlot[]>("/v1/admin/schedule-slots"),
@@ -61,8 +63,10 @@ export default function GrillePage() {
       setSlots(s);
       setArtists(a);
     } catch (e) {
-      toast((e as ApiError).message, "error");
-      setSlots([]);
+      const msg = (e as ApiError).message;
+      toast(msg, "error");
+      // Ne PAS faire setSlots([]) : on distinguerait alors une panne d'un parc vide.
+      setError(msg);
     }
   };
   useEffect(() => {
@@ -145,7 +149,8 @@ export default function GrillePage() {
 
   // Détection de trous / chevauchements pour aider l'éditeur.
   const coverageWarning = useMemo(() => {
-    if (daySlots.length === 0) return "Aucun créneau ce jour.";
+    // Jour vide : l'état <Empty> ci-dessous porte déjà le message.
+    if (daySlots.length === 0) return null;
     const issues: string[] = [];
     if (daySlots[0]!.startMin !== 0) issues.push("ne commence pas à 00:00");
     for (let i = 1; i < daySlots.length; i++) {
@@ -154,7 +159,7 @@ export default function GrillePage() {
       }
     }
     if (daySlots[daySlots.length - 1]!.endMin !== 1440) issues.push("ne finit pas à 24:00");
-    return issues.length ? `⚠ ${issues.join(" · ")}` : null;
+    return issues.length ? issues.join(" · ") : null;
   }, [daySlots]);
 
   return (
@@ -177,13 +182,18 @@ export default function GrillePage() {
       </div>
 
       {coverageWarning && (
-        <p className="muted" style={{ marginBottom: 14, color: coverageWarning.startsWith("⚠") ? "var(--warn)" : undefined }}>
-          {coverageWarning}
+        <p className="muted" role="status" style={{ marginBottom: 14, color: "var(--warn)" }}>
+          <span aria-hidden="true">⚠ </span>
+          Couverture incomplète : {coverageWarning}
         </p>
       )}
 
-      {slots === null ? (
+      {error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : slots === null ? (
         <Spinner />
+      ) : daySlots.length === 0 ? (
+        <Empty label="Aucun créneau ce jour." />
       ) : (
         <div className="slot-list">
           {daySlots.map((s) => (
