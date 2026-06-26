@@ -44,13 +44,42 @@ body {
 }
 .muted { color: var(--muted); }
 
+/* État du dernier rafraîchissement (couleur d'erreur sur échec) — L3. */
+#lastUpdate.is-stale { color: var(--down); }
+
+/* Indicateur de polling auto — L6. */
+.auto-refresh {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.72rem; color: var(--muted);
+}
+.auto-refresh .live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--up); flex: 0 0 auto;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
 .btn {
   background: var(--bg-2); color: var(--text);
   border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 14px; cursor: pointer; font: inherit;
+  min-height: 44px; display: inline-flex; align-items: center; gap: 6px;
 }
 .btn:hover { border-color: var(--accent); }
 .btn:disabled { opacity: 0.5; cursor: progress; }
+
+/* Focus clavier visible (indépendant de :hover) — a11y L1. */
+.btn:focus-visible,
+.act:focus-visible,
+[data-copy]:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* Lecteur d'écran seulement — L2. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 
 main { max-width: 1100px; margin: 0 auto; padding: 24px 22px 60px; }
 
@@ -110,6 +139,51 @@ td.actions { white-space: nowrap; }
 .act:hover { border-color: var(--accent); color: var(--accent); }
 .act-off { color: var(--muted); opacity: 0.5; cursor: not-allowed; }
 .act-copy { font-family: inherit; }
+/* Icône SVG inline dans une action — L6. */
+.act .ico, .btn .ico, .badge .ico, .kpi-label .ico { vertical-align: -0.18em; }
+
+/* Cibles tactiles ≥44px en flex pour les actions de ligne — L1. */
+td.actions { white-space: nowrap; }
+td.actions .act-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.act { min-height: 44px; }
+
+/* En-têtes triables — L6. */
+table.parc th.sortable { cursor: pointer; -webkit-user-select: none; user-select: none; }
+table.parc th.sortable .sort-ind { color: var(--muted); margin-left: 4px; font-size: 0.7em; }
+table.parc th[aria-sort="ascending"] .sort-ind::after { content: "▲"; }
+table.parc th[aria-sort="descending"] .sort-ind::after { content: "▼"; }
+table.parc th.sortable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Panneau en cours de chargement + squelette KPI à hauteur réservée — L6. */
+.panel.is-loading { opacity: 0.6; }
+/* Données périmées (échec de rafraîchissement, données déjà affichées) — L3. */
+.panel.is-stale-data .table-wrap { opacity: 0.55; }
+.kpi.kpi-skeleton { min-height: 86px; }
+.kpi-skeleton .kpi-value,
+.kpi-skeleton .kpi-label {
+  color: transparent; background: var(--line);
+  border-radius: 6px; animation: skelPulse 1.4s ease-in-out infinite;
+}
+.kpi-skeleton .kpi-value { height: 2rem; width: 60%; }
+.kpi-skeleton .kpi-label { height: 0.82rem; width: 80%; margin-top: 12px; }
+
+/* Bandeau « données périmées » — L3. */
+.stale-banner {
+  display: none; align-items: center; gap: 8px;
+  background: rgba(248,113,113,0.10); border: 1px solid rgba(248,113,113,0.4);
+  color: var(--down); border-radius: var(--radius);
+  padding: 10px 14px; margin-bottom: 16px; font-size: 0.88rem;
+}
+.stale-banner.is-visible { display: flex; }
+
+/* Bouton Réessayer dans la ligne d'erreur de table — L3. */
+.retry-btn {
+  margin-left: 10px; min-height: 36px;
+  background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; font: inherit;
+}
+.retry-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---- Onboarding ---- */
 .onboard { margin: 0; padding-left: 22px; display: grid; gap: 16px; }
@@ -124,3 +198,21 @@ td.actions { white-space: nowrap; }
 .onboard em { color: var(--text); font-style: normal; }
 
 .foot { text-align: center; padding: 14px 0; font-size: 0.85rem; }
+
+/* ---- Animations + garde reduced-motion ---- */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+@keyframes skelPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-refresh .live-dot,
+  .kpi-skeleton .kpi-value,
+  .kpi-skeleton .kpi-label {
+    animation: none;
+  }
+}
