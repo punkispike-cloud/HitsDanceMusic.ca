@@ -44,6 +44,30 @@ export default function JournalPage() {
     void load();
   }, [load]);
 
+  // QW-1 — Filtres persistés dans l'URL : lecture au montage…
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const e = sp.get("entity");
+    const a = sp.get("action");
+    if (e) setEntity(e);
+    if (a) setAction(a);
+  }, []);
+
+  // …puis réécriture à chaque changement de filtre (replaceState).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    entity ? sp.set("entity", entity) : sp.delete("entity");
+    action ? sp.set("action", action) : sp.delete("action");
+    const qs = sp.toString();
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `${window.location.pathname}?${qs}` : window.location.pathname,
+    );
+  }, [entity, action]);
+
   if (user?.role !== "superadmin") {
     return (
       <div>

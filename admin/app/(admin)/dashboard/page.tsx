@@ -76,6 +76,24 @@ export default function DashboardPage() {
         <h1>Bonjour, {user?.displayName} <span aria-hidden="true">👋</span></h1>
       </div>
 
+      {stats && stats.artists + stats.shows + stats.episodes + stats.mixes === 0 && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: "4px solid var(--accent)" }}>
+          <h2 style={{ marginTop: 0 }}>Bienvenue — configurons ta radio</h2>
+          <p className="muted">Trois étapes pour partir en ondes :</p>
+          <ol className="onboarding-steps">
+            <li>
+              <a href="/animateurs" style={{ color: "var(--accent-2)" }}>Ajoute tes animateurs</a> — l&apos;équipe à l&apos;antenne.
+            </li>
+            <li>
+              <a href="/emissions" style={{ color: "var(--accent-2)" }}>Crée tes émissions</a> — les rendez-vous de la grille.
+            </li>
+            <li>
+              <a href="/grille" style={{ color: "var(--accent-2)" }}>Monte la grille horaire</a> — qui passe, et quand.
+            </li>
+          </ol>
+        </div>
+      )}
+
       {now && (
         <div className="card" style={{ marginBottom: 20, borderLeft: "4px solid var(--accent)" }}>
           <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
