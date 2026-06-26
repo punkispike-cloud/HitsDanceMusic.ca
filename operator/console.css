@@ -216,3 +216,46 @@ table.parc th.sortable:focus-visible { outline: 2px solid var(--accent); outline
     animation: none;
   }
 }
+
+/* ====================== POLISH VISUEL (motion & profondeur) ====================== */
+:root { --ease: cubic-bezier(0.22, 1, 0.36, 1); --shadow-soft: 0 14px 40px -22px rgba(0, 0, 0, 0.7); }
+
+/* Transitions douces sur les éléments interactifs (états moins secs) + retour au clic */
+.btn, .act, .retry-btn {
+  transition: border-color 0.18s var(--ease), color 0.18s var(--ease),
+              background 0.18s var(--ease), transform 0.12s var(--ease);
+}
+.btn:not(:disabled):active, .act:not(.act-off):active, .retry-btn:active { transform: scale(0.97); }
+
+/* KPIs & panneaux : profondeur au survol */
+.kpi, .panel {
+  transition: border-color 0.22s var(--ease), transform 0.22s var(--ease), box-shadow 0.22s var(--ease);
+}
+.kpi:hover, .panel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(78, 161, 255, 0.45);
+  box-shadow: var(--shadow-soft);
+}
+/* Un panneau en chargement ne « saute » pas au survol */
+.panel.is-loading:hover { transform: none; box-shadow: none; }
+
+/* Lignes de table : retour au survol */
+table.parc tbody tr { transition: background 0.15s var(--ease); }
+table.parc tbody tr:hover td { background: rgba(78, 161, 255, 0.06); }
+
+/* Badges : transition de couleur */
+.badge { transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease); }
+
+/* Entrée en fondu (fill both sur opacité seule → pas de conflit avec le lift au survol) */
+@keyframes opFade { from { opacity: 0; } to { opacity: 1; } }
+.kpi, .panel { animation: opFade 0.5s var(--ease) both; }
+.kpis .kpi:nth-child(2) { animation-delay: 0.05s; }
+.kpis .kpi:nth-child(3) { animation-delay: 0.10s; }
+.kpis .kpi:nth-child(4) { animation-delay: 0.15s; }
+.kpis .kpi:nth-child(5) { animation-delay: 0.20s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .act, .retry-btn, .kpi, .panel, table.parc tbody tr, .badge { transition: none; }
+  .kpi, .panel { animation: none; }
+  .kpi:hover, .panel:hover { transform: none; }
+}
