@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -21,7 +22,7 @@ const LINKS: { href: string; label: string; minRole?: Role }[] = [
   { href: "/compte", label: "Mon compte" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void } = {}) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { radios, selectedId, selectRadio, isOwner } = useRadio();
@@ -29,28 +30,43 @@ export function Sidebar() {
   const currentRadio =
     radios.find((r) => r.id === selectedId) ?? (radios.length === 1 ? radios[0] : undefined);
 
+  // Ferme le drawer quand la route change (navigation) ou via Escape.
+  useEffect(() => {
+    if (open) onClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   return (
-    <aside className="sidebar">
+    <aside id="admin-sidebar" className={`sidebar${open ? " open" : ""}`}>
       <div className="brand">
         <span className="dot" /> En Ondes
       </div>
 
       {isOwner && radios.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, color: "#9aa", display: "block", marginBottom: 4 }}>
+          <label htmlFor="sidebar-radio-select" style={{ fontSize: 11, color: "var(--txt-dim)", display: "block", marginBottom: 4 }}>
             Radio administrée
           </label>
           <select
-            aria-label="Radio administrée"
+            id="sidebar-radio-select"
             value={currentRadio?.id ?? ""}
             onChange={(e) => selectRadio(e.target.value)}
             style={{
               width: "100%",
               padding: "7px 8px",
               borderRadius: 6,
-              background: "var(--panel2, #0f0f14)",
-              color: "var(--txt, #eee)",
-              border: "1px solid var(--border, #2a2a33)",
+              background: "var(--panel-2)",
+              color: "var(--txt)",
+              border: "1px solid var(--line-2)",
             }}
           >
             {!currentRadio && <option value="">— choisir —</option>}
@@ -64,15 +80,19 @@ export function Sidebar() {
       )}
 
       <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {LINKS.filter((l) => !l.minRole || roleAtLeast(user?.role, l.minRole)).map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={`nav-link ${pathname.startsWith(l.href) ? "active" : ""}`}
-          >
-            {l.label}
-          </Link>
-        ))}
+        {LINKS.filter((l) => !l.minRole || roleAtLeast(user?.role, l.minRole)).map((l) => {
+          const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`nav-link ${active ? "active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              {l.label}
+            </Link>
+          );
+        })}
       </nav>
       <div className="spacer" />
       <div className="user-box">

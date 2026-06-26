@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Spinner } from "@/components/ui";
+import { Spinner, ErrorState } from "@/components/ui";
 import type { Artist, Show, Episode, Mix, TrackHistoryEntry } from "@/lib/types";
 
 interface NowSlot {
@@ -25,29 +25,36 @@ export default function DashboardPage() {
   } | null>(null);
   const [now, setNow] = useState<NowSlot | null>(null);
   const [tracks, setTracks] = useState<TrackHistoryEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Chargement des compteurs : en cas d'échec on NE fabrique PAS de 0 (qui
+  // ferait passer une panne pour un parc vide) → on bascule en état erreur.
+  const loadStats = useCallback(async () => {
+    setError(null);
+    setStats(null);
+    try {
+      const [artists, shows, episodes, mixes, nowSlot] = await Promise.all([
+        api.get<Artist[]>("/v1/admin/artists"),
+        api.get<Show[]>("/v1/admin/shows"),
+        api.get<Episode[]>("/v1/admin/episodes"),
+        api.get<Mix[]>("/v1/admin/mixes"),
+        api.get<NowSlot | null>("/v1/schedule/now"),
+      ]);
+      setStats({
+        artists: artists.length,
+        shows: shows.length,
+        episodes: episodes.length,
+        mixes: mixes.length,
+      });
+      setNow(nowSlot);
+    } catch {
+      setError("Impossible de charger les indicateurs.");
+    }
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [artists, shows, episodes, mixes, nowSlot] = await Promise.all([
-          api.get<Artist[]>("/v1/admin/artists"),
-          api.get<Show[]>("/v1/admin/shows"),
-          api.get<Episode[]>("/v1/admin/episodes"),
-          api.get<Mix[]>("/v1/admin/mixes"),
-          api.get<NowSlot | null>("/v1/schedule/now"),
-        ]);
-        setStats({
-          artists: artists.length,
-          shows: shows.length,
-          episodes: episodes.length,
-          mixes: mixes.length,
-        });
-        setNow(nowSlot);
-      } catch {
-        setStats({ artists: 0, shows: 0, episodes: 0, mixes: 0 });
-      }
-    })();
-  }, []);
+    void loadStats();
+  }, [loadStats]);
 
   // Titres récemment joués — rafraîchis toutes les 20 s.
   useEffect(() => {
@@ -66,7 +73,7 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="page-head">
-        <h1>Bonjour, {user?.displayName} 👋</h1>
+        <h1>Bonjour, {user?.displayName} <span aria-hidden="true">👋</span></h1>
       </div>
 
       {now && (
@@ -83,7 +90,15 @@ export default function DashboardPage() {
 
       {tracks && tracks.length > 0 && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <h2 style={{ marginTop: 0 }}>🎵 Titres récemment joués</h2>
+          <h2 style={{ marginTop: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+            Titres récemment joués
+          </h2>
           <div className="table-wrap">
             <table className="data">
               <thead>
@@ -107,8 +122,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!stats ? (
-        <Spinner />
+      {error ? (
+        <ErrorState message={error} onRetry={() => void loadStats()} />
+      ) : !stats ? (
+        <Spinner label="Chargement des indicateurs…" />
       ) : (
         <div className="cards-grid">
           <div className="card stat-card">

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Spinner } from "@/components/ui";
+import { Spinner, ErrorState } from "@/components/ui";
 import { AudioUpload } from "@/components/audio-upload";
 import type { Artist, Episode } from "@/lib/types";
 
@@ -19,7 +19,30 @@ const columns: Column<Episode>[] = [
   {
     key: "audioUrl",
     label: "Audio",
-    render: (r) => (r.audioUrl ? "🎵 prêt" : <span className="muted">à téléverser</span>),
+    render: (r) =>
+      r.audioUrl ? (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          {/* icône note de musique (décorative, libellé texte porte le sens) */}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+          prêt
+        </span>
+      ) : (
+        <span className="muted">à téléverser</span>
+      ),
   },
   {
     key: "status",
@@ -41,11 +64,20 @@ const columns: Column<Episode>[] = [
 export default function PodcastsPage() {
   const { user } = useAuth();
   const [artists, setArtists] = useState<Artist[] | null>(null);
+  // On distingue l'erreur du chargement : null + error (jamais setArtists([])).
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get<Artist[]>("/v1/admin/artists").then(setArtists).catch(() => setArtists([]));
-  }, []);
+  const loadArtists = () => {
+    setError(null);
+    setArtists(null);
+    api
+      .get<Artist[]>("/v1/admin/artists")
+      .then(setArtists)
+      .catch((e) => setError((e as ApiError).message || "Échec du chargement des animateurs."));
+  };
+  useEffect(loadArtists, []);
 
+  if (error) return <ErrorState message={error} onRetry={loadArtists} />;
   if (!artists) return <Spinner />;
   const isAdmin = user?.role === "superadmin";
   const owns = (r: Episode) => isAdmin || (user?.artistId != null && r.artistId === user.artistId);
@@ -100,7 +132,7 @@ export default function PodcastsPage() {
         })}
       />
       <p className="muted" style={{ marginTop: 16, fontSize: "0.85rem" }}>
-        💡 Le téléversement audio (S3) sera branché à l&apos;étape finale. Pour l&apos;instant, gère
+        <span aria-hidden="true">💡</span> Le téléversement audio (S3) sera branché à l&apos;étape finale. Pour l&apos;instant, gère
         les métadonnées ; l&apos;audio s&apos;attachera ensuite.
       </p>
     </div>

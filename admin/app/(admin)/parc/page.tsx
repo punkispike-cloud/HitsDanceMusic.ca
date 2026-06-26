@@ -5,13 +5,13 @@
    suspendre / provisionner / ÉDITER (forfait, prix, flux, note de facturation).
    Réservé au rôle owner (le backend refuse aussi pour les autres). */
 
-import { useEffect, useState, useCallback, type ReactNode, type FormEvent } from "react";
+import { useEffect, useState, useCallback, useRef, useId, type ReactNode, type FormEvent } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
 import { useToast } from "@/components/toast";
-import { Spinner, Empty } from "@/components/ui";
+import { Empty, ErrorState, TableSkeleton, Modal } from "@/components/ui";
 import { TrendChart, type TrendPoint } from "@/components/trend-chart";
 import {
   formatDuration,
@@ -38,8 +38,11 @@ export default function ParcPage() {
   const toast = useToast();
   const [overview, setOverview] = useState<OwnerOverview | null>(null);
   const [radios, setRadios] = useState<RadioSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<RadioSummary | null>(null);
+  // Confirmation de changement de statut (couper/relancer le direct).
+  const [confirmStatus, setConfirmStatus] = useState<{ radio: RadioSummary; status: RadioStatus } | null>(null);
   const [health, setHealth] = useState<Record<string, RadioHealth>>({});
   const [series, setSeries] = useState<TrendPoint[]>([]);
   const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
@@ -47,8 +50,22 @@ export default function ParcPage() {
   const isOwner = user?.role === "owner";
 
   const load = useCallback(() => {
-    api.get<OwnerOverview>("/v1/owner/overview").then(setOverview).catch(() => setOverview(null));
-    api.get<RadioSummary[]>("/v1/owner/radios").then(setRadios).catch(() => setRadios([]));
+    // Chargement: en cas d'échec on garde radios=null + error (ne PAS confondre erreur et vide).
+    setError(null);
+    Promise.all([
+      api.get<OwnerOverview>("/v1/owner/overview"),
+      api.get<RadioSummary[]>("/v1/owner/radios"),
+    ])
+      .then(([ov, rs]) => {
+        setOverview(ov);
+        setRadios(rs);
+      })
+      .catch((e) => {
+        setRadios(null);
+        setOverview(null);
+        setError((e as ApiError).message || "Impossible de charger le parc.");
+      });
+    // Données secondaires (santé / courbe): non bloquantes pour l'affichage de la table.
     api
       .get<RadioHealth[]>("/v1/owner/health")
       .then((h) => setHealth(Object.fromEntries(h.map((x) => [x.id, x]))))
@@ -73,7 +90,8 @@ export default function ParcPage() {
       </div>
     );
   }
-  if (!radios || !overview) return <Spinner />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (radios === null || overview === null) return <TableSkeleton cols={8} />;
 
   const setStatus = async (r: RadioSummary, status: RadioStatus) => {
     try {
@@ -112,8 +130,40 @@ export default function ParcPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Erreurs de validation par champ (aria-invalid + aria-describedby).
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const validateForm = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = "Le nom est requis.";
+    if (form.monthlyPrice) {
+      const n = Number(form.monthlyPrice);
+      if (!Number.isFinite(n) || n < 0) errs.monthlyPrice = "Prix invalide (doit être ≥ 0).";
+    }
+    const isUrl = (v: string) => {
+      try {
+        new URL(v);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (form.streamUrl && !isUrl(form.streamUrl)) errs.streamUrl = "URL invalide (ex. https://…).";
+    if (form.nowPlayingUrl && !isUrl(form.nowPlayingUrl)) errs.nowPlayingUrl = "URL invalide (ex. https://…).";
+    return errs;
+  };
+
   const createRadio = async (e: FormEvent) => {
     e.preventDefault();
+    const errs = validateForm();
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      // Focus sur le premier champ fautif.
+      const first = Object.keys(errs)[0]!;
+      formRef.current?.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
+      return;
+    }
     setCreating(true);
     try {
       const domains = form.domains.split(",").map((s) => s.trim()).filter(Boolean);
@@ -128,6 +178,7 @@ export default function ParcPage() {
       });
       toast("Radio créée ✓ (statut : en montage)", "ok");
       setForm({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
+      setFormErrors({});
       load();
       refresh();
     } catch (err) {
@@ -163,8 +214,8 @@ export default function ParcPage() {
 
       <div
         style={{
-          background: "var(--panel, #15151b)",
-          border: "1px solid var(--border, #2a2a33)",
+          background: "var(--panel)",
+          border: "1px solid var(--line)",
           borderRadius: 10,
           padding: 16,
           marginBottom: 20,
@@ -173,91 +224,101 @@ export default function ParcPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <strong>Visiteurs — 30 derniers jours (tout le parc)</strong>
           <button className="btn btn-sm btn-ghost" type="button" onClick={exportCsv}>
-            ⬇ Export CSV
+            <span aria-hidden="true">⬇</span> Export CSV
           </button>
         </div>
-        <TrendChart points={series} />
+        <TrendChart points={series} label="Visiteurs" />
       </div>
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Radio</th>
-            <th>Statut</th>
-            <th>Forfait</th>
-            <th>Direct</th>
-            <th>Jour</th>
-            <th>Écoute</th>
-            <th>Contenu</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {radios.map((r) => (
-            <tr key={r.id} style={selectedId === r.id ? { outline: "1px solid var(--accent, #3aa0ff)" } : undefined}>
-              <td>
-                <HealthDot h={health[r.id]} />{" "}
-                <Link href={`/parc/${r.id}`} style={{ color: "var(--txt, #eee)", textDecoration: "underline" }}>
-                  <strong>{r.name}</strong>
-                </Link>
-                <br />
-                <span style={{ color: "#9aa", fontSize: 12 }}>
-                  {r.slug}
-                  {r.contactEmail ? ` · ${r.contactEmail}` : ""}
-                </span>
-              </td>
-              <td>
-                <span className={`status-dot ${r.status === "active" ? "status-published" : "status-archived"}`} />
-                {STATUS_LABEL[r.status]}
-              </td>
-              <td>
-                {r.plan || "—"}
-                <br />
-                <span style={{ color: "#9aa", fontSize: 12 }}>{money(r.monthlyPrice)}</span>
-              </td>
-              <td>{r.live}</td>
-              <td>{r.today}</td>
-              <td>{formatDuration(r.listenSec)}</td>
-              <td style={{ whiteSpace: "nowrap" }}>
-                {r.artists} anim. · {r.shows} ém.
-              </td>
-              <td style={{ whiteSpace: "nowrap" }}>
-                <button className="btn btn-sm" type="button" onClick={() => selectRadio(r.id)} disabled={selectedId === r.id}>
-                  {selectedId === r.id ? "Administrée" : "Administrer"}
-                </button>{" "}
-                <button className="btn btn-sm btn-ghost" type="button" onClick={() => setEditing(r)}>
-                  Éditer
-                </button>{" "}
-                {r.status !== "active" ? (
-                  <button className="btn btn-sm btn-ghost" type="button" onClick={() => void setStatus(r, "active")}>
-                    Activer
-                  </button>
-                ) : (
-                  <button className="btn btn-sm btn-ghost" type="button" onClick={() => void setStatus(r, "paused")}>
-                    Suspendre
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {radios.length === 0 ? (
+        <Empty label="Aucune radio dans le parc. Provisionne-en une ci-dessous." />
+      ) : (
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th scope="col">Radio</th>
+                <th scope="col">Statut</th>
+                <th scope="col">Forfait</th>
+                <th scope="col">Direct</th>
+                <th scope="col">Jour</th>
+                <th scope="col">Écoute</th>
+                <th scope="col">Contenu</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {radios.map((r) => (
+                <tr key={r.id} style={selectedId === r.id ? { outline: "1px solid var(--accent)" } : undefined}>
+                  <td>
+                    <HealthDot h={health[r.id]} />{" "}
+                    <Link href={`/parc/${r.id}`} style={{ color: "var(--txt)", textDecoration: "underline" }}>
+                      <strong>{r.name}</strong>
+                    </Link>
+                    <br />
+                    <span style={{ color: "var(--txt-dim)", fontSize: 12 }}>
+                      {r.slug}
+                      {r.contactEmail ? ` · ${r.contactEmail}` : ""}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-dot ${r.status === "active" ? "status-published" : "status-archived"}`} />
+                    {STATUS_LABEL[r.status]}
+                  </td>
+                  <td>
+                    {r.plan || "—"}
+                    <br />
+                    <span style={{ color: "var(--txt-dim)", fontSize: 12 }}>{money(r.monthlyPrice)}</span>
+                  </td>
+                  <td>{r.live}</td>
+                  <td>{r.today}</td>
+                  <td>{formatDuration(r.listenSec)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {r.artists} anim. · {r.shows} ém.
+                  </td>
+                  <td>
+                    <div className="row-actions">
+                      <button className="btn btn-sm" type="button" onClick={() => selectRadio(r.id)} disabled={selectedId === r.id}>
+                        {selectedId === r.id ? "Administrée" : "Administrer"}
+                      </button>
+                      <button className="btn btn-sm btn-ghost" type="button" onClick={() => setEditing(r)}>
+                        Éditer
+                      </button>
+                      {r.status !== "active" ? (
+                        <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "active" })}>
+                          Activer
+                        </button>
+                      ) : (
+                        <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "paused" })}>
+                          Suspendre
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 style={{ marginTop: 28 }}>Provisionner une nouvelle radio</h2>
-      <p style={{ color: "#9aa", fontSize: 13, marginTop: -6 }}>
+      <p style={{ color: "var(--txt-dim)", fontSize: 13, marginTop: -6 }}>
         Crée le tenant (statut « en montage »). Le branchement du flux AzuraCast viendra automatiser le reste.
       </p>
       <form
+        ref={formRef}
         onSubmit={createRadio}
+        noValidate
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, maxWidth: 780 }}
       >
-        <Field label="Nom *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
-        <Field label="Slug (auto si vide)" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} />
-        <Field label="Forfait" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
-        <Field label="Prix ($/mois)" value={form.monthlyPrice} onChange={(v) => setForm({ ...form, monthlyPrice: v })} type="number" />
-        <Field label="Domaines (séparés par ,)" value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} />
-        <Field label="Flux audio (stream URL)" value={form.streamUrl} onChange={(v) => setForm({ ...form, streamUrl: v })} />
-        <Field label="Now-playing URL" value={form.nowPlayingUrl} onChange={(v) => setForm({ ...form, nowPlayingUrl: v })} />
+        <Field name="name" label="Nom *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} />
+        <Field name="slug" label="Slug (auto si vide)" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} />
+        <Field name="plan" label="Forfait" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
+        <Field name="monthlyPrice" label="Prix ($/mois)" value={form.monthlyPrice} onChange={(v) => setForm({ ...form, monthlyPrice: v })} type="number" min="0" step="1" error={formErrors.monthlyPrice} />
+        <Field name="domains" label="Domaines (séparés par ,)" value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} />
+        <Field name="streamUrl" label="Flux audio (stream URL)" value={form.streamUrl} onChange={(v) => setForm({ ...form, streamUrl: v })} type="url" error={formErrors.streamUrl} />
+        <Field name="nowPlayingUrl" label="Now-playing URL" value={form.nowPlayingUrl} onChange={(v) => setForm({ ...form, nowPlayingUrl: v })} type="url" error={formErrors.nowPlayingUrl} />
         <div style={{ gridColumn: "1 / -1" }}>
           <button className="btn" type="submit" disabled={creating || !form.name.trim()}>
             {creating ? "Création…" : "Créer la radio"}
@@ -276,12 +337,49 @@ export default function ParcPage() {
           }}
         />
       )}
+
+      {confirmStatus && (
+        <Modal
+          title={confirmStatus.status === "paused" ? "Suspendre la radio ?" : "Activer la radio ?"}
+          onClose={() => setConfirmStatus(null)}
+        >
+          <p className="muted">
+            {confirmStatus.status === "paused" ? (
+              <>
+                Suspendre <strong>{confirmStatus.radio.name}</strong> coupera la diffusion : les auditeurs en direct
+                seront coupés et le site cessera de répondre.
+              </>
+            ) : (
+              <>
+                Réactiver <strong>{confirmStatus.radio.name}</strong> remettra la diffusion en ligne immédiatement.
+              </>
+            )}
+          </p>
+          <div className="modal-actions">
+            <button className="btn btn-ghost" type="button" onClick={() => setConfirmStatus(null)}>
+              Annuler
+            </button>
+            <button
+              className={confirmStatus.status === "paused" ? "btn btn-danger" : "btn"}
+              type="button"
+              onClick={() => {
+                const { radio, status } = confirmStatus;
+                setConfirmStatus(null);
+                void setStatus(radio, status);
+              }}
+            >
+              {confirmStatus.status === "paused" ? "Suspendre" : "Activer"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-/* ─────────────── Panneau d'édition d'une radio (modal) ─────────────── */
-function RadioEditPanel({
+/* ─────────────── Panneau d'édition d'une radio (modal) ───────────────
+   Exporté pour être réutilisé par la page détail (/parc/[id]). */
+export function RadioEditPanel({
   radio,
   onClose,
   onSaved,
@@ -292,6 +390,8 @@ function RadioEditPanel({
 }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
+  const [errs, setErrs] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [f, setF] = useState({
     name: radio.name,
     status: radio.status as RadioStatus,
@@ -307,8 +407,35 @@ function RadioEditPanel({
     licenseConfirmed: radio.licenseConfirmed,
   });
 
+  const validate = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+    if (!f.name.trim()) e.name = "Le nom est requis.";
+    if (f.monthlyPrice) {
+      const n = Number(f.monthlyPrice);
+      if (!Number.isFinite(n) || n < 0) e.monthlyPrice = "Prix invalide (doit être ≥ 0).";
+    }
+    const isUrl = (v: string) => {
+      try {
+        new URL(v);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (f.streamUrl && !isUrl(f.streamUrl)) e.streamUrl = "URL invalide (ex. https://…).";
+    if (f.nowPlayingUrl && !isUrl(f.nowPlayingUrl)) e.nowPlayingUrl = "URL invalide (ex. https://…).";
+    return e;
+  };
+
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    const v = validate();
+    setErrs(v);
+    if (Object.keys(v).length > 0) {
+      const first = Object.keys(v)[0]!;
+      formRef.current?.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
+      return;
+    }
     setSaving(true);
     try {
       await api.patch(`/v1/owner/radios/${radio.id}`, {
@@ -335,37 +462,19 @@ function RadioEditPanel({
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        padding: 40,
-        zIndex: 50,
-        overflow: "auto",
-      }}
-    >
+    <Modal title={`Éditer — ${radio.name}`} onClose={onClose}>
       <form
-        onClick={(e) => e.stopPropagation()}
+        ref={formRef}
         onSubmit={save}
+        noValidate
         style={{
-          background: "var(--panel, #15151b)",
-          border: "1px solid var(--border, #2a2a33)",
-          borderRadius: 12,
-          padding: 22,
-          width: "min(620px, 100%)",
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: 12,
         }}
       >
-        <h2 style={{ gridColumn: "1 / -1", margin: 0 }}>Éditer — {radio.name}</h2>
-        <Field label="Nom" value={f.name} onChange={(v) => setF({ ...f, name: v })} required />
-        <label style={{ display: "block", fontSize: 12, color: "#9aa" }}>
+        <Field name="name" label="Nom" value={f.name} onChange={(v) => setF({ ...f, name: v })} required error={errs.name} />
+        <label style={{ display: "block", fontSize: 12, color: "var(--txt-dim)" }}>
           Statut
           <select
             value={f.status}
@@ -377,15 +486,15 @@ function RadioEditPanel({
             <option value="paused">Suspendue</option>
           </select>
         </label>
-        <Field label="Forfait" value={f.plan} onChange={(v) => setF({ ...f, plan: v })} />
-        <Field label="Prix ($/mois)" value={f.monthlyPrice} onChange={(v) => setF({ ...f, monthlyPrice: v })} type="number" />
-        <Field label="Domaines (séparés par ,)" value={f.domains} onChange={(v) => setF({ ...f, domains: v })} wide />
-        <Field label="Flux audio (stream URL)" value={f.streamUrl} onChange={(v) => setF({ ...f, streamUrl: v })} wide />
-        <Field label="Now-playing URL" value={f.nowPlayingUrl} onChange={(v) => setF({ ...f, nowPlayingUrl: v })} wide />
-        <Field label="Contact — nom" value={f.contactName} onChange={(v) => setF({ ...f, contactName: v })} />
-        <Field label="Contact — courriel" value={f.contactEmail} onChange={(v) => setF({ ...f, contactEmail: v })} />
-        <Field label="Contact — téléphone" value={f.contactPhone} onChange={(v) => setF({ ...f, contactPhone: v })} />
-        <label style={{ display: "block", fontSize: 12, color: "#9aa", gridColumn: "1 / -1" }}>
+        <Field name="plan" label="Forfait" value={f.plan} onChange={(v) => setF({ ...f, plan: v })} />
+        <Field name="monthlyPrice" label="Prix ($/mois)" value={f.monthlyPrice} onChange={(v) => setF({ ...f, monthlyPrice: v })} type="number" min="0" step="1" error={errs.monthlyPrice} />
+        <Field name="domains" label="Domaines (séparés par ,)" value={f.domains} onChange={(v) => setF({ ...f, domains: v })} wide />
+        <Field name="streamUrl" label="Flux audio (stream URL)" value={f.streamUrl} onChange={(v) => setF({ ...f, streamUrl: v })} type="url" wide error={errs.streamUrl} />
+        <Field name="nowPlayingUrl" label="Now-playing URL" value={f.nowPlayingUrl} onChange={(v) => setF({ ...f, nowPlayingUrl: v })} type="url" wide error={errs.nowPlayingUrl} />
+        <Field name="contactName" label="Contact — nom" value={f.contactName} onChange={(v) => setF({ ...f, contactName: v })} />
+        <Field name="contactEmail" label="Contact — courriel" value={f.contactEmail} onChange={(v) => setF({ ...f, contactEmail: v })} type="email" />
+        <Field name="contactPhone" label="Contact — téléphone" value={f.contactPhone} onChange={(v) => setF({ ...f, contactPhone: v })} type="tel" />
+        <label style={{ display: "block", fontSize: 12, color: "var(--txt-dim)", gridColumn: "1 / -1" }}>
           Note de facturation
           <textarea
             value={f.billingNote}
@@ -394,7 +503,7 @@ function RadioEditPanel({
             style={{ ...inputStyle, resize: "vertical" }}
           />
         </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, gridColumn: "1 / -1", fontSize: 13, color: "var(--txt, #eee)" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, gridColumn: "1 / -1", fontSize: 13, color: "var(--txt)" }}>
           <input
             type="checkbox"
             checked={f.licenseConfirmed}
@@ -411,7 +520,7 @@ function RadioEditPanel({
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -420,14 +529,14 @@ const inputStyle: React.CSSProperties = {
   marginTop: 4,
   padding: "8px 10px",
   borderRadius: 6,
-  background: "var(--panel2, #0f0f14)",
-  color: "var(--txt, #eee)",
-  border: "1px solid var(--border, #2a2a33)",
+  background: "var(--bg)",
+  color: "var(--txt)",
+  border: "1px solid var(--line-2)",
 };
 
 const alertBox: React.CSSProperties = {
-  background: "var(--panel, #15151b)",
-  border: "1px solid #2a2a33",
+  background: "var(--panel)",
+  border: "1px solid var(--line)",
   borderRadius: 10,
   padding: 14,
   marginBottom: 18,
@@ -450,22 +559,31 @@ function AlertsPanel({ radios, health }: { radios: RadioSummary[]; health: Recor
     if (r.status === "paused") alerts.push({ id: r.id, name: r.name, high: false, msg: "Radio suspendue" });
   }
   if (!alerts.length)
-    return <div style={{ ...alertBox, borderColor: "#2ecc71" }}>✅ Tout est en ordre — rien à traiter.</div>;
+    return (
+      <div style={{ ...alertBox, borderColor: "var(--ok)" }} role="status">
+        <span aria-hidden="true">✅</span> Tout est en ordre — rien à traiter.
+      </div>
+    );
   return (
-    <div style={{ ...alertBox, borderColor: "#e0a23a" }}>
-      <strong>⚠️ À traiter ({alerts.length})</strong>
+    <div style={{ ...alertBox, borderColor: "var(--warn)" }} role="alert">
+      <strong>
+        <span aria-hidden="true">⚠️</span> À traiter ({alerts.length})
+      </strong>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
         {alerts.map((a, i) => (
           <Link
             key={i}
             href={`/parc/${a.id}`}
-            style={{ color: "var(--txt, #eee)", textDecoration: "none", display: "flex", gap: 8, alignItems: "center" }}
+            style={{ color: "var(--txt)", textDecoration: "none", display: "flex", gap: 8, alignItems: "center" }}
           >
             <span
-              style={{ width: 8, height: 8, borderRadius: "50%", background: a.high ? "#e74c3c" : "#e0a23a", display: "inline-block" }}
+              aria-hidden="true"
+              style={{ width: 8, height: 8, borderRadius: "50%", background: a.high ? "var(--danger)" : "var(--warn)", display: "inline-block" }}
             />
+            {/* Sévérité non portée par la seule couleur du point. */}
+            <span className="sr-only">{a.high ? "Priorité haute :" : "À surveiller :"}</span>
             <strong>{a.name}</strong>
-            <span style={{ color: "#9aa" }}>— {a.msg}</span>
+            <span style={{ color: "var(--txt-dim)" }}>— {a.msg}</span>
           </Link>
         ))}
       </div>
@@ -475,14 +593,17 @@ function AlertsPanel({ radios, health }: { radios: RadioSummary[]; health: Recor
 
 function HealthDot({ h }: { h?: RadioHealth }) {
   const map = {
-    up: ["#2ecc71", "Flux en ligne"],
-    down: ["#e74c3c", "Flux injoignable"],
-    none: ["#778", "Pas de flux configuré"],
+    up: ["var(--ok)", "Flux en ligne"],
+    down: ["var(--danger)", "Flux injoignable"],
+    none: ["var(--txt-faint)", "Pas de flux configuré"],
   } as const;
   const [color, title] = map[h?.status ?? "none"];
+  const label = h?.ms != null ? `${title} (${h.ms} ms)` : title;
   return (
     <span
-      title={h?.ms != null ? `${title} (${h.ms} ms)` : title}
+      role="img"
+      aria-label={label}
+      title={label}
       style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: color }}
     />
   );
@@ -494,13 +615,13 @@ function Kpi({ label, value, sub, accent }: { label: string; value: ReactNode; s
       style={{
         padding: 14,
         borderRadius: 10,
-        background: "var(--panel, #15151b)",
-        border: `1px solid ${accent ? "var(--accent, #3aa0ff)" : "var(--border, #2a2a33)"}`,
+        background: "var(--panel)",
+        border: `1px solid ${accent ? "var(--accent)" : "var(--line)"}`,
       }}
     >
-      <div style={{ fontSize: 12, color: "#9aa" }}>{label}</div>
+      <div style={{ fontSize: 12, color: "var(--txt-dim)" }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#778" }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "var(--txt-faint)" }}>{sub}</div>}
     </div>
   );
 }
@@ -512,6 +633,10 @@ function Field({
   required,
   type = "text",
   wide,
+  name,
+  error,
+  min,
+  step,
 }: {
   label: string;
   value: string;
@@ -519,11 +644,33 @@ function Field({
   required?: boolean;
   type?: string;
   wide?: boolean;
+  name?: string;
+  error?: string;
+  min?: string;
+  step?: string;
 }) {
+  const errId = useId();
+  const invalid = Boolean(error);
   return (
-    <label style={{ display: "block", fontSize: 12, color: "#9aa", gridColumn: wide ? "1 / -1" : undefined }}>
+    <label style={{ display: "block", fontSize: 12, color: "var(--txt-dim)", gridColumn: wide ? "1 / -1" : undefined }}>
       {label}
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} style={inputStyle} />
+      <input
+        name={name}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        min={min}
+        step={step}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? errId : undefined}
+        style={invalid ? { ...inputStyle, borderColor: "var(--danger)" } : inputStyle}
+      />
+      {error && (
+        <span id={errId} role="alert" style={{ display: "block", marginTop: 4, fontSize: 12, color: "var(--danger)" }}>
+          {error}
+        </span>
+      )}
     </label>
   );
 }

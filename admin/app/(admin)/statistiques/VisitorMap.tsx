@@ -3,6 +3,21 @@
 import { useEffect, useState } from "react";
 import type { GeoPoint } from "@/lib/types";
 
+/* Respecte prefers-reduced-motion. Le SMIL <animate> ne s'arrête PAS via CSS :
+   on doit donc conditionner son rendu en JS (montage conditionnel). */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
+
 /* Carte des visiteurs — SVG autonome (aucune librairie de carte).
    Fond : GeoJSON mondial léger (jsDelivr, CORS *). Projection équirectangulaire.
    Les points pulsent en vert quand le visiteur est actif (« en direct »). */
@@ -77,6 +92,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
     };
   }, []);
 
+  const reduced = usePrefersReducedMotion();
   const pts = (points ?? []).filter(
     (p) => typeof p.lat === "number" && typeof p.lon === "number",
   );
@@ -85,10 +101,22 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
   // parent) → un point s'« éteint » tout seul après 60 s sans nouveau fetch.
   const isLive = (p: GeoPoint) => now - new Date(p.last_seen).getTime() < LIVE_WINDOW_MS;
   const liveSessions = pts.filter(isLive).reduce((a, p) => a + p.sessions, 0);
+  const liveCities = pts.filter(isLive).length;
+
+  // Résumé synthétique de la carte pour les lecteurs d'écran (role=img).
+  const mapSummary = pts.length
+    ? `Carte des visiteurs : ${pts.length} ville(s), ${liveCities} en direct totalisant ${liveSessions} session(s) en direct.`
+    : "Carte des visiteurs : aucune ville à afficher.";
 
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", background: "#0b1020" }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        role="img"
+        aria-label={mapSummary}
+        style={{ display: "block", background: "#0b1020" }}
+      >
         {world?.map((d, i) => (
           <path key={i} d={d} fill="#1b2740" stroke="#2b3c5e" strokeWidth={0.4} />
         ))}
@@ -99,12 +127,18 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
           const live = isLive(p);
           const color = live ? "#19c37d" : "#5b8cff";
           return (
-            <g key={i}>
-              {live && (
+            <g key={`${p.label ?? "?"}-${p.lat}-${p.lon}`}>
+              {/* Halo animé : monté UNIQUEMENT si l'utilisateur n'a pas demandé
+                  de réduire les animations (le SMIL ne s'arrête pas via CSS). */}
+              {live && !reduced && (
                 <circle cx={x} cy={y} r={r} fill="#19c37d" opacity={0.3}>
                   <animate attributeName="r" values={`${r};${r + 8};${r}`} dur="1.6s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.4;0;0.4" dur="1.6s" repeatCount="indefinite" />
                 </circle>
+              )}
+              {/* Repli sobre quand reduced-motion : halo statique, sans <animate>. */}
+              {live && reduced && (
+                <circle cx={x} cy={y} r={r + 3} fill="#19c37d" opacity={0.22} />
               )}
               <circle cx={x} cy={y} r={r} fill={color} stroke="#ffffff" strokeWidth={0.5} opacity={0.92}>
                 <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${live ? " · en direct" : ""}`}</title>
@@ -113,21 +147,50 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
           );
         })}
       </svg>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
+      <table className="sr-only">
+        <caption>Visiteurs par ville</caption>
+        <thead>
+          <tr>
+            <th scope="col">Ville</th>
+            <th scope="col">Sessions</th>
+            <th scope="col">État</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pts.map((p) => (
+            <tr key={`${p.label ?? "?"}-${p.lat}-${p.lon}`}>
+              <th scope="row">{p.label ?? "?"}</th>
+              <td>{p.sessions}</td>
+              <td>{isLive(p) ? "en direct" : "récent"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <div
         style={{
           position: "absolute",
           top: 10,
           left: 12,
           fontSize: "0.8rem",
-          color: "#cdd6e8",
-          background: "rgba(11,16,32,0.6)",
-          padding: "4px 8px",
+          color: "#e6ecfa",
+          background: "rgba(11,16,32,0.78)",
+          padding: "6px 10px",
           borderRadius: 6,
+          lineHeight: 1.5,
         }}
       >
-        <strong style={{ color: "#19c37d" }}>● {liveSessions}</strong> en direct ·{" "}
-        {pts.length} ville{pts.length > 1 ? "s" : ""}
-        {!world && <span style={{ color: "#8a96b0" }}> · (fond de carte indisponible)</span>}
+        {/* Légende : pastille + opacité + texte (l'info n'est pas portée par la
+            seule couleur). « En direct » = pleine opacité, « récent » = atténué. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: "#19c37d", opacity: 1, display: "inline-block" }} />
+          <strong style={{ color: "#19c37d" }}>{liveSessions}</strong> en direct
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, opacity: 0.85 }}>
+          <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: "#5b8cff", opacity: 0.6, display: "inline-block" }} />
+          {pts.length} ville{pts.length > 1 ? "s" : ""} (récentes)
+        </div>
+        {!world && <div style={{ color: "#9fb0d0" }}>fond de carte indisponible</div>}
       </div>
     </div>
   );

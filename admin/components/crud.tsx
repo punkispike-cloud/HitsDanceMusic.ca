@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "./toast";
-import { Modal, Field, Spinner, Empty, ConfirmDelete } from "./ui";
+import { Modal, Field, Empty, ConfirmDelete, TableSkeleton, ErrorState } from "./ui";
 import { ImageUpload } from "./image-upload";
 
 export type FieldType = "text" | "textarea" | "number" | "checkbox" | "select" | "image";
@@ -89,6 +89,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
 
   const toast = useToast();
   const [rows, setRows] = useState<T[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<T | "new" | null>(null);
   const [values, setValues] = useState<FormValues>({});
@@ -96,11 +97,16 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
   const [deleting, setDeleting] = useState<T | null>(null);
 
   const load = async () => {
+    // Distingue l'erreur du vide : on remet rows à null (squelette) puis on
+    // signale l'échec via un état d'erreur dédié (et non un tableau vide).
+    setError(null);
+    setRows(null);
     try {
       setRows(await api.get<T[]>(endpoint));
     } catch (e) {
-      toast((e as ApiError).message, "error");
-      setRows([]);
+      const msg = (e as ApiError).message || "Échec du chargement.";
+      setError(msg);
+      toast(msg, "error");
     }
   };
   useEffect(() => {
@@ -132,10 +138,10 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
       if (props.transformPayload) payload = props.transformPayload(payload, values);
       if (editing === "new") {
         await api.post(endpoint, payload);
-        toast("Créé ✓", "ok");
+        toast("Créé", "ok");
       } else if (editing) {
         await api.patch(`${endpoint}/${editing.id}`, payload);
-        toast("Enregistré ✓", "ok");
+        toast("Enregistré", "ok");
       }
       close();
       await load();
@@ -187,8 +193,10 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
         </div>
       </div>
 
-      {rows === null ? (
-        <Spinner />
+      {error ? (
+        <ErrorState message={error} onRetry={() => void load()} />
+      ) : rows === null ? (
+        <TableSkeleton cols={columns.length + 1} />
       ) : rows.length === 0 ? (
         <Empty label="Aucune entrée pour l'instant." />
       ) : visibleRows && visibleRows.length === 0 ? (
@@ -199,9 +207,9 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
             <thead>
               <tr>
                 {columns.map((c) => (
-                  <th key={c.key}>{c.label}</th>
+                  <th key={c.key} scope="col">{c.label}</th>
                 ))}
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th scope="col" style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>

@@ -8,8 +8,8 @@ export interface TrendPoint {
   value: number;
 }
 
-export function TrendChart({ points, color = "#3aa0ff", height = 150 }: { points: TrendPoint[]; color?: string; height?: number }) {
-  if (!points.length) return <div style={{ color: "#778", fontSize: 13 }}>Pas encore de données.</div>;
+export function TrendChart({ points, color = "#3aa0ff", height = 150, label = "Tendance" }: { points: TrendPoint[]; color?: string; height?: number; label?: string }) {
+  if (!points.length) return <div style={{ color: "var(--txt-dim)", fontSize: 13 }}>Pas encore de données.</div>;
 
   const W = 720;
   const H = height;
@@ -28,9 +28,15 @@ export function TrendChart({ points, color = "#3aa0ff", height = 150 }: { points
   const first = points[0]!.day.slice(5);
   const last = points[n - 1]!.day.slice(5);
 
+  // Résumé textuel de la tendance pour les lecteurs d'écran.
+  const startVal = points[0]!.value;
+  const endVal = points[n - 1]!.value;
+  const dir = endVal > startVal ? "en hausse" : endVal < startVal ? "en baisse" : "stable";
+  const summary = `${label} sur ${n} jours, ${dir}. Du ${first} (${startVal.toLocaleString("fr-CA")}) au ${last} (${endVal.toLocaleString("fr-CA")}). Total ${total.toLocaleString("fr-CA")}, maximum ${max.toLocaleString("fr-CA")} par jour.`;
+
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Courbe de tendance">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label={summary}>
         <defs>
           <linearGradient id="tc-grad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={color} stopOpacity="0.35" />
@@ -40,7 +46,19 @@ export function TrendChart({ points, color = "#3aa0ff", height = 150 }: { points
         <path d={area} fill="url(#tc-grad)" />
         <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#778", marginTop: 2 }}>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
+      <table className="sr-only">
+        <caption>{summary}</caption>
+        <thead>
+          <tr><th scope="col">Jour</th><th scope="col">Valeur</th></tr>
+        </thead>
+        <tbody>
+          {points.map((p) => (
+            <tr key={p.day}><td>{p.day}</td><td>{p.value.toLocaleString("fr-CA")}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--txt-dim)", marginTop: 2 }} aria-hidden="true">
         <span>{first}</span>
         <span>total : {total.toLocaleString("fr-CA")} · max/j : {max.toLocaleString("fr-CA")}</span>
         <span>{last}</span>

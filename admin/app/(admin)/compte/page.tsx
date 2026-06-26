@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Field } from "@/components/ui";
+import { PasswordField } from "@/components/ui";
 
 export default function ComptePage() {
   const { user, logout } = useAuth();
@@ -13,14 +13,22 @@ export default function ComptePage() {
   const [newPassword, setNew] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
+  // Refs sur les conteneurs (PasswordField ne forwarde pas de ref) : on cible
+  // l'input interne pour focaliser le 1er champ fautif après une erreur.
+  const newWrapRef = useRef<HTMLDivElement>(null);
+  const confirmWrapRef = useRef<HTMLDivElement>(null);
+  const focusInput = (wrap: React.RefObject<HTMLDivElement | null>) =>
+    wrap.current?.querySelector("input")?.focus();
 
   const submit = async () => {
     if (newPassword.length < 12) {
       toast("Le nouveau mot de passe doit faire au moins 12 caractères", "warn");
+      focusInput(newWrapRef);
       return;
     }
     if (newPassword !== confirm) {
       toast("Les deux mots de passe ne correspondent pas", "warn");
+      focusInput(confirmWrapRef);
       return;
     }
     setSaving(true);
@@ -46,19 +54,35 @@ export default function ComptePage() {
           Connecté en tant que <strong>{user?.email}</strong> ({user?.role}).
         </p>
         <h2>Changer mon mot de passe</h2>
-        <Field label="Mot de passe actuel">
-          <input type="password" value={oldPassword} onChange={(e) => setOld(e.target.value)}
-            autoComplete="current-password" />
-        </Field>
-        <Field label="Nouveau mot de passe (≥ 12 car.)">
-          <input type="password" value={newPassword} onChange={(e) => setNew(e.target.value)}
-            autoComplete="new-password" />
-        </Field>
-        <Field label="Confirmer le nouveau mot de passe">
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
-            autoComplete="new-password" />
-        </Field>
-        <button className="btn btn-primary" onClick={submit} disabled={saving || !oldPassword || !newPassword}>
+        <PasswordField
+          label="Mot de passe actuel"
+          value={oldPassword}
+          onChange={setOld}
+          autoComplete="current-password"
+        />
+        <div ref={newWrapRef}>
+          <PasswordField
+            label="Nouveau mot de passe (≥ 12 car.)"
+            value={newPassword}
+            onChange={setNew}
+            autoComplete="new-password"
+            showStrength
+          />
+        </div>
+        <div ref={confirmWrapRef}>
+          <PasswordField
+            label="Confirmer le nouveau mot de passe"
+            value={confirm}
+            onChange={setConfirm}
+            autoComplete="new-password"
+          />
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={submit}
+          disabled={saving || !oldPassword || !newPassword}
+          aria-busy={saving}
+        >
           {saving ? "Changement…" : "Changer le mot de passe"}
         </button>
       </div>

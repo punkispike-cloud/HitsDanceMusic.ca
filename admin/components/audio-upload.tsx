@@ -85,7 +85,7 @@ export function AudioUpload({
         targetId,
         durationSec,
       });
-      toast("Audio téléversé ✓", "ok");
+      toast("Audio téléversé", "ok");
       setOpen(false);
       await onDone();
     } catch (e) {
@@ -99,20 +99,31 @@ export function AudioUpload({
   return (
     <>
       <button className="btn btn-sm btn-ghost" onClick={() => setOpen(true)} type="button">
-        {hasAudio ? "↻ Audio" : "⬆ Audio"}
+        {hasAudio ? <ReplaceIcon /> : <UploadIcon />}
+        {hasAudio ? "Remplacer l'audio" : "Ajouter l'audio"}
       </button>
       {open && (
         <Modal title={`Téléverser l'audio (${kind === "episode" ? "podcast" : "mix"})`} onClose={() => (busy ? null : setOpen(false))}>
           <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
             Formats : MP3, M4A, AAC, OGG, WAV. L&apos;envoi se fait directement vers S3.
           </p>
-          <input ref={fileRef} type="file" accept="audio/*" disabled={busy} />
+          <label htmlFor="audio-upload-file" className="sr-only">
+            Fichier audio à téléverser
+          </label>
+          <input id="audio-upload-file" ref={fileRef} type="file" accept="audio/*" disabled={busy} />
           {busy && (
             <div style={{ marginTop: 16 }}>
-              <div style={{ height: 8, background: "var(--panel-2)", borderRadius: 4, overflow: "hidden" }}>
+              <div
+                style={{ height: 8, background: "var(--panel-2)", borderRadius: 4, overflow: "hidden" }}
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progression du téléversement"
+              >
                 <div style={{ height: "100%", width: `${progress}%`, background: "var(--accent)", transition: "width 0.2s" }} />
               </div>
-              <p className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>{progress}%</p>
+              <p className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }} aria-live="polite">{progress}%</p>
             </div>
           )}
           <div className="modal-actions">
@@ -126,5 +137,24 @@ export function AudioUpload({
         </Modal>
       )}
     </>
+  );
+}
+
+/* Icônes SVG inline (currentColor, 18x18, stroke ~1.75), décoratives. */
+function UploadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 16V4" />
+      <path d="m6 10 6-6 6 6" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+function ReplaceIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 4v5h-5" />
+    </svg>
   );
 }
