@@ -1,13 +1,32 @@
 /* UI player : panneau plein (#player) + mini-player flottant + header play
    + sleep badge. Les UI s'enregistrent dans playerUIs (Set) du module player. */
 
-import { $, $$ } from "./util.js";
+import { $, $$, safeAnimate, EASE_OUT } from "./util.js";
 import { state } from "./state.js";
 import { SLOT_TAGS } from "./schedule.js";
 import {
   playerUIs, togglePlayback, setVolume, toggleMute,
 } from "./player.js";
 import { fallbackCoverDataUri } from "./now-playing.js";
+
+/* Révèle un changement de texte par une micro-animation (Web Animations API :
+   aucun CSS requis → respecte le gel CSS de Hits Dance). Sans effet si l'API
+   est absente ou si l'utilisateur préfère un mouvement réduit. */
+function revealText(el) {
+  safeAnimate(el, [
+    { opacity: 0.35, transform: "translateY(4px)" },
+    { opacity: 1, transform: "translateY(0)" },
+  ], { duration: 360, easing: EASE_OUT });
+}
+
+// Petit rebond du bouton de lecture au clic (feedback immédiat, CSS-free).
+function pulsePlay(btn) {
+  safeAnimate(btn, [
+    { transform: "scale(1)" },
+    { transform: "scale(1.12)" },
+    { transform: "scale(1)" },
+  ], { duration: 280, easing: "ease-out" });
+}
 
 /* ----- Panneau plein (#player) ----- */
 export function makeFullPanelUI() {
@@ -36,7 +55,7 @@ export function makeFullPanelUI() {
     muteBtn.addEventListener("click", toggleMute);
   }
 
-  playBtn?.addEventListener("click", (e) => { e.preventDefault(); void togglePlayback(); });
+  playBtn?.addEventListener("click", (e) => { e.preventDefault(); pulsePlay(playBtn); void togglePlayback(); });
   vol?.addEventListener("input", (e) => setVolume(Number(e.target.value)));
 
   return {
@@ -86,7 +105,11 @@ export function makeFullPanelUI() {
         return;
       }
       trackLine.hidden = false;
-      trackText.textContent = track.artist ? `${track.artist} — ${track.title}` : track.title;
+      const nextText = track.artist ? `${track.artist} — ${track.title}` : track.title;
+      if (trackText.textContent !== nextText) {
+        trackText.textContent = nextText;
+        revealText(trackText); // micro-révélation au changement de morceau
+      }
       if (cover && coverUrl) {
         cover.dataset.live = "1";
         cover.src = coverUrl;
@@ -146,7 +169,7 @@ export function makeMiniPlayerUI() {
   const shareBtn = $("#miniShareBtn", bar);
   const closeBtn = $("#miniClose", bar);
 
-  playBtn.addEventListener("click", () => void togglePlayback());
+  playBtn.addEventListener("click", () => { pulsePlay(playBtn); void togglePlayback(); });
   muteBtn.addEventListener("click", toggleMute);
   volEl.addEventListener("input", (e) => setVolume(Number(e.target.value)));
   histBtn.addEventListener("click", () => _historyHook());
@@ -188,7 +211,11 @@ export function makeMiniPlayerUI() {
     },
     syncTrack(track) {
       if (!track) return;
-      trackEl.textContent = track.artist ? `${track.artist} — ${track.title}` : track.title;
+      const nextText = track.artist ? `${track.artist} — ${track.title}` : track.title;
+      if (trackEl.textContent !== nextText) {
+        trackEl.textContent = nextText;
+        revealText(trackEl); // micro-révélation au changement de morceau
+      }
     },
   };
 }
@@ -212,7 +239,7 @@ export function injectHeaderPlay() {
   const navToggle = header.querySelector(".nav-toggle");
   if (navToggle) header.insertBefore(btn, navToggle);
   else header.appendChild(btn);
-  btn.addEventListener("click", (e) => { e.preventDefault(); void togglePlayback(); });
+  btn.addEventListener("click", (e) => { e.preventDefault(); pulsePlay(btn); void togglePlayback(); });
 }
 
 /* ----- Sleep badge (placeholder texte mis à jour par sleep.js) ----- */

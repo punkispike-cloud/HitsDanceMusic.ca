@@ -1,6 +1,6 @@
 /* Drawer historique des morceaux + recherche + export JSON/CSV. */
 
-import { $, $$, escapeHtml } from "./util.js";
+import { $, $$, escapeHtml, safeAnimate, EASE_OUT } from "./util.js";
 import { getHistory } from "./now-playing.js";
 import { store, STORAGE } from "./store.js";
 import { toast } from "./toast.js";
@@ -63,6 +63,11 @@ export function renderHistory() {
       </a>
     </li>`;
   }).join("");
+  // Cascade d'apparition des morceaux (CSS-free, ouvert uniquement → visible).
+  list.querySelectorAll("li").forEach((li, i) => safeAnimate(li, [
+    { opacity: 0, transform: "translateX(-12px)" },
+    { opacity: 1, transform: "translateX(0)" },
+  ], { duration: 380, delay: i * 40, easing: EASE_OUT, fill: "both" }));
 }
 
 export function exportHistory(format = "json") {

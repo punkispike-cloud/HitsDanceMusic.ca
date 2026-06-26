@@ -1,6 +1,6 @@
 /* Drawer plein écran "Now Playing" (déclenché par click simple sur la pochette). */
 
-import { $, escapeHtml } from "./util.js";
+import { $, escapeHtml, safeAnimate, EASE_OUT } from "./util.js";
 import { state } from "./state.js";
 import { SLOT_TAGS } from "./schedule.js";
 import { getAudio, togglePlayback } from "./player.js";
@@ -80,6 +80,25 @@ export function openNowPlayingDrawer() {
   d.dataset.lastFocus = document.activeElement?.id || "";
   focusables[0]?.focus({ preventScroll: true });
   requestAnimationFrame(() => d.classList.add("is-open"));
+
+  // Stagger d'apparition des éléments du tiroir (CSS-free). On annule d'abord
+  // toute animation résiduelle d'une ouverture précédente (évite l'empilement).
+  const npTrackEl = d.querySelector("#npTrack");
+  const steps = [
+    [d.querySelector("#npCover"), 0],
+    [d.querySelector("#npTag"), 100],
+    [d.querySelector("#npTitle"), 200],
+    [(npTrackEl && !npTrackEl.hidden) ? npTrackEl : null, 280],
+    [d.querySelector(".np-actions"), 400],
+  ];
+  for (const [el, delay] of steps) {
+    if (!el) continue;
+    el.getAnimations?.().forEach((a) => a.cancel());
+    safeAnimate(el, [
+      { opacity: 0, transform: "translateY(10px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ], { duration: 360, delay, easing: EASE_OUT, fill: "both" });
+  }
 }
 
 export function closeNowPlayingDrawer() {
