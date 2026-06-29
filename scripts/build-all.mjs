@@ -1,8 +1,9 @@
 /* Hits Dance Music — Pipeline de build complet.
  * Ordre IMPÉRATIF :
  *   1. build-brand : injecte la marque (génère brand.css / brand.generated.js, remplace les valeurs)
- *   2. build-html  : inline les partials dans les *.html
- *   3. build-sw    : recalcule le hash du cache à partir du contenu FINAL
+ *   2. build-css   : bundle la chaîne de @import (brand.css inclus) en styles.bundle.css
+ *   3. build-html  : inline les partials dans les *.html
+ *   4. build-sw    : recalcule le hash du cache à partir du contenu FINAL
  *
  * Usage :
  *   node scripts/build-all.mjs              # applique BRAND (défaut hitsdance)
@@ -17,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const checkArg = process.argv.includes("--check") ? ["--check"] : [];
 
-const steps = ["build-brand.mjs", "build-html.mjs", "build-sw.mjs"];
+const steps = ["build-brand.mjs", "build-css.mjs", "build-html.mjs", "build-sw.mjs"];
 for (const step of steps) {
   console.log(`\n=== ${step} ${checkArg.join(" ")} ===`);
   const res = spawnSync(process.execPath, [join(here, step), ...checkArg], {

@@ -1,6 +1,13 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-4d5897ed328d";
+const CACHE = "hitradio-4dbc4f24aceb";
+/* SHELL — liste des ressources précachées pour l'offline.
+   ⚠ Maintenance manuelle : ce tableau est la source unique du précache.
+   build-sw.mjs en rehash le contenu (→ bump auto de CACHE) et avertit si un
+   fichier listé est manquant ou si un module js/ n'y figure pas (drift).
+   CSS : depuis la Phase 5, le bundle UNIQUE styles.bundle.css (compilé par
+   scripts/build-css.mjs depuis styles.css + styles/*.css) remplace l'ancienne
+   chaîne de 33 @import — NE PAS remettre les partials styles/*.css ici. */
 const SHELL = [
   "./",
   "./index.html",
@@ -12,39 +19,7 @@ const SHELL = [
   "./contact.html",
   "./404.html",
   "./stats.html",
-  "./styles.css",
-  "./styles/00-base.css",
-  "./styles/01-components-lounge.css",
-  "./styles/02-hero.css",
-  "./styles/03-player.css",
-  "./styles/04-mini-player.css",
-  "./styles/05-schedule.css",
-  "./styles/06-toasts.css",
-  "./styles/07-history-drawer.css",
-  "./styles/08-contact.css",
-  "./styles/09-emissions.css",
-  "./styles/10-header-tools.css",
-  "./styles/11-install-band.css",
-  "./styles/12-sleep.css",
-  "./styles/13-search-palette.css",
-  "./styles/14-countdown.css",
-  "./styles/15-offline-and-theme-fragment.css",
-  "./styles/16-favorites.css",
-  "./styles/17-stats.css",
-  "./styles/18-misc-extras.css",
-  "./styles/19-phase1-polish.css",
-  "./styles/20-phase2-ux.css",
-  "./styles/21-phase4-mobile.css",
-  "./styles/22-featured-partners.css",
-  "./styles/23-requests-nav-a11y.css",
-  "./styles/24-ui-extras.css",
-  "./styles/25-mobile-perfection.css",
-  "./styles/26-mobile-header-fix.css",
-  "./styles/27-theme-light.css",
-  "./styles/28-player-2026.css",
-  "./styles/29-animateur-detail.css",
-  "./styles/30-podcasts.css",
-  "./styles/brand.css",
+  "./styles.bundle.css",
   "./manifest.webmanifest",
   "./assets/favicon.svg",
   "./assets/icon-192.png",
@@ -67,6 +42,8 @@ const SHELL = [
   "./js/state.js",
   "./js/toast.js",
   "./js/a11y.js",
+  "./js/a11y-modal.js",
+  "./js/consent.js",
   "./js/theme.js",
   "./js/schedule.js",
   "./js/now-playing.js",

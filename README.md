@@ -58,7 +58,7 @@ Depuis les pages satellites, la barre **Écouter le direct** pointe vers `index.
 Suite unitaire sur les fonctions pures (zéro dépendance, Node 18+ built-in test runner) :
 
 ```sh
-node --test tests/                       # tout
+npm test                                # tout ( = node --test tests/ )
 node --test tests/parsing.test.mjs       # parser now-playing
 node --test tests/time.test.mjs          # TZ + helpers
 node --test tests/schedule.test.mjs      # grille hebdomadaire
@@ -67,9 +67,20 @@ node --test tests/store.test.mjs         # localStorage wrapper (mode privé saf
 
 Couvre : parsing des chaînes Centova/SHOUTcast (10 formats), continuité 24/7 de la grille des 7 jours, conversion UTC → heure Toronto, dégradation gracieuse de `localStorage` en mode privé.
 
+Tests visuels (Playwright) — 9 pages × 3 viewports (mobile/tablette/desktop), comparaison pixel à pixel :
+
+```sh
+npm run test:visual      # = snap:check — compare aux baselines versionnées
+npm run snap:baseline    # régénère les baselines (après un changement de rendu intentionnel)
+```
+
+Le serveur statique de test est `tests/visual/serve.mjs` (Node 18+, **aucune dépendance Python**) : `python -m http.server` est remplacé car il servait les modules ES de façon non concurrente (graphe `main.js` → 40+ imports) → rendu tronqué. `serve.mjs` sert les bons types MIME (notamment `text/javascript` pour les `.js`/`.mjs`) et gère la concurrence. Baselines : `tests/visual/*-snapshots/` (versionnées).
+
+Consentement audience (Loi 25 / RGPD) : la mesure d'audience (`js/analytics.js`) et le compteur de présence (`js/presence.js`) ne démarrent qu'après consentement (`js/consent.js`, bannière `#consentBar`, clé localStorage `hr.consent`). Bouton « Modifier mes choix » sur `confidentialite.html`. En test visuel, le consentement est forcé à `no` (`addInitScript`) → pas de bannière ni de collecte, captures focalisées sur le rendu.
+
 ## Checklist visuelle (post-déploiement)
 
-Pas encore de screenshot baseline (Playwright). À chaque mise en prod, vérifier manuellement sur les 7 pages × 3 viewports (mobile 375, tablette 768, desktop 1280) :
+Baselines Playwright en place (9 pages × 3 viewports). En plus, vérifier manuellement après une mise en prod :
 
 - [ ] Hero + lecteur live affichés correctement sur l'accueil
 - [ ] Click play → flux démarre dans les 3 s (cf. logs console pour erreur reconnect)
@@ -87,9 +98,12 @@ Pas encore de screenshot baseline (Playwright). À chaque mise en prod, vérifie
 
 ## Build scripts
 
-Deux scripts, à exécuter après modif (manuellement ou via pre-commit hook) :
+Pipeline complet (`scripts/build-all.mjs`) : build-brand → build-css → build-html → build-sw.
 
 ```sh
+npm run build              # = node scripts/build-all.mjs — applique la marque + régénère tout
+npm run check              # = node scripts/build-all.mjs --check — exit 1 si quelque chose est hors sync (CI)
+
 node scripts/build-html.mjs          # propage les partials vers les *.html (idempotent)
 node scripts/build-html.mjs --check  # exit 1 si HTML hors sync
 
@@ -97,10 +111,15 @@ node scripts/build-sw.mjs            # bumpe CACHE dans sw.js selon hash SHA-256
 node scripts/build-sw.mjs --check    # exit 1 si CACHE hors sync avec contenu réel
 ```
 
-Pas de dépendance npm — Node 18+ suffit. Workflow recommandé : lancer les deux scripts avant chaque `git commit`.
+Dépendance npm : `lightningcss` (build CSS) + `@playwright/test` (tests visuels) → `npm install`. Node 18+ requis. Workflow recommandé : `npm run build` avant chaque `git commit` (ou `npm run check` en CI).
 
+- `build-css` : bundle la chaîne de `@import` de `styles.css` en UN fichier `styles.bundle.css` (cascade préservée, iso-rendu). Option prod : `npm run build:css:minify` (ou `CSS_MINIFY=1 node scripts/build-css.mjs`) → bundle minifié (artefact de déploiement, ne pas committer — le bundle versionné reste non minifié).
 - `build-html` : remplace le contenu entre `<!--#include name="X"-->` et `<!--#endinclude-->` par `_partials/X.html`.
-- `build-sw` : régénère `const CACHE` dans `sw.js` à partir du hash du contenu réel des 86 ressources du SHELL — invalidation auto à toute modif de JS/CSS/HTML/asset.
+- `build-sw` : régénère `const CACHE` dans `sw.js` à partir du hash du contenu réel des ressources du SHELL — invalidation auto à toute modif de JS/CSS/HTML/asset. Avertit aussi si un module `js/*.js` n'est pas dans le SHELL (drift) ou si un fichier listé est manquant.
+
+## Sitemap & SEO
+
+`sitemap.xml` liste les pages indexables (accueil, animateurs, horaire, emissions, podcasts, contact, confidentialite). Les pages `noindex` (`stats.html`, `404.html`) en sont exclites. Référencé depuis `robots.txt`. `sw.js` précache `styles.bundle.css` (et non l'ancienne chaîne `styles.css` + partials).
 
 ## Ouvrir en local
 
