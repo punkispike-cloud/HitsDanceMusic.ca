@@ -83,16 +83,15 @@ after(async () => {
 
 /* ───────────────────── Auth manquant & résolution tenant ───────────────────── */
 
-test("sans user injecté : le garde lève une TypeError → 500 (requireAuth garantit user en amont)", async () => {
-  // Comportement RÉEL observé : les gardes accèdent à user.role sans vérifier la
-  // présence de user → TypeError capturée par onError → 500 internal_error. Dans
-  // l'app réelle, requireAuth court-circuite toujours avant (401 si token
-  // manquant/invalide), donc user n'est jamais absent à ce stade. Ce test
-  // documente la gap défensive (non corrigée dans cette PR test-only).
+test("sans user injecté : le garde renvoie 401 unauthorized (garde défensive)", async () => {
+  // Les gardes RBAC vérifient désormais la présence de `user` avant d'accéder à
+  // user.role → 401 unauthorized si jamais une garde est montée avant requireAuth
+  // (misconfiguration). En app réelle, requireAuth court-circuite toujours avant,
+  // mais cette garde défensive évite un 500 (TypeError) si l'ordre change.
   const app = buildApp({ user: null, guard: requireEditorialAdmin, tenant: false });
   const r = await call(app);
-  assert.equal(r.status, 500);
-  assert.equal(r.body?.error?.code, "internal_error");
+  assert.equal(r.status, 401);
+  assert.equal(r.body?.error?.code, "unauthorized");
   assert.notEqual(r.body?.ok, true, "le handler n'est pas atteint");
 });
 
