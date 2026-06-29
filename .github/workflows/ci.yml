@@ -51,8 +51,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # Échoue si la marque, les partials ou le hash SW ne sont pas à jour
-      # (build-brand → build-html → build-sw doivent avoir tourné après une modif).
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      # Échoue si la marque, le bundle CSS, les partials ou le hash SW ne sont
+      # pas à jour (build-brand → build-css → build-html → build-sw doivent
+      # avoir tourné après une modif). build-css requiert lightningcss (npm ci).
       - name: Vérifier le pipeline de build (marque · partials · hash SW)
         run: node scripts/build-all.mjs --check
       # Vérifie que chaque module ES parse (attrape les erreurs de syntaxe).
