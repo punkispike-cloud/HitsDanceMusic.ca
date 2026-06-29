@@ -11,6 +11,7 @@ import { radios, trackHistory, users } from "../db/schema.js";
 import type { Radio } from "../db/schema.js";
 import { env, isMonitorEnabled, isResendConfigured } from "../env.js";
 import { sendEmail, alertEmailHtml } from "./email.js";
+import { withAdvisoryLock } from "./lock.js";
 
 type Health = "up" | "down" | "silent" | "unknown";
 
@@ -92,7 +93,9 @@ async function tick(): Promise<void> {
 
 export function startMonitor(): void {
   if (!isMonitorEnabled()) return;
-  void tick();
-  setInterval(() => void tick(), env.MONITOR_INTERVAL_MS).unref();
+  // Verrou advisory (C1.2) : une seule instance surveille les flux à la fois.
+  const run = () => withAdvisoryLock("job:monitor", tick);
+  void run();
+  setInterval(() => void run(), env.MONITOR_INTERVAL_MS).unref();
   console.log(`[monitor] surveillance du flux active (${Math.round(env.MONITOR_INTERVAL_MS / 1000)}s)`);
 }

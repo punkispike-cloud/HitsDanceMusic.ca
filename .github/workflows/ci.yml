@@ -24,6 +24,21 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  tenant-guard:
+    name: API (garde isolement tenant)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Garde statique : rejette tout accès à une table tenant sans radioId dans
+      # le même bloc (api/src/routes + api/src/services). Voir scripts/check-tenant-queries.mjs.
+      - run: node scripts/check-tenant-queries.mjs
+
   admin:
     name: Admin (typecheck · build)
     runs-on: ubuntu-latest

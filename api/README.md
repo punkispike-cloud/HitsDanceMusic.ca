@@ -30,7 +30,7 @@ Construit en **Hono + Drizzle + PostgreSQL** (TypeScript, Node 20, ES modules).
 3. **Variables** (cf. `.env.example`) :
    - `DATABASE_URL` = référence `${{Postgres.DATABASE_URL}}` (URL privée)
    - `JWT_SECRET` = `openssl rand -base64 48`
-   - `ALLOWED_ORIGINS` = `https://hitsdancemusic.ca,https://admin.hitsdancemusic.ca`
+   - `ALLOWED_ORIGINS` = tous les domaines qui parlent à l'API (site public + admin + hub), ex. `https://hitsdancemusic.ca,https://www.hitsdancemusic.ca,https://admin.hitsdancemusic.ca` (CORS — aucune origine hardcodée, cf. § Sécurité)
    - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (premier superadmin)
    - `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD` (compte En Ondes — rôle `owner`, god mode cross-radio)
    - `SEED_IT_EMAIL` / `SEED_IT_PASSWORD` / `SEED_IT_NAME` (compte IT — rôle `it`, monitoring technique cross-radio, sans accès éditorial/commercial ; optionnel)
@@ -99,7 +99,24 @@ Deux axes de capacité (le rang linéaire ne sert qu'à l'anti-escalade/gestion)
 - Access JWT court (15 min) ; refresh opaque 30 j **haché** en DB (rotation +
   détection de réutilisation → révocation de chaîne).
 - bcrypt coût 12 ; jamais de mot de passe loggé/renvoyé.
-- CORS whitelisté (`ALLOWED_ORIGINS`), rate-limit global + strict sur `/auth/*`.
+- **CORS** : whitelist via la variable d'env `ALLOWED_ORIGINS` **uniquement**
+  (aucune origine hardcodée — C1.4). En prod, ops DOIT y lister **tous** les
+  domaines qui parlent à l'API : le **site public**, l'**admin** et le **hub**,
+  séparés par des virgules, domaines exacts (pas de wildcard) :
+  `ALLOWED_ORIGINS=https://hitsdancemusic.ca,https://www.hitsdancemusic.ca,https://admin.hitsdancemusic.ca,https://<admin-railway>.up.railway.app`.
+  Si la variable est vide, **aucune** origine navigateur n'est autorisée (CORS
+  bloque tout) → le service n'est plus qu'attaquable en non-navigateur. À
+  vérifier au déploiement.
+- **Rate-limit** : global en mémoire (par instance) + **strict sur `/auth/*`
+  anti brute-force, Postgres-backed** (table `rate_buckets`, partagé entre
+  instances). Fail-open en cas d'indisponibilité DB (l'auth reste disponible).
+- **Isolement tenant** : sans RLS Postgres native, l'isolation repose sur
+  `radio_id` posé par les middlewares `publicTenant`/`adminTenant` et passé à
+  chaque requête. Une **garde statique en CI** (`npm run tenant:guard` →
+  `api/scripts/check-tenant-queries.mjs`) rejette tout accès à une table tenant
+  sans référence à `radioId` dans le même bloc (routes + services). Faux positifs
+  cross-radio légitimes documentés dans le script (console owner, auth, jobs
+  globaux, loaders d'ownership).
 - Zod sur tous les bodies, cap taille body, mime whitelist sur uploads.
 - Injection SQL éliminée par Drizzle (requêtes paramétrées).
 - Fail-fast au boot si `JWT_SECRET`/`DATABASE_URL` manquants ou faibles.

@@ -37,26 +37,23 @@ if (isProd && WEAK_SECRETS.includes(JWT_SECRET)) {
   process.exit(1);
 }
 
-// Origines toujours autorisées (domaines de prod connus), FUSIONNÉES avec la
-// variable ALLOWED_ORIGINS. Garantit que l'admin et le site fonctionnent même
-// si la variable d'env est incomplète. Domaines spécifiques (pas de wildcard)
-// → reste sûr. À nettoyer quand des domaines custom seront en place.
-const BUILTIN_ORIGINS = [
-  "https://hitsdancemusic.ca",
-  "https://www.hitsdancemusic.ca",
-  "https://zucchini-charisma-production-3a67.up.railway.app", // admin (Railway)
-];
-
+// Origines CORS autorisées — UNIQUEMENT via la variable d'env ALLOWED_ORIGINS
+// (C1.4 : retrait des origines hardcodées). En prod, ops DOIT lister ici tous les
+// domaines qui parlent à l'API : site public + admin + hub (ex. :
+// `https://hitsdancemusic.ca,https://admin.hitsdancemusic.ca`). Domaines spécifiques
+// (pas de wildcard) → reste sûr. Voir api/README.md § CORS.
 const ALLOWED_ORIGINS = [
-  ...new Set([
-    ...BUILTIN_ORIGINS,
-    ...optional("ALLOWED_ORIGINS", "")
+  ...new Set(
+    optional("ALLOWED_ORIGINS", "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
-  ]),
+  ),
 ];
 
+if (ALLOWED_ORIGINS.length === 0) {
+  console.warn("[api] ⚠️  ALLOWED_ORIGINS vide — aucune origine navigateur ne sera autorisée (CORS). Renseigner la variable en prod (site + admin + hub).");
+}
 if (ALLOWED_ORIGINS.includes("*")) {
   console.warn("[api] ⚠️  ALLOWED_ORIGINS contient '*' — à NE PAS utiliser en production.");
 }

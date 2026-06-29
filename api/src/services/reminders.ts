@@ -9,6 +9,7 @@ import { scheduleSlots, shows } from "../db/schema.js";
 import { montrealParts } from "./schedule.js";
 import { notifyShow } from "./push.js";
 import { isPushConfigured, env } from "../env.js";
+import { withAdvisoryLock } from "./lock.js";
 
 const LEAD_MIN = 10; // on prévient 10 minutes avant
 const sentKeys = new Set<string>(); // `${YYYY-MM-DD}:${slotId}` déjà notifiés
@@ -56,6 +57,7 @@ async function tick(): Promise<void> {
 
 export function startReminders(): void {
   if (!isPushConfigured()) return;
-  setInterval(() => void tick(), 60_000).unref();
+  // Verrou advisory (C1.2) : une seule instance notifie par fenêtre d'1 minute.
+  setInterval(() => void withAdvisoryLock("job:reminders", tick), 60_000).unref();
   console.log("[reminders] planificateur de rappels actif ✓");
 }

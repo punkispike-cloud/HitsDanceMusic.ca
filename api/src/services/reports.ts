@@ -16,6 +16,7 @@ import {
 } from "../db/schema.js";
 import { env, isResendConfigured } from "../env.js";
 import { sendEmail, reportEmailHtml, type ReportEmailData } from "./email.js";
+import { withAdvisoryLock } from "./lock.js";
 
 const MONTHS_FR = [
   "janvier", "février", "mars", "avril", "mai", "juin",
@@ -159,7 +160,10 @@ export async function runMonthlyReports(): Promise<void> {
 
 export function startMonthlyReports(): void {
   if (!isResendConfigured()) return;
-  setTimeout(() => void runMonthlyReports(), 60_000).unref(); // 1 min après le boot
-  setInterval(() => void runMonthlyReports(), 12 * 60 * 60_000).unref(); // toutes les 12 h
+  // Verrou advisory (C1.2) : une seule instance envoie les rapports (l'idempotence
+  // via report_log reste le garde-fou secondaire).
+  const run = () => withAdvisoryLock("job:reports", runMonthlyReports);
+  setTimeout(() => void run(), 60_000).unref(); // 1 min après le boot
+  setInterval(() => void run(), 12 * 60 * 60_000).unref(); // toutes les 12 h
   console.log("[reports] rapports mensuels actifs ✓");
 }
