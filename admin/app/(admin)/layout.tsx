@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useRadio } from "@/lib/radio";
 import { Sidebar } from "@/components/sidebar";
 import { Spinner } from "@/components/ui";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
-  const { epoch } = useRadio();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -41,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
-      <main className="main" key={epoch}>
+      <main className="main">
         {offline && (
           <div className="offline-bar" role="status">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -1,74 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  useArtists,
+  useShows,
+  useEpisodes,
+  useMixes,
+  useNowSlot,
+  useRecentTracks,
+} from "@/lib/hooks";
 import { Spinner, ErrorState } from "@/components/ui";
-import type { Artist, Show, Episode, Mix, TrackHistoryEntry } from "@/lib/types";
-
-interface NowSlot {
-  from: string;
-  to: string;
-  title: string;
-  host: string;
-  tag: string;
-  isLive: boolean;
-}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<{
-    artists: number;
-    shows: number;
-    episodes: number;
-    mixes: number;
-  } | null>(null);
-  const [now, setNow] = useState<NowSlot | null>(null);
-  const [tracks, setTracks] = useState<TrackHistoryEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Compteurs partagés via le cache SWR (clés radio-scopées) : les compteurs du
+  // dashboard réutilisent les listes cachées par les pages CRUD. keepPreviousData
+  // garde les valeurs de la radio précédente pendant le fetch de la nouvelle.
+  const artists = useArtists();
+  const shows = useShows();
+  const episodes = useEpisodes();
+  const mixes = useMixes();
+  const nowSlot = useNowSlot();
+  // Titres récemment joués — rafraîchis toutes les 20 s (pause auto onglet masqué).
+  const { data: tracks } = useRecentTracks();
+  const now = nowSlot.data;
 
-  // Chargement des compteurs : en cas d'échec on NE fabrique PAS de 0 (qui
-  // ferait passer une panne pour un parc vide) → on bascule en état erreur.
-  const loadStats = useCallback(async () => {
-    setError(null);
-    setStats(null);
-    try {
-      const [artists, shows, episodes, mixes, nowSlot] = await Promise.all([
-        api.get<Artist[]>("/v1/admin/artists"),
-        api.get<Show[]>("/v1/admin/shows"),
-        api.get<Episode[]>("/v1/admin/episodes"),
-        api.get<Mix[]>("/v1/admin/mixes"),
-        api.get<NowSlot | null>("/v1/schedule/now"),
-      ]);
-      setStats({
-        artists: artists.length,
-        shows: shows.length,
-        episodes: episodes.length,
-        mixes: mixes.length,
-      });
-      setNow(nowSlot);
-    } catch {
-      setError("Impossible de charger les indicateurs.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadStats();
-  }, [loadStats]);
-
-  // Titres récemment joués — rafraîchis toutes les 20 s.
-  useEffect(() => {
-    const load = () =>
-      api
-        .get<TrackHistoryEntry[]>("/v1/admin/tracks/recent?limit=20")
-        .then(setTracks)
-        .catch(() => {});
-    void load();
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 20_000);
-    return () => clearInterval(id);
-  }, []);
+  const stats =
+    artists.data && shows.data && episodes.data && mixes.data
+      ? {
+          artists: artists.data.length,
+          shows: shows.data.length,
+          episodes: episodes.data.length,
+          mixes: mixes.data.length,
+        }
+      : null;
+  // En cas d'échec d'un des indicateurs on NE fabrique PAS de 0 (qui ferait
+  // passer une panne pour un parc vide) → on bascule en état erreur.
+  const indicatorError =
+    artists.error || shows.error || episodes.error || mixes.error || nowSlot.error;
+  const error = indicatorError ? "Impossible de charger les indicateurs." : null;
+  const reload = () =>
+    Promise.all([
+      artists.mutate(),
+      shows.mutate(),
+      episodes.mutate(),
+      mixes.mutate(),
+      nowSlot.mutate(),
+    ]);
 
   return (
     <div>
@@ -141,7 +119,7 @@ export default function DashboardPage() {
       )}
 
       {error ? (
-        <ErrorState message={error} onRetry={() => void loadStats()} />
+        <ErrorState message={error} onRetry={() => void reload()} />
       ) : !stats ? (
         <Spinner label="Chargement des indicateurs…" />
       ) : (

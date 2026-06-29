@@ -1,44 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { usePushStats, useShows } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Spinner, Field, Forbidden, ErrorState } from "@/components/ui";
 import { isCrossRadio } from "@/lib/types";
-import type { PushStats, Show } from "@/lib/types";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const [stats, setStats] = useState<PushStats | null>(null);
-  const [shows, setShows] = useState<Show[]>([]);
+  const { data: stats, error: statsErr, mutate: mutateStats } = usePushStats();
+  const { data: shows, error: showsErr, mutate: mutateShows } = useShows();
   const [showSlug, setShowSlug] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    // En cas d'échec on NE fabrique PAS un état « inactif/0 » (qui ferait passer
-    // une panne pour Web Push désactivé) → stats reste null + état erreur.
-    setError(null);
-    setStats(null);
-    try {
-      const [s, sh] = await Promise.all([
-        api.get<PushStats>("/v1/admin/push/stats"),
-        api.get<Show[]>("/v1/admin/shows"),
-      ]);
-      setStats(s);
-      setShows(sh);
-    } catch {
-      setError("Impossible de charger l'état des notifications.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const fetchError = statsErr || showsErr;
+  const error = fetchError ? "Impossible de charger l'état des notifications." : null;
+  const reload = () => Promise.all([mutateStats(), mutateShows()]);
 
   const send = async () => {
     if (!title.trim() || !body.trim()) {
@@ -75,14 +56,14 @@ export default function NotificationsPage() {
     );
   }
 
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
-  if (!stats) return <Spinner label="Chargement des notifications…" />;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (!stats || !shows) return <Spinner label="Chargement des notifications…" />;
 
   return (
     <div>
       <div className="page-head">
         <h1>Notifications push</h1>
-        <button className="btn btn-ghost btn-sm" onClick={() => void load()}
+        <button className="btn btn-ghost btn-sm" onClick={() => void reload()}
           style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

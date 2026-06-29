@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useArtists } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Spinner, Forbidden, ErrorState } from "@/components/ui";
 import { isEditorialAdmin, ROLE_LABEL } from "@/lib/types";
-import type { AdminUser, Artist } from "@/lib/types";
+import type { AdminUser } from "@/lib/types";
 
 const columns: Column<AdminUser>[] = [
   { key: "displayName", label: "Nom" },
@@ -37,19 +37,7 @@ const columns: Column<AdminUser>[] = [
 export default function UtilisateursPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const [artists, setArtists] = useState<Artist[] | null>(null);
-  const [artistsError, setArtistsError] = useState<string | null>(null);
-
-  const loadArtists = useCallback(() => {
-    // En cas d'échec on NE renvoie PAS un tableau vide (qui ferait passer une
-    // panne pour « aucun animateur ») → artists reste null + état erreur.
-    setArtistsError(null);
-    setArtists(null);
-    api
-      .get<Artist[]>("/v1/admin/artists")
-      .then(setArtists)
-      .catch(() => setArtistsError("Impossible de charger les fiches animateurs."));
-  }, []);
+  const { data: artists, error: artistsError, mutate } = useArtists();
 
   const sendInvite = async (id: string) => {
     try {
@@ -65,10 +53,6 @@ export default function UtilisateursPage() {
     }
   };
 
-  useEffect(() => {
-    loadArtists();
-  }, [loadArtists]);
-
   if (!user || !isEditorialAdmin(user.role)) {
     return (
       <div>
@@ -79,7 +63,8 @@ export default function UtilisateursPage() {
       </div>
     );
   }
-  if (artistsError) return <ErrorState message={artistsError} onRetry={loadArtists} />;
+  if (artistsError)
+    return <ErrorState message="Impossible de charger les fiches animateurs." onRetry={() => void mutate()} />;
   if (!artists) return <Spinner label="Chargement des comptes…" />;
 
   // Les rôles « En Ondes » (owner) et « IT » ne sont proposés qu'à un owner

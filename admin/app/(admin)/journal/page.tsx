@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useAudit } from "@/lib/hooks";
 import { Empty, Forbidden, ErrorState, TableSkeleton } from "@/components/ui";
 import { isCrossRadio } from "@/lib/types";
-import type { AuditEntry, AuditResponse } from "@/lib/types";
+import type { AuditEntry } from "@/lib/types";
 
 const ACTION_LABEL: Record<string, string> = {
   create: "Création",
@@ -20,30 +20,12 @@ const ACTION_COLOR: Record<string, string> = {
 
 export default function JournalPage() {
   const { user } = useAuth();
-  const [data, setData] = useState<AuditResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [entity, setEntity] = useState("");
   const [action, setAction] = useState("");
-
-  const load = useCallback(async () => {
-    const qs = new URLSearchParams();
-    if (entity) qs.set("entity", entity);
-    if (action) qs.set("action", action);
-    qs.set("limit", "150");
-    // En cas d'échec on NE renvoie PAS un tableau vide (qui ferait passer une
-    // panne pour « aucune entrée ») → data reste null + état erreur.
-    setError(null);
-    setData(null);
-    try {
-      setData(await api.get<AuditResponse>(`/v1/admin/audit?${qs.toString()}`));
-    } catch {
-      setError("Impossible de charger le journal d'audit.");
-    }
-  }, [entity, action]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Clé incluant les filtres (encodés dans le chemin query) + selectedRadioId :
+  // changer un filtre ou la radio change la clé → re-fetch automatique.
+  const { data, error, mutate } = useAudit(entity, action);
+  const loadError = error ? "Impossible de charger le journal d'audit." : null;
 
   // QW-1 — Filtres persistés dans l'URL : lecture au montage…
   useEffect(() => {
@@ -102,7 +84,7 @@ export default function JournalPage() {
             <option value="update">Modification</option>
             <option value="delete">Suppression</option>
           </select>
-          <button className="btn btn-ghost btn-sm" aria-label="Rafraîchir le journal" onClick={() => void load()}>
+          <button className="btn btn-ghost btn-sm" aria-label="Rafraîchir le journal" onClick={() => void mutate()}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
@@ -116,8 +98,8 @@ export default function JournalPage() {
         Trace de toutes les modifications faites depuis la console. Conservé 1 an.
       </p>
 
-      {error ? (
-        <ErrorState message={error} onRetry={() => void load()} />
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={() => void mutate()} />
       ) : !data ? (
         <TableSkeleton cols={6} />
       ) : data.rows.length === 0 ? (
