@@ -1,11 +1,70 @@
 # État du projet — Hits Dance Music (reprise sur Mac)
 
 > Document de reprise : tout ce qu'il faut pour continuer le travail.
-> Dernière mise à jour : 2026-06-19. Branche : `main` (déploiement auto Railway).
+> Dernière mise à jour : **2026-06-29**. Branche : `main` (déploiement auto Railway).
 
 ---
 
-## 0. Nouveautés 2026-06-19 — 10 améliorations (frontend public gelé)
+## 0. Reprise 2026-06-29 — Engagement auditeur & plan « forte valeur »
+
+> **Note développeur** : gros lot de fonctionnalités implémenté en local, **pas encore
+> committé ni déployé** (voir `git status`). Cette section décrit où on en est et ce
+> qu'il reste avant mise en prod.
+
+### Ce qui vient d'être construit (working tree, non poussé)
+
+| # | Fonction | Statut code | Fichiers / migrations clés |
+|---|---|---|---|
+| 1 | **Demandes & dédicaces + file animateur** | ✅ complet | `song_requests` + enum `request_status` → **`0016_yellow_shard.sql`** ; `POST /v1/requests` ; `GET/PATCH /v1/admin/requests` ; page admin `/demandes` ; `js/contact-form.js` → API (repli mailto si pas de titre) ; purge Loi 25 dans `maintenance.ts` |
+| 3 | **Feedback programmation (top titres)** | ✅ complet | `GET /v1/admin/analytics/top-tracks?days=` ; section dans `/statistiques` |
+| 2 | **Sondages en direct** | ✅ complet | `polls` + `poll_votes` → **`0018_empty_maverick.sql`** ; admin `/sondages` ; widget public `js/polls.js` + `#pollWidget` sur `index.html` |
+| 4 | **Outil distribution** | ✅ complet | colonne `radios.distribution` (jsonb) → **`0019_nosy_tyrannus.sql`** ; `GET/PATCH /v1/owner/radios/:id/distribution` ; carte dans `/parc/[id]` |
+| 5 | **Replay / catch-up directs** | ✅ backend gated | `api/src/services/replay.ts` + `listRecordings()` dans `azuracast.ts` ; **inactif par défaut** (`AZURACAST_REPLAY_ENABLED=false`) |
+| — | **Bibliothèque pistes + Studio DJ** | 🔄 WIP parallèle | table `tracks` → **`0017_tracks_library.sql`** ; pages admin `/pistes` + `/studio` (moteur audio client, waveform, upload) ; **pas dans le plan « forte valeur » original** |
+
+**Migrations à appliquer au prochain deploy** (dans l'ordre) : `0016` → `0017` → `0018` → `0019`.
+
+**Vérifications passées** (2026-06-29) :
+- `api/` : `typecheck` ✓ · `tenant:guard` ✓ · `test` ✓ (73)
+- `admin/` : `typecheck` ✓
+- racine : `npm test` ✓ (36)
+- `npm run check` : ⚠️ échec **pré-existant** sur `styles.bundle.css` (bundle pas regénéré — relancer `node scripts/build-css.mjs` si besoin)
+
+### Variables d'env nouvelles / à connaître
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `AZURACAST_REPLAY_ENABLED` | `false` | Active le job replay (enregistrements AzuraCast → épisodes brouillon) |
+| `REPLAY_INTERVAL_MS` | `900000` (15 min) | Intervalle du job replay |
+
+Les sondages, demandes et distribution n'ajoutent **pas** de clé obligatoire — ils fonctionnent dès que les migrations sont appliquées.
+
+### Ce qu'il RESTE (priorité suggérée)
+
+1. **Commit + push + deploy** — tout le lot ci-dessus est encore local uniquement.
+2. **Studio ↔ file demandes** — `useRequests("new")` existe dans `hooks.ts` mais **n'est pas branché** sur `/studio` ; c'était le lien prévu pour rendre Studio indispensable à l'antenne (afficher la file `status=new` en direct).
+3. **Web Push « ta demande passe ! »** — mentionné dans le plan (notifier l'auditeur quand statut → `played`) ; **non implémenté**.
+4. **Plans non démarrés** (discussions antérieures, hors lot juin 29) :
+   - **Studio / En direct** (sessions live, créneau courant enrichi)
+   - **Bibliothèque médias + pubs/jingles** (`media_assets`, `ad_rotations`)
+   - **Extension portail opérateur** (au-delà de parc + distribution déjà là)
+5. **Bibliothèque pistes / Studio DJ** (`0017`, `/pistes`, `/studio`) — code présent mais à **valider en prod** (S3/R2, CORS upload, perf navigateur).
+6. **Replay AzuraCast** — tester l'endpoint recordings sur l'instance réelle avant d'activer `AZURACAST_REPLAY_ENABLED`.
+7. **Révélation site live** — voir §0 historique (2026-06-19) : nav Podcasts, badge live, lien confidentialité toujours en attente de feu vert.
+
+### Checklist reprise rapide
+
+```bash
+git status                    # voir l'étendue du lot non committé
+cd api && npm run typecheck && npm run tenant:guard && npm test
+cd ../admin && npm run typecheck
+cd .. && npm test
+# Après commit + push : migrations 0016-0019 s'appliquent auto (preDeployCommand)
+```
+
+---
+
+## 0 bis. Nouveautés 2026-06-19 — 10 améliorations (frontend public gelé)
 
 Ajoutées sans modifier le visuel des pages existantes (le live garde son lien) :
 
