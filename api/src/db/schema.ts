@@ -494,6 +494,24 @@ export const reportLog = pgTable(
   }),
 );
 
+/* ───────────────────────── rate_buckets (rate-limit auth DB — C1.3) ─────────────────────────
+   Compteur de fenêtre par minute pour le rate-limit des endpoints /auth/* (anti
+   brute-force), partagé entre instances via Postgres. `key` = `auth:<ip>:<minute>`.
+   Une ligne par fenêtre → upsert atomique (count + 1) ; purge des lignes expirées
+   par le job d'entretien (services/maintenance.ts). */
+
+export const rateBuckets = pgTable(
+  "rate_buckets",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull().default(1),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    expIdx: index("rate_buckets_expires_idx").on(t.expiresAt),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({

@@ -6,6 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { trackHistory, radios } from "../db/schema.js";
 import { env } from "../env.js";
+import { withAdvisoryLock } from "./lock.js";
 
 const POLL_MS = 30_000;
 
@@ -104,7 +105,9 @@ async function tick(): Promise<void> {
 }
 
 export function startTrackHistory(): void {
-  void tick();
-  setInterval(() => void tick(), POLL_MS);
+  // Verrou advisory (C1.2) : en multi-instance, une seule instance poll le
+  // now-playing à la fois (évite le double insert d'un même titre).
+  void withAdvisoryLock("job:track-history", tick);
+  setInterval(() => void withAdvisoryLock("job:track-history", tick), POLL_MS);
   console.log(`[track-history] poller actif (${POLL_MS / 1000}s, par radio active)`);
 }

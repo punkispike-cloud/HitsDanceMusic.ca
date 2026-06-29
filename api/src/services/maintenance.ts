@@ -3,8 +3,9 @@
 
 import { lt, and, isNotNull, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, auditLog } from "../db/schema.js";
+import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, auditLog, rateBuckets } from "../db/schema.js";
 import { env } from "../env.js";
+import { withAdvisoryLock } from "./lock.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const AUDIT_RETENTION_DAYS = 365; // on garde l'audit plus longtemps que l'analytics
@@ -52,17 +53,26 @@ export async function runCleanup(): Promise<void> {
       .where(lt(auditLog.createdAt, auditCutoff))
       .returning({ id: auditLog.id });
 
+    // Rate-limit auth DB (C1.3) : purge des buckets de fenêtre expirés.
+    const delBuckets = await db
+      .delete(rateBuckets)
+      .where(lt(rateBuckets.expiresAt, new Date()))
+      .returning({ key: rateBuckets.key });
+
     console.log(
       `[cleanup] refresh_tokens: ${delTokens.length}, upload_intents: ${delIntents.length}, ` +
-        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, audit_log: ${delAudit.length}`,
+        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
     );
   } catch (err) {
     console.error("[cleanup] échec (non bloquant)", err);
   }
 }
 
-/** Démarre la purge : une fois au boot (différée) puis toutes les 24 h. */
+/** Démarre la purge : une fois au boot (différée) puis toutes les 24 h.
+    Le tick est wrappé par un verrou advisory (C1.2) : en multi-instance, une
+    seule instance exécute la purge à la fois. */
 export function startMaintenance(): void {
-  setTimeout(() => void runCleanup(), 30_000).unref();
-  setInterval(() => void runCleanup(), DAY).unref();
+  const run = () => withAdvisoryLock("job:maintenance", runCleanup);
+  setTimeout(() => void run(), 30_000).unref();
+  setInterval(() => void run(), DAY).unref();
 }

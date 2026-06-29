@@ -39,6 +39,13 @@ export function invalidateRadioCache(): void {
   CACHE = null;
 }
 
+/** Test-only : injecte directement le cache des radios (évite toute DB en tests).
+    Les middlewares publicTenant/adminTenant passent par allRadios() qui sert ce
+    cache sans requêter. À n'utiliser que dans la suite tenant. */
+export function setRadioCacheForTests(rows: { id: string; slug: string; domains: string[]; status: string }[]): void {
+  CACHE = { rows, at: Date.now() };
+}
+
 function normHost(h: string): string {
   return h.toLowerCase().split(":")[0]!.replace(/^www\./, "");
 }
