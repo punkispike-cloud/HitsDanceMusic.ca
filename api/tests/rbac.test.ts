@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  RANK,
   requireRole,
   requireMinRole,
   requireOwner,
@@ -192,4 +193,48 @@ test("assertCanAssignRole : owner peut attribuer it ; superadmin ne peut pas", (
 test("assertCanManageUser : superadmin ne peut pas gérer un it (rang supérieur)", () => {
   assert.throws(() => assertCanManageUser(su, "it"), (e) => e instanceof AppError && e.status === 403);
   assert.doesNotThrow(() => assertCanManageUser(owner, "it"));
+});
+
+/* ───────────────────────── Phase C4 — extension ───────────────────────── */
+
+test("RANK : hiérarchie stricte lecteur < animateur < superadmin < it < owner", () => {
+  assert.ok(RANK.lecteur < RANK.animateur, "lecteur < animateur");
+  assert.ok(RANK.animateur < RANK.superadmin, "animateur < superadmin");
+  assert.ok(RANK.superadmin < RANK.it, "superadmin < it");
+  assert.ok(RANK.it < RANK.owner, "it < owner");
+});
+
+test("assertCanManageUser : it ne peut PAS gérer un owner (rang supérieur)", () => {
+  assert.throws(() => assertCanManageUser(it, "owner"), (e) => e instanceof AppError && e.status === 403);
+});
+
+test("assertCanManageUser : it PEUT gérer un superadmin (it est de rang supérieur)", () => {
+  // Hiérarchie documentée (rbac.ts) : owner > it > superadmin > animateur > lecteur.
+  // `it` (rang 4) est AU-DESSUS de `superadmin` (rang 3) → gestion autorisée.
+  // La formulation de la task (« it ne peut pas gérer un superadmin, rang
+  // supérieur ») inversait la hiérarchie ; on asserte le comportement réel.
+  assert.doesNotThrow(() => assertCanManageUser(it, "superadmin"));
+});
+
+test("matrice role × garde (politique RBAC en un seul test tabulaire)", async () => {
+  const users: { role: AuthUser["role"]; user: AuthUser }[] = [
+    { role: "lecteur", user: reader },
+    { role: "animateur", user: dj },
+    { role: "superadmin", user: su },
+    { role: "it", user: it },
+    { role: "owner", user: owner },
+  ];
+  const guards: { name: string; mw: ReturnType<typeof requireRole>; allow: AuthUser["role"][] }[] = [
+    { name: "requireOwner", mw: requireOwner, allow: ["owner"] },
+    { name: "requireItOrOwner", mw: requireItOrOwner, allow: ["it", "owner"] },
+    { name: "requireEditorialAdmin", mw: requireEditorialAdmin, allow: ["superadmin", "owner"] },
+    { name: "requireMinRole('superadmin')", mw: requireMinRole("superadmin"), allow: ["superadmin", "it", "owner"] },
+  ];
+  for (const g of guards) {
+    for (const { role, user } of users) {
+      const r = await run(g.mw, fakeCtx(user));
+      const want = g.allow.includes(role);
+      assert.equal(r.nextCalled, want, `${g.name} × ${role} : expected next=${want}`);
+    }
+  }
 });

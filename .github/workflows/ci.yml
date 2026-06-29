@@ -40,7 +40,7 @@ jobs:
       - run: node scripts/check-tenant-queries.mjs
 
   admin:
-    name: Admin (typecheck · build)
+    name: Admin (typecheck · test · build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,6 +54,7 @@ jobs:
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://patient-endurance-production-21c8.up.railway.app
