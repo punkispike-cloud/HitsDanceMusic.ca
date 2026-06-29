@@ -132,10 +132,6 @@ export default function PodcastsPage() {
           publishedAt: r.publishedAt ?? "",
         })}
       />
-      <p className="muted" style={{ marginTop: 16, fontSize: "0.85rem" }}>
-        <span aria-hidden="true">💡</span> Le téléversement audio (S3) sera branché à l&apos;étape finale. Pour l&apos;instant, gère
-        les métadonnées ; l&apos;audio s&apos;attachera ensuite.
-      </p>
     </div>
   );
 }

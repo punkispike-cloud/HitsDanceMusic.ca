@@ -125,9 +125,6 @@ export default function MixesPage() {
           publishedAt: r.publishedAt ?? "",
         })}
       />
-      <p className="muted" style={{ marginTop: 16, fontSize: "0.85rem" }}>
-        <span aria-hidden="true">💡</span> Téléversement audio + tracklist détaillée : branchés à l&apos;étape finale (S3).
-      </p>
     </div>
   );
 }
