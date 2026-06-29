@@ -9,13 +9,14 @@
      traité comme un non-admin éditorial (il n'a pas d'artiste → 403). */
 
 import type { MiddlewareHandler } from "hono";
-import { forbidden, notFound } from "../lib/errors.js";
+import { forbidden, notFound, unauthorized } from "../lib/errors.js";
 import type { AppBindings, AuthUser } from "../types.js";
 import type { Role } from "../db/schema.js";
 
 export function requireRole(...roles: Role[]): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const user = c.get("user");
+    if (!user) throw unauthorized();
     if (!roles.includes(user.role)) throw forbidden("Rôle insuffisant");
     await next();
   };
@@ -54,6 +55,7 @@ export const requireEditorialAdmin = requireRole("superadmin", "owner");
 export function requireMinRole(min: Role): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const user = c.get("user");
+    if (!user) throw unauthorized();
     if (RANK[user.role] < RANK[min]) throw forbidden("Rôle insuffisant");
     await next();
   };
@@ -66,6 +68,7 @@ type OwnerLoader = (id: string) => Promise<{ artistId: string | null } | undefin
 export function requireOwnershipOrAdmin(loader: OwnerLoader): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const user = c.get("user");
+    if (!user) throw unauthorized();
     if (isEditorialAdmin(user.role)) return next();
     const id = c.req.param("id");
     if (!id) throw notFound();
