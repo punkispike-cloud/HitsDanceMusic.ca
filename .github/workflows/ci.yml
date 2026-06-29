@@ -79,3 +79,17 @@ jobs:
         run: |
           set -e
           for f in js/*.js; do node --check "$f"; done
+
+  stations:
+    name: "Hub stations (intégrité manifeste)"
+    runs-on: ubuntu-latest
+    # Pas de defaults.working-directory → repo root. Le script est pur Node, zéro
+    # dépendance → pas de `npm ci` (plus rapide). brand/clients.json est gitignored
+    # (privé) → absent du checkout CI : le script bascule en vérification d'intégrité
+    # des artefacts commités (enondes-site/stations.json + nginx.conf).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/build-stations.mjs --check

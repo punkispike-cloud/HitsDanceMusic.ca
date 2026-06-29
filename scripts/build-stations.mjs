@@ -16,9 +16,16 @@
  *   - now-playing : exposé en /np/<slug> (same-origin, proxifié par nginx) si la
  *     station a un nowPlayingProxy réel ; sinon null (le hub dégrade proprement).
  *
+ * Registre privé : brand/clients.json est GITIGNORED (donc absent d'un checkout
+ * CI frais). Quand il manque :
+ *   - mode --check  → vérification d'INTÉGRITÉ des artefacts commités
+ *     (enondes-site/stations.json + nginx.conf), exit 1 si malformé, 0 sinon.
+ *   - mode normal   → avertissement + rien écrit (exit 0), jamais de crash.
+ * Quand il est présent : sync exacte (régénération manifeste + nginx).
+ *
  * Usage :
  *   node scripts/build-stations.mjs            # (ré)génère manifeste + nginx
- *   node scripts/build-stations.mjs --check    # exit 1 si hors sync (CI)
+ *   node scripts/build-stations.mjs --check    # exit 1 si hors sync (CI) ou artefact malformé
  */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -41,7 +48,88 @@ async function readJson(rel) {
   return JSON.parse(await readFile(join(root, rel), "utf-8"));
 }
 
-const registry = await readJson("brand/clients.json");
+/* ---------- Registre privé (gitignored — absent d'un checkout CI frais) ---------- */
+const registryText = await readFile(join(root, "brand/clients.json"), "utf-8").catch(() => null);
+
+if (registryText === null) {
+  /* brand/clients.json absent : pas de (re)génération possible. En --check, on
+     valide l'intégrité des artefacts COMMITÉS (stations.json + nginx.conf) ;
+     sinon on avertit et on n'écrit rien. Jamais de crash. */
+  if (!checkMode) {
+    console.warn("[build-stations] ⚠ registre privé brand/clients.json absent — rien à régénérer (exit 0).");
+    process.exit(0);
+  }
+
+  let bad = 0;
+
+  // 1. stations.json : JSON valide + champs publics requis par station.
+  let stationsCount = null;
+  const jsonText = await readFile(OUT_JSON, "utf-8").catch(() => null);
+  if (jsonText === null) {
+    console.error("[build-stations] ✗ enondes-site/stations.json introuvable.");
+    bad++;
+  } else {
+    let manifest;
+    try {
+      manifest = JSON.parse(jsonText);
+    } catch (err) {
+      console.error(`[build-stations] ✗ stations.json : JSON invalide — ${err.message}`);
+      bad++;
+      manifest = null;
+    }
+    if (manifest) {
+      if (typeof manifest.network !== "string") {
+        console.error("[build-stations] ✗ stations.json : champ `network` manquant (string attendu).");
+        bad++;
+      }
+      const stations = manifest.stations;
+      if (!Array.isArray(stations)) {
+        console.error("[build-stations] ✗ stations.json : champ `stations` manquant (tableau attendu).");
+        bad++;
+      } else {
+        stationsCount = stations.length;
+        for (const s of stations) {
+          const ok =
+            typeof s.slug === "string" && s.slug.length > 0 &&
+            typeof s.name === "string" && s.name.length > 0 &&
+            (s.status === "live" || s.status === "coming") &&
+            (s.stream === null || typeof s.stream === "string");
+          if (!ok) {
+            console.error(`[build-stations] ✗ station malformée : ${JSON.stringify(s)}`);
+            bad++;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. nginx.conf : marqueurs NP-PROXY présents et dans le bon ordre.
+  const nginxText = await readFile(OUT_NGINX, "utf-8").catch(() => null);
+  if (nginxText === null) {
+    console.error("[build-stations] ✗ enondes-site/nginx.conf introuvable.");
+    bad++;
+  } else {
+    const i = nginxText.indexOf(NP_BEGIN);
+    const j = nginxText.indexOf(NP_END);
+    if (i === -1 || j === -1) {
+      console.error("[build-stations] ✗ nginx.conf : marqueurs NP-PROXY absents.");
+      bad++;
+    } else if (j < i) {
+      console.error("[build-stations] ✗ nginx.conf : marqueurs NP-PROXY dans le mauvais ordre (END avant BEGIN).");
+      bad++;
+    }
+  }
+
+  if (bad > 0) {
+    console.error(`[build-stations] ${bad} problème(s) d'intégrité sur les artefacts commités.`);
+    process.exit(1);
+  }
+  console.log(`[build-stations] registre privé absent — vérification d'intégrité des artefacts commités OK (${stationsCount} station·s).`);
+  process.exit(0);
+}
+
+/* ---------- Registre présent : sync manifeste + nginx (inchangé) ---------- */
+const registry = JSON.parse(registryText);
 const listed = (registry.clients ?? [])
   .filter((c) => c?.listing?.directory === true)
   .sort((a, b) => (a.listing.order ?? 99) - (b.listing.order ?? 99));

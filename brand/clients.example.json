@@ -1,5 +1,5 @@
 {
-  "_comment": "Registre des clients En Ondes (source de vérité). Lu par scripts/status.mjs, scripts/console.mjs et update-clients.mjs. Si des clients obtiennent un accès au dépôt, déplacer ce fichier hors du repo (gitignore) — il liste tes clients. Champ status : active | provisioning | paused (seuls les 'active' avec une api sont pingués). Champ billing optionnel ({ mrr, status, nextInvoice }) : renseigné dans le vrai clients.json (privé), jamais ici — le cockpit n'affiche le revenu que si un montant numérique existe.",
+  "_comment": "Registre des clients En Ondes (source de vérité). Lu par scripts/status.mjs, scripts/console.mjs et update-clients.mjs. Si des clients obtiennent un accès au dépôt, déplacer ce fichier hors du repo (gitignore) — il liste tes clients. Le VRAI brand/clients.json est privé/gitignored ; cet exemple est PUBLIC (ne pas y mettre de secret). Champ status : active | provisioning | paused (seuls les 'active' avec une api sont pingués). Champ billing optionnel ({ mrr, status, nextInvoice }) : renseigné dans le vrai clients.json (privé), jamais ici — le cockpit n'affiche le revenu que si un montant numérique existe. Champ listing (opt-in annuaire public du hub d'écoute, lu par scripts/build-stations.mjs) : directory (bool — true = la station apparaît dans enondes-site/stations.json), order (int — tri croissant du directory), owned (bool — marque ton réseau En Ondes vs client). Absent = non listée.",
   "clients": [
     {
       "slug": "hitsdance",
@@ -24,6 +24,11 @@
         "mrr": null,
         "status": "vitrine",
         "nextInvoice": null
+      },
+      "listing": {
+        "directory": true,
+        "owned": true,
+        "order": 1
       },
       "commissioned": "2026-06-18"
     },
@@ -50,6 +55,9 @@
         "mrr": null,
         "status": "trial",
         "nextInvoice": null
+      },
+      "listing": {
+        "directory": false
       },
       "commissioned": null
     }
