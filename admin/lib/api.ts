@@ -7,8 +7,9 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
 let accessToken: string | null = null;
 let onUnauthorized: (() => void) | null = null;
 let refreshing: Promise<boolean> | null = null;
-// Radio sélectionnée par l'owner (En Ondes) → en-tête X-Radio-Id sur l'admin.
-// Pour les non-owner, inutilisé (leur radio vient du JWT).
+// Radio sélectionnée par un compte cross-radio (owner En Ondes / it) → en-tête
+// X-Radio-Id sur l'admin. Pour les non-cross-radio, inutilisé (leur radio vient
+// du JWT).
 let selectedRadioId: string | null = null;
 
 export function setAccessToken(token: string | null) {

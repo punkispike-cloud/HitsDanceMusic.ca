@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Spinner, ErrorState } from "@/components/ui";
 import { AudioUpload } from "@/components/audio-upload";
+import { isEditorialAdmin } from "@/lib/types";
 import type { Artist, Episode } from "@/lib/types";
 
 const STATUS_OPTIONS = [
@@ -79,7 +80,7 @@ export default function PodcastsPage() {
 
   if (error) return <ErrorState message={error} onRetry={loadArtists} />;
   if (!artists) return <Spinner />;
-  const isAdmin = user?.role === "superadmin";
+  const isAdmin = isEditorialAdmin(user?.role);
   const owns = (r: Episode) => isAdmin || (user?.artistId != null && r.artistId === user.artistId);
 
   const fields: FieldConfig[] = [

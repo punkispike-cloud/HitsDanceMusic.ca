@@ -1,9 +1,10 @@
 "use client";
 
-/* Console OPÉRATEUR (owner En Ondes) : un seul écran pour TOUTES les radios —
+/* Console OPÉRATEUR (En Ondes) : un seul écran pour TOUTES les radios —
    totaux agrégés (dont MRR), comparaison radio par radio, administrer /
    suspendre / provisionner / ÉDITER (forfait, prix, flux, note de facturation).
-   Réservé au rôle owner (le backend refuse aussi pour les autres). */
+   Accès cross-radio : owner (god mode, + actions commerciales) + it (monitoring
+   technique SANS actions commerciales — provisioning/billing masqués). */
 
 import { useEffect, useState, useCallback, useRef, useId, type ReactNode, type FormEvent } from "react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ import { Empty, ErrorState, TableSkeleton, Modal } from "@/components/ui";
 import { TrendChart, type TrendPoint } from "@/components/trend-chart";
 import {
   formatDuration,
+  isCrossRadio,
   type RadioSummary,
   type OwnerOverview,
   type RadioStatus,
@@ -47,6 +49,9 @@ export default function ParcPage() {
   const [series, setSeries] = useState<TrendPoint[]>([]);
   const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
 
+  // Accès cross-radio (owner + it). Les actions commerciales (provisioning,
+  // édition, statut, export CSV) restent réservées à l'owner.
+  const crossRadio = isCrossRadio(user?.role);
   const isOwner = user?.role === "owner";
 
   const load = useCallback(() => {
@@ -77,16 +82,16 @@ export default function ParcPage() {
   }, []);
 
   useEffect(() => {
-    if (isOwner) load();
-  }, [isOwner, load]);
+    if (crossRadio) load();
+  }, [crossRadio, load]);
 
-  if (!isOwner) {
+  if (!crossRadio) {
     return (
       <div>
         <div className="page-head">
           <h1>Parc</h1>
         </div>
-        <Empty label="Réservé à l'opérateur (En Ondes)." />
+        <Empty label="Réservé à l'opérateur (En Ondes) et à l'équipe IT." />
       </div>
     );
   }
@@ -223,9 +228,11 @@ export default function ParcPage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <strong>Visiteurs — 30 derniers jours (tout le parc)</strong>
-          <button className="btn btn-sm btn-ghost" type="button" onClick={exportCsv}>
-            <span aria-hidden="true">⬇</span> Export CSV
-          </button>
+          {isOwner && (
+            <button className="btn btn-sm btn-ghost" type="button" onClick={exportCsv}>
+              <span aria-hidden="true">⬇</span> Export CSV
+            </button>
+          )}
         </div>
         <TrendChart points={series} label="Visiteurs" />
       </div>
@@ -281,17 +288,21 @@ export default function ParcPage() {
                       <button className="btn btn-sm" type="button" onClick={() => selectRadio(r.id)} disabled={selectedId === r.id}>
                         {selectedId === r.id ? "Administrée" : "Administrer"}
                       </button>
-                      <button className="btn btn-sm btn-ghost" type="button" onClick={() => setEditing(r)}>
-                        Éditer
-                      </button>
-                      {r.status !== "active" ? (
-                        <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "active" })}>
-                          Activer
-                        </button>
-                      ) : (
-                        <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "paused" })}>
-                          Suspendre
-                        </button>
+                      {isOwner && (
+                        <>
+                          <button className="btn btn-sm btn-ghost" type="button" onClick={() => setEditing(r)}>
+                            Éditer
+                          </button>
+                          {r.status !== "active" ? (
+                            <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "active" })}>
+                              Activer
+                            </button>
+                          ) : (
+                            <button className="btn btn-sm btn-ghost" type="button" onClick={() => setConfirmStatus({ radio: r, status: "paused" })}>
+                              Suspendre
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
@@ -302,29 +313,33 @@ export default function ParcPage() {
         </div>
       )}
 
-      <h2 style={{ marginTop: 28 }}>Provisionner une nouvelle radio</h2>
-      <p style={{ color: "var(--txt-dim)", fontSize: 13, marginTop: -6 }}>
-        Crée le tenant (statut « en montage »). Le branchement du flux AzuraCast viendra automatiser le reste.
-      </p>
-      <form
-        ref={formRef}
-        onSubmit={createRadio}
-        noValidate
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, maxWidth: 780 }}
-      >
-        <Field name="name" label="Nom *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} />
-        <Field name="slug" label="Slug (auto si vide)" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} />
-        <Field name="plan" label="Forfait" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
-        <Field name="monthlyPrice" label="Prix ($/mois)" value={form.monthlyPrice} onChange={(v) => setForm({ ...form, monthlyPrice: v })} type="number" min="0" step="1" error={formErrors.monthlyPrice} />
-        <Field name="domains" label="Domaines (séparés par ,)" value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} />
-        <Field name="streamUrl" label="Flux audio (stream URL)" value={form.streamUrl} onChange={(v) => setForm({ ...form, streamUrl: v })} type="url" error={formErrors.streamUrl} />
-        <Field name="nowPlayingUrl" label="Now-playing URL" value={form.nowPlayingUrl} onChange={(v) => setForm({ ...form, nowPlayingUrl: v })} type="url" error={formErrors.nowPlayingUrl} />
-        <div style={{ gridColumn: "1 / -1" }}>
-          <button className="btn" type="submit" disabled={creating || !form.name.trim()}>
-            {creating ? "Création…" : "Créer la radio"}
-          </button>
-        </div>
-      </form>
+      {isOwner && (
+        <>
+          <h2 style={{ marginTop: 28 }}>Provisionner une nouvelle radio</h2>
+          <p style={{ color: "var(--txt-dim)", fontSize: 13, marginTop: -6 }}>
+            Crée le tenant (statut « en montage »). Le branchement du flux AzuraCast viendra automatiser le reste.
+          </p>
+          <form
+            ref={formRef}
+            onSubmit={createRadio}
+            noValidate
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, maxWidth: 780 }}
+          >
+            <Field name="name" label="Nom *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} />
+            <Field name="slug" label="Slug (auto si vide)" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} />
+            <Field name="plan" label="Forfait" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
+            <Field name="monthlyPrice" label="Prix ($/mois)" value={form.monthlyPrice} onChange={(v) => setForm({ ...form, monthlyPrice: v })} type="number" min="0" step="1" error={formErrors.monthlyPrice} />
+            <Field name="domains" label="Domaines (séparés par ,)" value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} />
+            <Field name="streamUrl" label="Flux audio (stream URL)" value={form.streamUrl} onChange={(v) => setForm({ ...form, streamUrl: v })} type="url" error={formErrors.streamUrl} />
+            <Field name="nowPlayingUrl" label="Now-playing URL" value={form.nowPlayingUrl} onChange={(v) => setForm({ ...form, nowPlayingUrl: v })} type="url" error={formErrors.nowPlayingUrl} />
+            <div style={{ gridColumn: "1 / -1" }}>
+              <button className="btn" type="submit" disabled={creating || !form.name.trim()}>
+                {creating ? "Création…" : "Créer la radio"}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
 
       {editing && (
         <RadioEditPanel

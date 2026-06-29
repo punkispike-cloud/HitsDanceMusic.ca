@@ -11,6 +11,7 @@ import {
   tagColor,
   minToHHMM,
   hhmmToMin,
+  isEditorialAdmin,
   type ScheduleSlot,
   type Artist,
   type SlotTag,
@@ -42,7 +43,7 @@ const EMPTY_FORM: SlotForm = {
 export default function GrillePage() {
   const { user } = useAuth();
   const toast = useToast();
-  const isAdmin = user?.role === "superadmin";
+  const isAdmin = isEditorialAdmin(user?.role);
 
   const [slots, setSlots] = useState<ScheduleSlot[] | null>(null);
   const [artists, setArtists] = useState<Artist[]>([]);

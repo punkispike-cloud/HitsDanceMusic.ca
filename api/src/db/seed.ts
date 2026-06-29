@@ -78,6 +78,37 @@ async function seedOwner() {
   console.log(`[seed] owner créé : ${env.SEED_OWNER_EMAIL}`);
 }
 
+/* Compte IT En Ondes (rôle `it`, cross-radio, monitoring technique sans accès
+   éditorial/commercial). Idempotent, en miroir du compte owner. Posé seulement
+   si SEED_IT_* sont fournis. radioId NULL (cross-radio). On ne rétrograde
+   jamais un owner existant. */
+async function seedIt() {
+  if (!env.SEED_IT_EMAIL || !env.SEED_IT_PASSWORD) return;
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, env.SEED_IT_EMAIL),
+  });
+  if (existing) {
+    if (existing.role === "owner") {
+      console.log(`[seed] compte owner existant pour ${env.SEED_IT_EMAIL} — laissé owner.`);
+      return;
+    }
+    if (existing.role !== "it") {
+      await db.update(users).set({ role: "it", updatedAt: new Date() }).where(eq(users.id, existing.id));
+      console.log(`[seed] compte promu it : ${env.SEED_IT_EMAIL}`);
+    } else {
+      console.log(`[seed] it déjà présent : ${env.SEED_IT_EMAIL}`);
+    }
+    return;
+  }
+  await db.insert(users).values({
+    email: env.SEED_IT_EMAIL,
+    passwordHash: await hashPassword(env.SEED_IT_PASSWORD),
+    displayName: env.SEED_IT_NAME || "Équipe IT",
+    role: "it",
+  });
+  console.log(`[seed] it créé : ${env.SEED_IT_EMAIL}`);
+}
+
 // Noms « jolis » connus pour les marques de départ ; sinon = le slug.
 const RADIO_NAMES: Record<string, string> = {
   hitsdance: "Hits Dance Music",
@@ -98,7 +129,7 @@ async function ensureDefaultRadio(): Promise<string> {
 
 /* Back-remplit radio_id sur toute ligne orpheline (données créées AVANT le
    multi-tenant, ex. la prod Hits Dance existante). Idempotent : ne touche QUE
-   radio_id IS NULL. Les comptes `owner` (cross-radio) restent à null. */
+   radio_id IS NULL. Les comptes cross-radio (`owner` + `it`) restent à null. */
 async function backfillRadioId(radioId: string): Promise<void> {
   await db.update(artists).set({ radioId }).where(isNull(artists.radioId));
   await db.update(shows).set({ radioId }).where(isNull(shows.radioId));
@@ -111,7 +142,10 @@ async function backfillRadioId(radioId: string): Promise<void> {
   await db.update(pushSubscriptions).set({ radioId }).where(isNull(pushSubscriptions.radioId));
   await db.update(auditLog).set({ radioId }).where(isNull(auditLog.radioId));
   await db.update(uploadIntents).set({ radioId }).where(isNull(uploadIntents.radioId));
-  await db.update(users).set({ radioId }).where(and(isNull(users.radioId), ne(users.role, "owner")));
+  await db
+    .update(users)
+    .set({ radioId })
+    .where(and(isNull(users.radioId), ne(users.role, "owner"), ne(users.role, "it")));
   console.log("[seed] radio_id back-rempli sur les lignes orphelines (idempotent).");
 }
 
@@ -249,10 +283,12 @@ async function main() {
   // comptes y sont rattachés via radio_id.
   const radioId = await ensureDefaultRadio();
 
-  // Le superadmin (admin de la radio) + le propriétaire En Ondes sont toujours
-  // garantis (création/promotion idempotente).
+  // Le superadmin (admin de la radio), le propriétaire En Ondes (god mode) et
+  // le compte IT (technique cross-radio) sont toujours garantis (création/
+  // promotion idempotente).
   await seedSuperadmin(radioId);
   await seedOwner();
+  await seedIt();
 
   // Le contenu (animateurs / émissions / grille) n'est seedé QUE si la base
   // est vierge. Sur une base déjà peuplée, on ne touche à rien → les éditions

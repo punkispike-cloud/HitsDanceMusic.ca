@@ -2,6 +2,7 @@
 
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { useAuth } from "@/lib/auth";
+import { isEditorialAdmin } from "@/lib/types";
 import type { Artist } from "@/lib/types";
 
 const SOCIAL_KEYS = ["instagram", "facebook", "tiktok", "youtube", "website"] as const;
@@ -42,7 +43,7 @@ const columns: Column<Artist>[] = [
 
 export default function AnimateursPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "superadmin";
+  const isAdmin = isEditorialAdmin(user?.role);
 
   return (
     <CrudPage<Artist>

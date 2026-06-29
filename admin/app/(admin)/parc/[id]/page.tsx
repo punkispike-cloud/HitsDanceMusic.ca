@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
 import { Empty, Spinner, ErrorState } from "@/components/ui";
 import { TrendChart, type TrendPoint } from "@/components/trend-chart";
-import { formatDuration, type RadioSummary, type RadioHealth, type OwnerTimeseriesPoint, type RadioStatus } from "@/lib/types";
+import { formatDuration, isCrossRadio, type RadioSummary, type RadioHealth, type OwnerTimeseriesPoint, type RadioStatus } from "@/lib/types";
 import { RadioEditPanel } from "../page";
 
 const STATUS_LABEL: Record<RadioStatus, string> = { active: "Active", provisioning: "En montage", paused: "Suspendue" };
@@ -27,10 +27,11 @@ export default function RadioDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
+  const crossRadio = isCrossRadio(user?.role);
   const isOwner = user?.role === "owner";
 
   const load = useCallback(() => {
-    if (!isOwner) return;
+    if (!crossRadio) return;
     // En cas d'échec on garde radio=undefined + error (ne PAS confondre erreur et radio introuvable).
     setError(null);
     api
@@ -48,13 +49,13 @@ export default function RadioDetailPage() {
       .get<RadioHealth[]>("/v1/owner/health")
       .then((h) => setHealth(h.find((x) => x.id === id) ?? null))
       .catch(() => setHealth(null));
-  }, [isOwner, id]);
+  }, [crossRadio, id]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (!isOwner) return <Empty label="Réservé à l'opérateur (En Ondes)." />;
+  if (!crossRadio) return <Empty label="Réservé à l'opérateur (En Ondes) et à l'équipe IT." />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (radio === undefined) return <Spinner />;
   if (radio === null) return <Empty label="Radio introuvable." />;
@@ -85,9 +86,11 @@ export default function RadioDetailPage() {
         <span className={`status-dot ${radio.status === "active" ? "status-published" : "status-archived"}`} aria-hidden="true" />
         <span style={{ color: "var(--txt-dim)" }}>{STATUS_LABEL[radio.status]}</span>
         <div className="row-actions" style={{ marginLeft: "auto" }}>
-          <button className="btn btn-sm" type="button" onClick={() => setEditing(true)}>
-            Éditer cette radio
-          </button>
+          {isOwner && (
+            <button className="btn btn-sm" type="button" onClick={() => setEditing(true)}>
+              Éditer cette radio
+            </button>
+          )}
           <button className="btn btn-sm" type="button" onClick={() => selectRadio(radio.id)} disabled={selectedId === radio.id}>
             {selectedId === radio.id ? "Administrée" : "Administrer cette radio"}
           </button>
@@ -142,18 +145,20 @@ export default function RadioDetailPage() {
           <Row label="Domaines" value={(radio.domains ?? []).join(", ") || null} />
           <Row label="Flux" value={radio.streamUrl} />
           <Row label="Note" value={radio.billingNote} />
-          <p style={{ color: "var(--txt-faint)", fontSize: 12, marginTop: 10 }}>
-            Modifier ces infos : utilise le bouton{" "}
-            <button
-              className="btn btn-sm btn-ghost"
-              type="button"
-              onClick={() => setEditing(true)}
-              style={{ verticalAlign: "baseline" }}
-            >
-              Éditer cette radio
-            </button>{" "}
-            en haut de la page.
-          </p>
+          {isOwner && (
+            <p style={{ color: "var(--txt-faint)", fontSize: 12, marginTop: 10 }}>
+              Modifier ces infos : utilise le bouton{" "}
+              <button
+                className="btn btn-sm btn-ghost"
+                type="button"
+                onClick={() => setEditing(true)}
+                style={{ verticalAlign: "baseline" }}
+              >
+                Éditer cette radio
+              </button>{" "}
+              en haut de la page.
+            </p>
+          )}
         </div>
       </div>
 

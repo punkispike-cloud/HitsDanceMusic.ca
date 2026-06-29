@@ -1,17 +1,17 @@
-/* Lecture du journal d'audit (superadmin uniquement — expose acteurs + IP).
-   Monté sous /v1/admin/audit. */
+/* Lecture du journal d'audit — expose acteurs + IP. Ouvert au superadmin (sa
+   radio), à l'owner (god mode) et à `it` (monitoring technique cross-radio). */
 
 import { Hono } from "hono";
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { auditLog } from "../db/schema.js";
-import { requireMinRole } from "../middleware/rbac.js";
+import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
 export const auditAdminRoutes = new Hono<AppBindings>();
 
-auditAdminRoutes.get("/", requireMinRole("superadmin"), async (c) => {
+auditAdminRoutes.get("/", requireRole("superadmin", "it", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 100));
   const offset = Math.max(0, Number(c.req.query("offset")) || 0);

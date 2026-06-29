@@ -1,7 +1,9 @@
 /* CRUD d'administration, monté sous /v1/admin (requireAuth + adminTenant
    appliqués au montage → `radioId` résolu sur le contexte). Tout est filtré
    par radio (mur multi-tenant) : un admin ne voit/touche QUE sa radio.
-   Lecture : lecteur+. Écriture : superadmin+, ou animateur propriétaire. */
+   Lecture : lecteur+. Écriture éditoriale : superadmin + owner
+   (requireEditorialAdmin) — `it` est EXCLU (technique, pas éditorial) ; ou
+   animateur propriétaire (requireOwnershipOrAdmin). */
 
 import { Hono } from "hono";
 import { z } from "zod";
@@ -19,12 +21,14 @@ import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/valid
 import { hashPassword } from "../lib/password.js";
 import { badRequest, notFound, conflict, forbidden } from "../lib/errors.js";
 import {
-  requireMinRole,
+  requireRole,
+  requireEditorialAdmin,
   requireOwnershipOrAdmin,
   assertCanActAs,
   assertCanAssignRole,
   assertCanManageUser,
-  isAdminOrAbove,
+  isEditorialAdmin,
+  isCrossRadio,
   RANK,
 } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
@@ -87,7 +91,7 @@ adminRoutes.get("/artists", async (c) => {
   );
 });
 
-adminRoutes.post("/artists", requireMinRole("superadmin"), async (c) => {
+adminRoutes.post("/artists", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const body = artistInput.parse(await c.req.json());
   const slug = slugify(body.slug || body.name);
@@ -102,10 +106,11 @@ adminRoutes.post("/artists", requireMinRole("superadmin"), async (c) => {
 
 adminRoutes.patch(
   "/artists/:id",
-  // Un animateur peut éditer SA fiche (celle liée à son compte).
+  // Un animateur peut éditer SA fiche (celle liée à son compte). `it` est bloqué
+  // (pas éditorial, pas d'artiste).
   async (c, next) => {
     const user = c.get("user");
-    if (isAdminOrAbove(user.role)) return next();
+    if (isEditorialAdmin(user.role)) return next();
     if (user.artistId && user.artistId === c.req.param("id")) return next();
     throw forbidden("Tu ne peux modifier que ta propre fiche");
   },
@@ -125,7 +130,7 @@ adminRoutes.patch(
   },
 );
 
-adminRoutes.delete("/artists/:id", requireMinRole("superadmin"), async (c) => {
+adminRoutes.delete("/artists/:id", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const [row] = await db
     .delete(artists)
@@ -161,12 +166,13 @@ adminRoutes.get("/shows", async (c) => {
   );
 });
 
-adminRoutes.post("/shows", requireMinRole("animateur"), async (c) => {
+adminRoutes.post("/shows", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
   const body = showInput.parse(await c.req.json());
-  // Un animateur ne peut créer une émission que rattachée à lui-même.
-  const artistId = isAdminOrAbove(user.role) ? body.artistId ?? null : user.artistId;
+  // Un animateur ne peut créer une émission que rattachée à lui-même. `it` est
+  // bloqué au middleware (pas dans la liste) — pas éditorial.
+  const artistId = isEditorialAdmin(user.role) ? body.artistId ?? null : user.artistId;
   assertCanActAs(user, artistId);
   const slug = slugify(body.slug || body.title);
   if (await db.query.shows.findFirst({ where: and(eq(shows.radioId, radioId), eq(shows.slug, slug)) }))
@@ -225,12 +231,12 @@ adminRoutes.get("/schedule-slots", async (c) => {
   );
 });
 
-adminRoutes.post("/schedule-slots", requireMinRole("animateur"), async (c) => {
+adminRoutes.post("/schedule-slots", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
   const body = slotInput.parse(await c.req.json());
   if (body.startMin >= body.endMin) throw badRequest("startMin doit être < endMin");
-  const artistId = isAdminOrAbove(user.role) ? body.artistId ?? null : user.artistId;
+  const artistId = isEditorialAdmin(user.role) ? body.artistId ?? null : user.artistId;
   assertCanActAs(user, artistId);
   const [row] = await db.insert(scheduleSlots).values({ ...body, radioId, artistId }).returning();
   return c.json(row, 201);
@@ -294,11 +300,11 @@ adminRoutes.get("/episodes", async (c) => {
   );
 });
 
-adminRoutes.post("/episodes", requireMinRole("animateur"), async (c) => {
+adminRoutes.post("/episodes", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
   const body = episodeInput.parse(await c.req.json());
-  const artistId = isAdminOrAbove(user.role) ? body.artistId ?? null : user.artistId;
+  const artistId = isEditorialAdmin(user.role) ? body.artistId ?? null : user.artistId;
   if (!artistId) throw badRequest("artistId requis");
   assertCanActAs(user, artistId);
   const slug = slugify(body.slug || body.title);
@@ -371,11 +377,11 @@ adminRoutes.get("/mixes", async (c) => {
   );
 });
 
-adminRoutes.post("/mixes", requireMinRole("animateur"), async (c) => {
+adminRoutes.post("/mixes", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
   const body = mixInput.parse(await c.req.json());
-  const artistId = isAdminOrAbove(user.role) ? body.artistId ?? null : user.artistId;
+  const artistId = isEditorialAdmin(user.role) ? body.artistId ?? null : user.artistId;
   if (!artistId) throw badRequest("artistId requis");
   assertCanActAs(user, artistId);
   const slug = slugify(body.slug || body.title);
@@ -450,7 +456,7 @@ function assertSameRadioOrOwner(actorRole: string, targetRadioId: string | null,
   if (targetRadioId !== radioId) throw notFound("Utilisateur introuvable");
 }
 
-adminRoutes.get("/users", requireMinRole("superadmin"), async (c) => {
+adminRoutes.get("/users", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const q = c.req.query("q")?.trim();
   const where = and(
@@ -473,14 +479,15 @@ const userCreateSchema = registerSchema.extend({
   invite: z.boolean().optional(),
 });
 
-adminRoutes.post("/users", requireMinRole("superadmin"), async (c) => {
+adminRoutes.post("/users", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const actor = c.get("user");
   const body = userCreateSchema.parse(await c.req.json());
   assertCanAssignRole(actor, body.role); // anti-escalade : jamais un rôle au-dessus du sien
-  // Une fiche animateur liée doit appartenir à la radio du compte.
+  // Une fiche animateur liée doit appartenir à la radio du compte (un compte
+  // cross-radio — owner/it — n'a pas de radio ni d'artiste).
   if (body.artistId) {
-    const targetRadio = body.role === "owner" ? null : radioId;
+    const targetRadio = isCrossRadio(body.role) ? null : radioId;
     const art = await db.query.artists.findFirst({
       where: eq(artists.id, body.artistId),
       columns: { radioId: true },
@@ -496,8 +503,8 @@ adminRoutes.post("/users", requireMinRole("superadmin"), async (c) => {
   const [row] = await db
     .insert(users)
     .values({
-      // Un owner appartient à aucune radio (cross-radio) ; sinon = la radio courante.
-      radioId: body.role === "owner" ? null : radioId,
+      // Un compte cross-radio (owner/it) n'appartient à aucune radio ; sinon = la radio courante.
+      radioId: isCrossRadio(body.role) ? null : radioId,
       email: body.email,
       passwordHash: await hashPassword(rawPassword),
       displayName: body.displayName,
@@ -522,7 +529,7 @@ adminRoutes.post("/users", requireMinRole("superadmin"), async (c) => {
 });
 
 /* POST /users/:id/invite — (re)génère et envoie un lien d'invitation. */
-adminRoutes.post("/users/:id/invite", requireMinRole("superadmin"), async (c) => {
+adminRoutes.post("/users/:id/invite", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const actor = c.get("user");
   const user = await db.query.users.findFirst({ where: eq(users.id, c.req.param("id")) });
@@ -539,7 +546,7 @@ adminRoutes.post("/users/:id/invite", requireMinRole("superadmin"), async (c) =>
   return c.json({ ok: true, invited, emailConfigured: isResendConfigured() });
 });
 
-adminRoutes.patch("/users/:id", requireMinRole("superadmin"), async (c) => {
+adminRoutes.patch("/users/:id", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const actor = c.get("user");
   const id = c.req.param("id");
@@ -555,9 +562,10 @@ adminRoutes.patch("/users/:id", requireMinRole("superadmin"), async (c) => {
     throw badRequest("Tu ne peux pas te désactiver ni te rétrograder toi-même");
   }
   const patch: Record<string, unknown> = { ...body, updatedAt: new Date() };
-  // Invariant : owner = cross-radio (radio_id NULL). On re-dérive radio_id si le rôle change.
+  // Invariant : un compte cross-radio (owner/it) a radio_id NULL. On re-dérive
+  // radio_id si le rôle change.
   if (body.role) {
-    patch.radioId = body.role === "owner" ? null : target.role === "owner" ? radioId : target.radioId;
+    patch.radioId = isCrossRadio(body.role) ? null : isCrossRadio(target.role) ? radioId : target.radioId;
   }
   // Une fiche animateur liée doit appartenir à la radio (effective) du compte.
   if (body.artistId) {
@@ -573,7 +581,7 @@ adminRoutes.patch("/users/:id", requireMinRole("superadmin"), async (c) => {
   return c.json(publicUser(row));
 });
 
-adminRoutes.delete("/users/:id", requireMinRole("superadmin"), async (c) => {
+adminRoutes.delete("/users/:id", requireEditorialAdmin, async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const actor = c.get("user");
   const id = c.req.param("id");

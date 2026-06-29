@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Empty, Forbidden, ErrorState, TableSkeleton } from "@/components/ui";
+import { isCrossRadio } from "@/lib/types";
 import type { AuditEntry, AuditResponse } from "@/lib/types";
 
 const ACTION_LABEL: Record<string, string> = {
@@ -68,13 +69,15 @@ export default function JournalPage() {
     );
   }, [entity, action]);
 
-  if (user?.role !== "superadmin") {
+  // Page technique/audit : owner (god mode) + it (monitoring cross-radio) +
+  // superadmin (de sa radio). Les autres rôles → 403.
+  if (!(isCrossRadio(user?.role) || user?.role === "superadmin")) {
     return (
       <div>
         <div className="page-head">
           <h1>Journal d&apos;audit</h1>
         </div>
-        <Forbidden label="Réservé aux super-administrateurs." hint="Le journal d'audit n'est accessible qu'aux super-administrateurs." />
+        <Forbidden label="Réservé aux gestionnaires et à l'équipe IT." hint="Le journal d'audit n'est accessible qu'aux gestionnaires, à l'équipe IT et au propriétaire En Ondes." />
       </div>
     );
   }

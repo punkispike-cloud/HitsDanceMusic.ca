@@ -7,6 +7,7 @@ import { useToast } from "@/components/toast";
 import { Empty, ErrorState, TableSkeleton } from "@/components/ui";
 import {
   formatDuration,
+  isEditorialAdmin,
   type AnalyticsOverview,
   type AnalyticsShow,
   type AnalyticsSession,
@@ -243,7 +244,7 @@ const LIVE_WINDOW_MS = 60_000; // une session vue il y a moins de 60 s = « en d
 export default function StatistiquesPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const isAdmin = user?.role === "superadmin";
+  const isAdmin = isEditorialAdmin(user?.role);
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [shows, setShows] = useState<AnalyticsShow[] | null>(null);

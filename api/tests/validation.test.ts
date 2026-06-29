@@ -71,8 +71,8 @@ test("slotTagSchema : n'accepte que les tags connus", () => {
   assert.throws(() => slotTagSchema.parse("inexistant"));
 });
 
-test("roleSchema : accepte owner/superadmin/animateur/lecteur, rejette le reste", () => {
-  for (const r of ["owner", "superadmin", "animateur", "lecteur"]) {
+test("roleSchema : accepte owner/it/superadmin/animateur/lecteur, rejette le reste", () => {
+  for (const r of ["owner", "it", "superadmin", "animateur", "lecteur"]) {
     assert.doesNotThrow(() => roleSchema.parse(r));
   }
   assert.throws(() => roleSchema.parse("root"));

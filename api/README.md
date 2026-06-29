@@ -32,6 +32,8 @@ Construit en **Hono + Drizzle + PostgreSQL** (TypeScript, Node 20, ES modules).
    - `JWT_SECRET` = `openssl rand -base64 48`
    - `ALLOWED_ORIGINS` = `https://hitsdancemusic.ca,https://admin.hitsdancemusic.ca`
    - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (premier superadmin)
+   - `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD` (compte En Ondes — rôle `owner`, god mode cross-radio)
+   - `SEED_IT_EMAIL` / `SEED_IT_PASSWORD` / `SEED_IT_NAME` (compte IT — rôle `it`, monitoring technique cross-radio, sans accès éditorial/commercial ; optionnel)
    - (Phase 4) `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`
 4. **Migrations** : lancer une fois `npm run db:migrate` (Railway → `railway run`
    ou commande release). Puis `npm run seed` pour importer animateurs/émissions/grille.
@@ -78,11 +80,19 @@ docker run -d --name hr-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:1
 
 ## Rôles
 
-| Rôle | Droits |
-|---|---|
-| `superadmin` | tout |
-| `animateur` | édite uniquement SON contenu (sa fiche, ses émissions/épisodes/mixes/créneaux) |
-| `lecteur` | lecture seule de l'admin |
+Deux axes de capacité (le rang linéaire ne sert qu'à l'anti-escalade/gestion) :
+
+| Rôle | Scope | Éditorial | Technique cross-radio | Commercial (parc/billing) |
+|---|---|---|---|---|
+| `owner` | cross-radio | oui | oui | oui (god mode) |
+| `it` | cross-radio | non | oui (monitoring parc) | non |
+| `superadmin` | 1 radio | oui | non | non |
+| `animateur` | 1 radio (son contenu) | son contenu | non | non |
+| `lecteur` | 1 radio | lecture | non | non |
+
+- `owner` = En Ondes (opérateur de la plateforme) ; `superadmin` = admin d'une radio cliente.
+- `it` (IT) accède au monitoring technique du parc (santé, alertes, journal, stats) **sans** éditer le contenu ni toucher au billing.
+- Écriture éditoriale : `superadmin` + `owner` (`requireEditorialAdmin`), ou animateur **propriétaire** (ownership via `artist_id`). `it` en est exclu.
 
 ## Sécurité
 
