@@ -8,18 +8,23 @@ import {
   requireRole,
   requireMinRole,
   requireOwner,
+  requireItOrOwner,
+  requireEditorialAdmin,
   requireOwnershipOrAdmin,
   assertCanActAs,
   assertCanAssignRole,
   assertCanManageUser,
+  isEditorialAdmin,
+  isCrossRadio,
 } from "../src/middleware/rbac.ts";
 import { AppError } from "../src/lib/errors.ts";
 import type { AuthUser } from "../src/types.ts";
 
-const owner: AuthUser = { userId: "o", role: "owner", artistId: null };
-const su: AuthUser = { userId: "s", role: "superadmin", artistId: null };
-const dj: AuthUser = { userId: "d", role: "animateur", artistId: "artist-1" };
-const reader: AuthUser = { userId: "r", role: "lecteur", artistId: null };
+const owner: AuthUser = { userId: "o", role: "owner", artistId: null } as AuthUser;
+const it: AuthUser = { userId: "i", role: "it", artistId: null } as AuthUser;
+const su: AuthUser = { userId: "s", role: "superadmin", artistId: null } as AuthUser;
+const dj: AuthUser = { userId: "d", role: "animateur", artistId: "artist-1" } as AuthUser;
+const reader: AuthUser = { userId: "r", role: "lecteur", artistId: null } as AuthUser;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fakeCtx(user: AuthUser, params: Record<string, string> = {}): any {
@@ -128,4 +133,63 @@ test("assertCanManageUser : un superadmin ne peut PAS gérer un owner", () => {
   assert.throws(() => assertCanManageUser(su, "owner"), (e) => e instanceof AppError && e.status === 403);
   assert.doesNotThrow(() => assertCanManageUser(su, "superadmin"));
   assert.doesNotThrow(() => assertCanManageUser(owner, "superadmin"));
+});
+
+/* ───────────────────────── Rôle IT (technique cross-radio) ───────────────────────── */
+
+test("isEditorialAdmin : superadmin + owner oui ; it NON (cœur du refactor)", () => {
+  assert.equal(isEditorialAdmin("superadmin"), true);
+  assert.equal(isEditorialAdmin("owner"), true);
+  assert.equal(isEditorialAdmin("it"), false);
+  assert.equal(isEditorialAdmin("animateur"), false);
+  assert.equal(isEditorialAdmin("lecteur"), false);
+});
+
+test("isCrossRadio : owner + it oui ; superadmin NON (scopé à une radio)", () => {
+  assert.equal(isCrossRadio("owner"), true);
+  assert.equal(isCrossRadio("it"), true);
+  assert.equal(isCrossRadio("superadmin"), false);
+  assert.equal(isCrossRadio("animateur"), false);
+});
+
+test("requireEditorialAdmin : superadmin + owner passent ; it → 403", async () => {
+  assert.equal((await run(requireEditorialAdmin, fakeCtx(su))).nextCalled, true);
+  assert.equal((await run(requireEditorialAdmin, fakeCtx(owner))).nextCalled, true);
+  const res = await run(requireEditorialAdmin, fakeCtx(it));
+  assert.equal(res.nextCalled, false);
+  assert.equal((res.error as AppError).status, 403);
+});
+
+test("requireItOrOwner : owner + it passent ; superadmin → 403", async () => {
+  assert.equal((await run(requireItOrOwner, fakeCtx(owner))).nextCalled, true);
+  assert.equal((await run(requireItOrOwner, fakeCtx(it))).nextCalled, true);
+  const res = await run(requireItOrOwner, fakeCtx(su));
+  assert.equal(res.nextCalled, false);
+  assert.equal((res.error as AppError).status, 403);
+});
+
+test("requireOwnershipOrAdmin : it ne court-circuite PAS (pas éditorial) → 403", async () => {
+  let loaderCalled = false;
+  const loader = async () => { loaderCalled = true; return { artistId: "autre" }; };
+  const res = await run(requireOwnershipOrAdmin(loader), fakeCtx(it, { id: "x" }));
+  assert.equal(loaderCalled, true, "it doit charger la ressource (pas de court-circuit)");
+  assert.equal(res.nextCalled, false);
+  assert.equal((res.error as AppError).status, 403);
+});
+
+test("assertCanActAs : it bloqué (pas éditorial, pas d'artiste)", () => {
+  assert.throws(() => assertCanActAs(it, "n-importe"), (e) => e instanceof AppError && e.status === 403);
+  assert.throws(() => assertCanActAs(it, null), (e) => e instanceof AppError && e.status === 403);
+});
+
+test("assertCanAssignRole : owner peut attribuer it ; superadmin ne peut pas", () => {
+  assert.doesNotThrow(() => assertCanAssignRole(owner, "it"));
+  assert.throws(() => assertCanAssignRole(su, "it"), (e) => e instanceof AppError && e.status === 403);
+  // it ne peut pas attribuer owner (rang supérieur).
+  assert.throws(() => assertCanAssignRole(it, "owner"), (e) => e instanceof AppError && e.status === 403);
+});
+
+test("assertCanManageUser : superadmin ne peut pas gérer un it (rang supérieur)", () => {
+  assert.throws(() => assertCanManageUser(su, "it"), (e) => e instanceof AppError && e.status === 403);
+  assert.doesNotThrow(() => assertCanManageUser(owner, "it"));
 });

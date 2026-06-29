@@ -84,6 +84,11 @@ export const env = {
   // PROMEUT en owner s'il existe déjà (migration douce d'un superadmin existant).
   SEED_OWNER_EMAIL: optional("SEED_OWNER_EMAIL", ""),
   SEED_OWNER_PASSWORD: optional("SEED_OWNER_PASSWORD", ""),
+  // Compte IT (technique cross-radio) — rôle `it`, monitoring parc SANS accès
+  // éditorial/commercial. Optionnel, en miroir du compte owner. radioId NULL.
+  SEED_IT_EMAIL: optional("SEED_IT_EMAIL", ""),
+  SEED_IT_PASSWORD: optional("SEED_IT_PASSWORD", ""),
+  SEED_IT_NAME: optional("SEED_IT_NAME", "Équipe IT"),
   // Marque seedée : "hitsdance" → contenu démo Hits Dance. Tout autre valeur
   // (= nouveau client) → DB de contenu vierge, à remplir via l'admin.
   SEED_BRAND: optional("SEED_BRAND", "hitsdance"),

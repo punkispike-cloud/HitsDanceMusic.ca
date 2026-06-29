@@ -1,15 +1,16 @@
 "use client";
 
-/* Contexte « radio courante » pour la console opérateur (owner En Ondes).
-   - Pour l'owner : charge le parc et mémorise la radio administrée. La sélection
-     est posée comme en-tête X-Radio-Id (lu par adminTenant côté API) DÈS le 1er
-     rendu (initializer synchrone) → les pages requêtent la bonne radio.
-   - Pour les non-owner : aucun effet (leur radio vient du JWT). */
+/* Contexte « radio courante » pour la console opérateur (En Ondes).
+   - Pour owner + it (cross-radio) : charge le parc et mémorise la radio
+     administrée. La sélection est posée comme en-tête X-Radio-Id (lu par
+     adminTenant côté API) DÈS le 1er rendu (initializer synchrone) → les pages
+     requêtent la bonne radio.
+   - Pour les non-cross-radio : aucun effet (leur radio vient du JWT). */
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { api, setSelectedRadioId } from "./api";
 import { useAuth } from "./auth";
-import type { RadioSummary } from "./types";
+import { isCrossRadio, type RadioSummary } from "./types";
 
 const KEY = "enondes_radio";
 
@@ -18,14 +19,14 @@ interface RadioState {
   selectedId: string | null;
   selectRadio: (id: string) => void;
   refresh: () => void;
-  isOwner: boolean;
+  isCrossRadio: boolean;
 }
 
 const RadioContext = createContext<RadioState | null>(null);
 
 export function RadioProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const canSelect = isCrossRadio(user?.role);
 
   // Restaure la sélection AVANT les requêtes des pages (en-tête posé en synchrone).
   const [selectedId, setSelectedId] = useState<string | null>(() => {
@@ -37,7 +38,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   const [radios, setRadios] = useState<RadioSummary[]>([]);
 
   const loadParc = useCallback(() => {
-    if (!isOwner) return;
+    if (!canSelect) return;
     api
       .get<RadioSummary[]>("/v1/owner/radios")
       .then((rows) => {
@@ -50,7 +51,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
           setSelectedId(null);
           return;
         }
-        // 1er login owner avec PLUSIEURS radios et aucune sélection : on
+        // 1er login cross-radio avec PLUSIEURS radios et aucune sélection : on
         // auto-sélectionne la 1re (sinon tout l'admin tombe en 404, faute de
         // X-Radio-Id) et on recharge pour que les pages requêtent la bonne radio.
         // En mono-radio, inutile : le backend retombe sur l'unique radio.
@@ -61,7 +62,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => setRadios([]));
-  }, [isOwner]);
+  }, [canSelect]);
 
   useEffect(() => {
     loadParc();
@@ -75,7 +76,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <RadioContext.Provider value={{ radios, selectedId, selectRadio, refresh: loadParc, isOwner }}>
+    <RadioContext.Provider value={{ radios, selectedId, selectRadio, refresh: loadParc, isCrossRadio: canSelect }}>
       {children}
     </RadioContext.Provider>
   );

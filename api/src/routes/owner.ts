@@ -1,13 +1,16 @@
-/* Console OPÉRATEUR (En Ondes). Routes cross-radio réservées au rôle `owner` :
-   le parc, les stats agrégées, la création / gestion des radios. Ces routes ne
-   sont PAS scopées à une seule radio (pas d'adminTenant) — l'owner voit tout. */
+/* Console OPÉRATEUR (En Ondes). Routes cross-radio scopées au parc entier (pas
+   d'adminTenant). Deux axes d'accès :
+   - Technique (monitoring parc, santé, alertes, rapports) : owner + it
+     (requireItOrOwner).
+   - Commercial (création/provisioning d'une radio, forfait/flux/billing) :
+     owner seul (requireOwner). `it` ne peut ni créer ni modifier le billing. */
 
 import { Hono } from "hono";
 import { z } from "zod";
 import { sql, eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { radios, artists, shows, analyticsSessions } from "../db/schema.js";
-import { requireOwner } from "../middleware/rbac.js";
+import { requireOwner, requireItOrOwner } from "../middleware/rbac.js";
 import { conflict, notFound } from "../lib/errors.js";
 import { slugify } from "../lib/validation.js";
 import { invalidateRadioCache } from "../services/tenant.js";
@@ -17,11 +20,8 @@ import type { AppBindings } from "../types.js";
 
 export const ownerRoutes = new Hono<AppBindings>();
 
-// Tout est owner-only.
-ownerRoutes.use("*", requireOwner);
-
 /* GET /v1/owner/overview — totaux agrégés sur TOUT le parc. */
-ownerRoutes.get("/overview", async (c) => {
+ownerRoutes.get("/overview", requireItOrOwner, async (c) => {
   const [rc] = await db
     .select({
       total: sql<number>`count(*)::int`,
@@ -49,7 +49,7 @@ ownerRoutes.get("/overview", async (c) => {
 });
 
 /* GET /v1/owner/radios — le parc + KPIs par radio (comparaison radio par radio). */
-ownerRoutes.get("/radios", async (c) => {
+ownerRoutes.get("/radios", requireItOrOwner, async (c) => {
   const rows = await db.select().from(radios).orderBy(radios.createdAt);
 
   const sess = await db
@@ -123,8 +123,9 @@ const radioCreate = z.object({
 });
 
 /* POST /v1/owner/radios — crée une radio (tenant). Démarre en "provisioning".
-   Le branchement du flux AzuraCast viendra en Phase 9. */
-ownerRoutes.post("/radios", async (c) => {
+   Commercial : owner seul (le provisioning AzuraCast + le forfait relèvent du
+   billing). Le branchement du flux AzuraCast viendra en Phase 9. */
+ownerRoutes.post("/radios", requireOwner, async (c) => {
   const body = radioCreate.parse(await c.req.json());
   const slug = slugify(body.slug || body.name);
   if (await db.query.radios.findFirst({ where: eq(radios.slug, slug) }))
@@ -183,8 +184,9 @@ const radioPatch = z.object({
   licenseConfirmed: z.boolean().optional(),
 });
 
-/* PATCH /v1/owner/radios/:id — gère une radio (statut, flux, forfait, note). */
-ownerRoutes.patch("/radios/:id", async (c) => {
+/* PATCH /v1/owner/radios/:id — gère une radio (statut, flux, forfait, note).
+   Commercial : owner seul (statut/flux/forfait/billing). */
+ownerRoutes.patch("/radios/:id", requireOwner, async (c) => {
   const body = radioPatch.parse(await c.req.json());
   const [row] = await db
     .update(radios)
@@ -198,7 +200,7 @@ ownerRoutes.patch("/radios/:id", async (c) => {
 
 /* GET /v1/owner/health — ping du flux (now-playing/stream) de chaque radio.
    Statut : up | down | none (pas d'URL). Best-effort, timeout 5s, en parallèle. */
-ownerRoutes.get("/health", async (c) => {
+ownerRoutes.get("/health", requireItOrOwner, async (c) => {
   const rows = await db
     .select({ id: radios.id, np: radios.nowPlayingUrl, stream: radios.streamUrl })
     .from(radios);
@@ -224,7 +226,7 @@ ownerRoutes.get("/health", async (c) => {
 
 /* GET /v1/owner/alerts — radios actives en état problématique (flux down / silence),
    alimenté par le service de surveillance (services/monitor.ts). */
-ownerRoutes.get("/alerts", async (c) => {
+ownerRoutes.get("/alerts", requireItOrOwner, async (c) => {
   const rows = await db
     .select({
       id: radios.id,
@@ -243,7 +245,7 @@ ownerRoutes.get("/alerts", async (c) => {
 
 /* GET /v1/owner/radios/:id/report?year=&month= — aperçu du rapport mensuel (JSON,
    sans envoi). Défaut : mois précédent. Sert à tester / prévisualiser. */
-ownerRoutes.get("/radios/:id/report", async (c) => {
+ownerRoutes.get("/radios/:id/report", requireItOrOwner, async (c) => {
   const now = new Date();
   const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const year = Number(c.req.query("year")) || prev.getUTCFullYear();
@@ -255,7 +257,7 @@ ownerRoutes.get("/radios/:id/report", async (c) => {
 
 /* GET /v1/owner/timeseries?days=30&radio=<id?> — série quotidienne (visiteurs +
    écoute). Agrégée sur tout le parc, ou scopée à une radio si `radio` fourni. */
-ownerRoutes.get("/timeseries", async (c) => {
+ownerRoutes.get("/timeseries", requireItOrOwner, async (c) => {
   const days = Math.min(180, Math.max(1, Number(c.req.query("days")) || 30));
   const radio = c.req.query("radio");
   const radioFilter = radio ? sql`AND s.radio_id = ${radio}` : sql``;

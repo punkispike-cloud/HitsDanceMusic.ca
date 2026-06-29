@@ -22,7 +22,8 @@ import { relations, sql } from "drizzle-orm";
 
 /* ───────────────────────── Enums ───────────────────────── */
 
-export const userRole = pgEnum("user_role", ["owner", "superadmin", "animateur", "lecteur"]);
+// `it` = technique cross-radio (monitoring parc, sans droit éditorial).
+export const userRole = pgEnum("user_role", ["owner", "superadmin", "animateur", "lecteur", "it"]);
 
 // Cycle de vie d'une radio cliente dans le parc (multi-tenant).
 export const radioStatus = pgEnum("radio_status", ["active", "provisioning", "paused"]);

@@ -12,7 +12,7 @@ import { uploadIntents, episodes, mixes } from "../db/schema.js";
 import { env } from "../env.js";
 import { badRequest, notFound, forbidden, AppError } from "../lib/errors.js";
 import { presignPut, headObject, publicUrl, isS3Configured } from "../lib/s3.js";
-import { requireMinRole, assertCanActAs, isAdminOrAbove } from "../middleware/rbac.js";
+import { requireRole, assertCanActAs, isEditorialAdmin } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
@@ -45,8 +45,9 @@ const presignSchema = z.object({
   sizeBytes: z.number().int().positive(),
 });
 
-/* POST /v1/admin/uploads/presign */
-uploadRoutes.post("/presign", requireMinRole("animateur"), async (c) => {
+/* POST /v1/admin/uploads/presign — éditorial (animateur + superadmin + owner).
+   `it` EXCLU : pas d'upload de contenu. */
+uploadRoutes.post("/presign", requireRole("animateur", "superadmin", "owner"), async (c) => {
   ensureS3();
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
@@ -83,8 +84,9 @@ const confirmSchema = z.object({
   durationSec: z.number().int().positive().optional(),
 });
 
-/* POST /v1/admin/uploads/confirm */
-uploadRoutes.post("/confirm", requireMinRole("animateur"), async (c) => {
+/* POST /v1/admin/uploads/confirm — éditorial (animateur + superadmin + owner).
+   `it` EXCLU. */
+uploadRoutes.post("/confirm", requireRole("animateur", "superadmin", "owner"), async (c) => {
   ensureS3();
   const radioId = requireRadioId(c.get("radioId"));
   const user = c.get("user");
@@ -94,7 +96,7 @@ uploadRoutes.post("/confirm", requireMinRole("animateur"), async (c) => {
     where: and(eq(uploadIntents.id, body.intentId), eq(uploadIntents.radioId, radioId)),
   });
   if (!intent) throw notFound("Intent d'upload introuvable");
-  if (intent.userId !== user.userId && !isAdminOrAbove(user.role))
+  if (intent.userId !== user.userId && !isEditorialAdmin(user.role))
     throw forbidden("Cet upload ne t'appartient pas");
 
   const head = await headObject(intent.objectKey);

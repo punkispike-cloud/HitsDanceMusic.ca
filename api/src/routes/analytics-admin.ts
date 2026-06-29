@@ -7,7 +7,7 @@ import { Hono } from "hono";
 import { sql, eq, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
-import { requireMinRole } from "../middleware/rbac.js";
+import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
@@ -150,8 +150,9 @@ analyticsAdminRoutes.get("/breakdown", async (c) => {
   });
 });
 
-/* GET /v1/admin/analytics/sessions — détail des visiteurs (IP…). Superadmin. */
-analyticsAdminRoutes.get("/sessions", requireMinRole("superadmin"), async (c) => {
+/* GET /v1/admin/analytics/sessions — détail des visiteurs (IP…). Éditorial :
+   superadmin + owner. `it` EXCLU (les sessions exposent des IP). */
+analyticsAdminRoutes.get("/sessions", requireRole("superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const limit = Math.min(500, Math.max(1, Number(c.req.query("limit")) || 200));
   const rows = await db
@@ -163,8 +164,9 @@ analyticsAdminRoutes.get("/sessions", requireMinRole("superadmin"), async (c) =>
   return c.json(rows);
 });
 
-/* GET /v1/admin/analytics/export?type=sessions|shows — CSV. Superadmin. */
-analyticsAdminRoutes.get("/export", requireMinRole("superadmin"), async (c) => {
+/* GET /v1/admin/analytics/export?type=sessions|shows — CSV. Éditorial :
+   superadmin + owner. `it` EXCLU (le CSV sessions expose les IP). */
+analyticsAdminRoutes.get("/export", requireRole("superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const type = c.req.query("type") === "shows" ? "shows" : "sessions";
   let csv: string;

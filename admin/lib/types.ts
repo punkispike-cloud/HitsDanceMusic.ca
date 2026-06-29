@@ -1,19 +1,32 @@
 /* Types partagés côté admin (miroir des entités de l'API). */
 
-export type Role = "owner" | "superadmin" | "animateur" | "lecteur";
+export type Role = "owner" | "superadmin" | "animateur" | "lecteur" | "it";
 
-/** Hiérarchie : owner > superadmin > animateur > lecteur (miroir de l'API). */
-export const ROLE_RANK: Record<Role, number> = { lecteur: 1, animateur: 2, superadmin: 3, owner: 4 };
+/** Hiérarchie linéaire (anti-escalade/gestion uniquement — miroir de l'API) :
+    owner > it > superadmin > animateur > lecteur. NB : ce rang ne dit rien des
+    CAPACITÉS (éditorial vs cross-radio) — cf. isEditorialAdmin/isCrossRadio. */
+export const ROLE_RANK: Record<Role, number> = { lecteur: 1, animateur: 2, superadmin: 3, it: 4, owner: 5 };
 
-/** Le rôle est-il au moins de rang `min` ? (owner satisfait toujours superadmin). */
+/** Le rôle est-il au moins de rang `min` ? (rang linéaire, anti-escalade). */
 export function roleAtLeast(role: Role | undefined | null, min: Role): boolean {
   return !!role && ROLE_RANK[role] >= ROLE_RANK[min];
 }
 
-/** Libellés affichés (la valeur DB reste `superadmin`/`owner`). */
+/** Axe ÉDITORIAL : gère le contenu d'une radio = superadmin + owner. EXCLUT `it`. */
+export function isEditorialAdmin(role: Role | undefined | null): boolean {
+  return role === "superadmin" || role === "owner";
+}
+
+/** Axe CROSS-RADIO (parc / technique) = owner + it. EXCLUT superadmin. */
+export function isCrossRadio(role: Role | undefined | null): boolean {
+  return role === "owner" || role === "it";
+}
+
+/** Libellés affichés (la valeur DB reste `superadmin`/`owner`/`it`). */
 export const ROLE_LABEL: Record<Role, string> = {
-  owner: "Propriétaire",
-  superadmin: "Admin",
+  owner: "En Ondes",
+  it: "IT",
+  superadmin: "Gestionnaire",
   animateur: "Animateur",
   lecteur: "Lecteur",
 };

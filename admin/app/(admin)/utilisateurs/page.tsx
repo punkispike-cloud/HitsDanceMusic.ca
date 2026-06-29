@@ -6,7 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
 import { Spinner, Forbidden, ErrorState } from "@/components/ui";
-import { roleAtLeast, ROLE_LABEL } from "@/lib/types";
+import { isEditorialAdmin, ROLE_LABEL } from "@/lib/types";
 import type { AdminUser, Artist } from "@/lib/types";
 
 const columns: Column<AdminUser>[] = [
@@ -69,26 +69,28 @@ export default function UtilisateursPage() {
     loadArtists();
   }, [loadArtists]);
 
-  if (!user || !roleAtLeast(user.role, "superadmin")) {
+  if (!user || !isEditorialAdmin(user.role)) {
     return (
       <div>
         <div className="page-head">
           <h1>Utilisateurs</h1>
         </div>
-        <Forbidden label="Réservé aux super-administrateurs." hint="La gestion des comptes n'est accessible qu'aux super-administrateurs." />
+        <Forbidden label="Réservé aux gestionnaires." hint="La gestion des comptes n'est accessible qu'aux gestionnaires et au propriétaire En Ondes (l'équipe IT est exclue)." />
       </div>
     );
   }
   if (artistsError) return <ErrorState message={artistsError} onRetry={loadArtists} />;
   if (!artists) return <Spinner label="Chargement des comptes…" />;
 
-  // Le rôle « Propriétaire » (owner) n'est proposé qu'à un owner (anti-escalade,
-  // miroir du bornage côté API).
+  // Les rôles « En Ondes » (owner) et « IT » ne sont proposés qu'à un owner
+  // (anti-escalade : RANK[it]=4 > RANK[superadmin]=3 → un gestionnaire ne peut
+  // pas les attribuer, miroir du bornage côté API).
   const roleOptions = [
     ...(user.role === "owner" ? [{ value: "owner", label: ROLE_LABEL.owner }] : []),
     { value: "superadmin", label: ROLE_LABEL.superadmin },
     { value: "animateur", label: ROLE_LABEL.animateur },
     { value: "lecteur", label: ROLE_LABEL.lecteur },
+    ...(user.role === "owner" ? [{ value: "it", label: ROLE_LABEL.it }] : []),
   ];
 
   // Champs création (POST /users) : email + password requis ; édition gérée à part.

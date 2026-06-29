@@ -5,7 +5,7 @@ import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Spinner, ErrorState } from "@/components/ui";
-import { SLOT_TAGS, tagColor, type Artist, type Show } from "@/lib/types";
+import { SLOT_TAGS, tagColor, isEditorialAdmin, type Artist, type Show } from "@/lib/types";
 
 const columns: Column<Show>[] = [
   { key: "title", label: "Titre" },
@@ -77,7 +77,7 @@ export default function EmissionsPage() {
     { name: "isPublished", label: "Publié", type: "checkbox", default: true },
   ];
 
-  const isAdmin = user?.role === "superadmin";
+  const isAdmin = isEditorialAdmin(user?.role);
   const owns = (r: Show) => isAdmin || (user?.artistId != null && r.artistId === user.artistId);
 
   return (

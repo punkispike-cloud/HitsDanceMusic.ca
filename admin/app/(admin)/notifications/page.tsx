@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
 import { Spinner, Field, Forbidden, ErrorState } from "@/components/ui";
+import { isCrossRadio } from "@/lib/types";
 import type { PushStats, Show } from "@/lib/types";
 
 export default function NotificationsPage() {
@@ -61,13 +62,15 @@ export default function NotificationsPage() {
     }
   };
 
-  if (user?.role !== "superadmin") {
+  // Page opérationnelle : owner (god mode) + it (monitoring cross-radio) +
+  // superadmin (de sa radio). Les autres rôles → 403.
+  if (!(isCrossRadio(user?.role) || user?.role === "superadmin")) {
     return (
       <div>
         <div className="page-head">
           <h1>Notifications</h1>
         </div>
-        <Forbidden label="Réservé aux super-administrateurs." hint="L'envoi de notifications push n'est accessible qu'aux super-administrateurs." />
+        <Forbidden label="Réservé aux gestionnaires et à l'équipe IT." hint="L'envoi de notifications push n'est accessible qu'aux gestionnaires, à l'équipe IT et au propriétaire En Ondes." />
       </div>
     );
   }
