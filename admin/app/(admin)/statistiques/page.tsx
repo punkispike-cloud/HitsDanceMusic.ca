@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { mutate } from "swr";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  useAnalyticsOverview,
+  useAnalyticsGeo,
+  useAnalyticsSessions,
+  useAnalyticsShows,
+  useAnalyticsTimeseries,
+  useAnalyticsBreakdown,
+} from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Empty, ErrorState, TableSkeleton } from "@/components/ui";
-import {
-  formatDuration,
-  isEditorialAdmin,
-  type AnalyticsOverview,
-  type AnalyticsShow,
-  type AnalyticsSession,
-  type AnalyticsPoint,
-  type GeoPoint,
-  type AnalyticsBreakdown,
-} from "@/lib/types";
+import { formatDuration, isEditorialAdmin, type AnalyticsPoint } from "@/lib/types";
 import VisitorMap from "./VisitorMap";
 
 /* Icônes inline (24x24, currentColor, stroke ~1.75) — accompagnent un libellé
@@ -246,14 +246,7 @@ export default function StatistiquesPage() {
   const toast = useToast();
   const isAdmin = isEditorialAdmin(user?.role);
 
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
-  const [shows, setShows] = useState<AnalyticsShow[] | null>(null);
-  const [sessions, setSessions] = useState<AnalyticsSession[] | null>(null);
-  const [series, setSeries] = useState<AnalyticsPoint[] | null>(null);
-  const [geo, setGeo] = useState<GeoPoint[] | null>(null);
-  const [breakdown, setBreakdown] = useState<AnalyticsBreakdown | null>(null);
   const [days, setDays] = useState(30);
-  const [error, setError] = useState<string | null>(null);
   const [auto, setAuto] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -262,46 +255,32 @@ export default function StatistiquesPage() {
   const prevLiveRef = useRef(0);
   const seenCountriesRef = useRef<Set<string> | null>(null);
 
-  // Données qui bougent vite : compteur « en direct » + sessions visiteurs.
-  const loadLive = useCallback(async () => {
-    try {
-      const [ov, g] = await Promise.all([
-        api.get<AnalyticsOverview>("/v1/admin/analytics/overview"),
-        api.get<GeoPoint[]>("/v1/admin/analytics/geo"),
-      ]);
-      setOverview(ov);
-      setGeo(g);
-      if (isAdmin) {
-        setSessions(await api.get<AnalyticsSession[]>("/v1/admin/analytics/sessions"));
-      }
-      setUpdatedAt(Date.now());
-      setError(null);
-    } catch {
-      /* on garde l'affichage précédent — pas de page blanche sur un hoquet réseau.
-         L'erreur n'est REMONTÉE que si l'on n'a encore aucune donnée à afficher
-         (1er chargement raté) → distingue l'erreur du vide. */
-      setOverview((prev) => {
-        if (prev === null) setError("Impossible de charger les statistiques.");
-        return prev;
-      });
-    }
-  }, [isAdmin]);
-
-  // Données qui bougent lentement : graphe par jour + répartition par émission.
-  const loadHeavy = useCallback(async () => {
-    try {
-      const [sh, ts, bd] = await Promise.all([
-        api.get<AnalyticsShow[]>("/v1/admin/analytics/shows"),
-        api.get<AnalyticsPoint[]>(`/v1/admin/analytics/timeseries?days=${days}`),
-        api.get<AnalyticsBreakdown>("/v1/admin/analytics/breakdown"),
-      ]);
-      setShows(sh);
-      setSeries(ts);
-      setBreakdown(bd);
-    } catch {
-      /* idem : best-effort */
-    }
-  }, [days]);
+  // Data-layer SWR : clés radio-scopées (incluant selectedRadioId via rkey) →
+  // changer de radio change la clé → re-fetch auto, sans remont du sous-arbre.
+  // Le polling est porté par `refreshInterval` (4 s « live », 60 s « lourd ») ;
+  // `refreshWhenHidden` false par défaut → pause auto onglet masqué ; interval
+  // 0 quand `auto` est coupé. `keepPreviousData` (posé dans les hooks) garde la
+  // radio / la période précédente pendant le fetch (pas de flash).
+  const liveInterval = auto ? LIVE_MS : 0;
+  const heavyInterval = auto ? HEAVY_MS : 0;
+  const overviewRes = useAnalyticsOverview({
+    refreshInterval: liveInterval,
+    onSuccess: () => setUpdatedAt(Date.now()),
+  });
+  const geoRes = useAnalyticsGeo({ refreshInterval: liveInterval });
+  const sessionsRes = useAnalyticsSessions(isAdmin, { refreshInterval: liveInterval });
+  const showsRes = useAnalyticsShows({ refreshInterval: heavyInterval });
+  const seriesRes = useAnalyticsTimeseries(days, { refreshInterval: heavyInterval });
+  const breakdownRes = useAnalyticsBreakdown({ refreshInterval: heavyInterval });
+  const overview = overviewRes.data;
+  const geo = geoRes.data;
+  const sessions = sessionsRes.data;
+  const shows = showsRes.data;
+  const series = seriesRes.data;
+  const breakdown = breakdownRes.data;
+  // Erreur : seul le 1er échec (aucune donnée encore) bascule en état erreur —
+  // les hoquets réseau ultérieurs gardent l'affichage précédent (best-effort).
+  const error = !overview && overviewRes.error ? "Impossible de charger les statistiques." : null;
 
   // Émet une alerte : toast in-app + notification navigateur (si autorisée).
   const fireAlert = useCallback(
@@ -318,36 +297,13 @@ export default function StatistiquesPage() {
     [toast, notifOn],
   );
 
+  // Revalide toutes les clés analytics (retry + bouton « Rafraîchir »).
   const refreshAll = useCallback(() => {
-    void loadLive();
-    void loadHeavy();
-  }, [loadLive, loadHeavy]);
-
-  // Chargement initial + recharge « lourde » quand la période change.
-  useEffect(() => {
-    void loadHeavy();
-  }, [loadHeavy]);
-  useEffect(() => {
-    void loadLive();
-  }, [loadLive]);
-
-  // Boucle « live » (~4 s) — en pause si auto désactivé ou onglet masqué.
-  useEffect(() => {
-    if (!auto) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void loadLive();
-    }, LIVE_MS);
-    return () => clearInterval(id);
-  }, [auto, loadLive]);
-
-  // Boucle « lourde » (60 s).
-  useEffect(() => {
-    if (!auto) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void loadHeavy();
-    }, HEAVY_MS);
-    return () => clearInterval(id);
-  }, [auto, loadHeavy]);
+    void mutate(
+      (key) =>
+        Array.isArray(key) && typeof key[0] === "string" && key[0].startsWith("/v1/admin/analytics"),
+    );
+  }, []);
 
   // Horloge 1 s pour l'étiquette « maj il y a Xs » + recalcul des points « live ».
   useEffect(() => {
@@ -504,7 +460,7 @@ export default function StatistiquesPage() {
           </div>
 
           <h2 style={{ marginTop: 28 }}>Carte des visiteurs en direct</h2>
-          <VisitorMap points={geo} now={nowTick} />
+          <VisitorMap points={geo ?? null} now={nowTick} />
 
           <h2 style={{ marginTop: 28 }}>Détails de l&apos;audience</h2>
           <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>

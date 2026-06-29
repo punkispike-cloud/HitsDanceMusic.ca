@@ -6,22 +6,21 @@
    Accès cross-radio : owner (god mode, + actions commerciales) + it (monitoring
    technique SANS actions commerciales — provisioning/billing masqués). */
 
-import { useEffect, useState, useCallback, useRef, useId, type ReactNode, type FormEvent } from "react";
+import { useState, useRef, useId, type ReactNode, type FormEvent } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
+import { useParc } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Empty, ErrorState, TableSkeleton, Modal } from "@/components/ui";
-import { TrendChart, type TrendPoint } from "@/components/trend-chart";
+import { TrendChart } from "@/components/trend-chart";
 import {
   formatDuration,
   isCrossRadio,
   type RadioSummary,
-  type OwnerOverview,
   type RadioStatus,
   type RadioHealth,
-  type OwnerTimeseriesPoint,
 } from "@/lib/types";
 
 const STATUS_LABEL: Record<RadioStatus, string> = {
@@ -38,15 +37,10 @@ export default function ParcPage() {
   const { user } = useAuth();
   const { selectedId, selectRadio, refresh } = useRadio();
   const toast = useToast();
-  const [overview, setOverview] = useState<OwnerOverview | null>(null);
-  const [radios, setRadios] = useState<RadioSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<RadioSummary | null>(null);
-  // Confirmation de changement de statut (couper/relancer le direct).
+  // Confirmation de changement de statut (couper / relancer le direct).
   const [confirmStatus, setConfirmStatus] = useState<{ radio: RadioSummary; status: RadioStatus } | null>(null);
-  const [health, setHealth] = useState<Record<string, RadioHealth>>({});
-  const [series, setSeries] = useState<TrendPoint[]>([]);
   const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
 
   // Accès cross-radio (owner + it). Les actions commerciales (provisioning,
@@ -54,36 +48,11 @@ export default function ParcPage() {
   const crossRadio = isCrossRadio(user?.role);
   const isOwner = user?.role === "owner";
 
-  const load = useCallback(() => {
-    // Chargement: en cas d'échec on garde radios=null + error (ne PAS confondre erreur et vide).
-    setError(null);
-    Promise.all([
-      api.get<OwnerOverview>("/v1/owner/overview"),
-      api.get<RadioSummary[]>("/v1/owner/radios"),
-    ])
-      .then(([ov, rs]) => {
-        setOverview(ov);
-        setRadios(rs);
-      })
-      .catch((e) => {
-        setRadios(null);
-        setOverview(null);
-        setError((e as ApiError).message || "Impossible de charger le parc.");
-      });
-    // Données secondaires (santé / courbe): non bloquantes pour l'affichage de la table.
-    api
-      .get<RadioHealth[]>("/v1/owner/health")
-      .then((h) => setHealth(Object.fromEntries(h.map((x) => [x.id, x]))))
-      .catch(() => setHealth({}));
-    api
-      .get<OwnerTimeseriesPoint[]>("/v1/owner/timeseries?days=30")
-      .then((rows) => setSeries(rows.map((r) => ({ day: r.day, value: r.sessions }))))
-      .catch(() => setSeries([]));
-  }, []);
-
-  useEffect(() => {
-    if (crossRadio) load();
-  }, [crossRadio, load]);
+  // Console opérateur NON radio-scopée : clés SANS selectedRadioId (la flotte ne
+  // dépend pas de la radio administrée). `enabled = crossRadio` évite un fetch
+  // (et un 403) pour les non-cross-radio. `reload` revalide les 4 clés.
+  const { overview, radios, health, series, error, reload } = useParc(crossRadio);
+  const loadError = error ? (error as ApiError).message || "Impossible de charger le parc." : null;
 
   if (!crossRadio) {
     return (
@@ -95,14 +64,14 @@ export default function ParcPage() {
       </div>
     );
   }
-  if (error) return <ErrorState message={error} onRetry={load} />;
-  if (radios === null || overview === null) return <TableSkeleton cols={8} />;
+  if (loadError) return <ErrorState message={loadError} onRetry={reload} />;
+  if (!overview || !radios) return <TableSkeleton cols={8} />;
 
   const setStatus = async (r: RadioSummary, status: RadioStatus) => {
     try {
       await api.patch(`/v1/owner/radios/${r.id}`, { status });
       toast("Radio mise à jour ✓", "ok");
-      load();
+      void reload();
       refresh();
     } catch (e) {
       toast((e as ApiError).message, "error");
@@ -184,7 +153,7 @@ export default function ParcPage() {
       toast("Radio créée ✓ (statut : en montage)", "ok");
       setForm({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
       setFormErrors({});
-      load();
+      void reload();
       refresh();
     } catch (err) {
       toast((err as ApiError).message, "error");
@@ -347,7 +316,7 @@ export default function ParcPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            load();
+            void reload();
             refresh();
           }}
         />

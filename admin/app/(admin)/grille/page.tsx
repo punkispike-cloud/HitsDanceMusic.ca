@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useSchedule, useArtists } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Modal, Field, Spinner, ConfirmDelete, Empty, ErrorState } from "@/components/ui";
 import {
@@ -13,7 +14,6 @@ import {
   hhmmToMin,
   isEditorialAdmin,
   type ScheduleSlot,
-  type Artist,
   type SlotTag,
 } from "@/lib/types";
 
@@ -45,35 +45,27 @@ export default function GrillePage() {
   const toast = useToast();
   const isAdmin = isEditorialAdmin(user?.role);
 
-  const [slots, setSlots] = useState<ScheduleSlot[] | null>(null);
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState(1);
   const [editing, setEditing] = useState<ScheduleSlot | "new" | null>(null);
   const [form, setForm] = useState<SlotForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<ScheduleSlot | null>(null);
 
-  const load = async () => {
-    setError(null);
-    try {
-      const [s, a] = await Promise.all([
-        api.get<ScheduleSlot[]>("/v1/admin/schedule-slots"),
-        api.get<Artist[]>("/v1/admin/artists"),
-      ]);
-      setSlots(s);
-      setArtists(a);
-    } catch (e) {
-      const msg = (e as ApiError).message;
-      toast(msg, "error");
-      // Ne PAS faire setSlots([]) : on distinguerait alors une panne d'un parc vide.
-      setError(msg);
-    }
-  };
+  // Grille + animateurs via le cache SWR (clés radio-scopées). keepPreviousData
+  // garde la grille de la radio précédente pendant le fetch de la nouvelle.
+  const schedule = useSchedule();
+  const artistsRes = useArtists();
+  const slots = schedule.data;
+  const artists = artistsRes.data ?? [];
+  const fetchError = schedule.error || artistsRes.error;
+  const error = fetchError ? (fetchError as ApiError).message : null;
+  // Toast sur l'apparition d'une erreur de chargement (transition null → msg).
+  const prevErrRef = useRef<string | null>(null);
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (error && error !== prevErrRef.current) toast(error, "error");
+    prevErrRef.current = error;
+  }, [error, toast]);
+  const reload = () => Promise.all([schedule.mutate(), artistsRes.mutate()]);
 
   const daySlots = useMemo(
     () => (slots ?? []).filter((s) => s.dayOfWeek === day).sort((a, b) => a.startMin - b.startMin),
@@ -127,7 +119,7 @@ export default function GrillePage() {
         toast("Créneau modifié ✓", "ok");
       }
       setEditing(null);
-      await load();
+      await schedule.mutate();
     } catch (e) {
       toast((e as ApiError).message, "error");
     } finally {
@@ -141,7 +133,7 @@ export default function GrillePage() {
       await api.del(`/v1/admin/schedule-slots/${deleting.id}`);
       toast("Créneau supprimé", "ok");
       setDeleting(null);
-      await load();
+      await schedule.mutate();
     } catch (e) {
       toast((e as ApiError).message, "error");
       setDeleting(null);
@@ -190,8 +182,8 @@ export default function GrillePage() {
       )}
 
       {error ? (
-        <ErrorState message={error} onRetry={load} />
-      ) : slots === null ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : !slots ? (
         <Spinner />
       ) : daySlots.length === 0 ? (
         <Empty label="Aucun créneau ce jour." />

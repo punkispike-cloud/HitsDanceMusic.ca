@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import useSWR from "swr";
 import { api, ApiError } from "@/lib/api";
+import { useRadio } from "@/lib/radio";
+import { rkey } from "@/lib/hooks";
 import { useToast } from "./toast";
 import { Modal, Field, Empty, ConfirmDelete, TableSkeleton, ErrorState } from "./ui";
 import { ImageUpload } from "./image-upload";
@@ -91,8 +94,14 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
   } = props;
 
   const toast = useToast();
-  const [rows, setRows] = useState<T[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { selectedId } = useRadio();
+  // Liste partagée via le cache SWR (clé = [endpoint, selectedRadioId]) : changer
+  // de radio change la clé → re-fetch auto, sans remont. keepPreviousData garde
+  // les lignes de la radio précédente pendant le fetch de la nouvelle.
+  const { data: rows, error, mutate } = useSWR<T[]>(
+    rkey(endpoint, selectedId),
+    { keepPreviousData: true },
+  );
   const [query, setQuery] = useState("");
   // Tri persistant (QW-1) : clé de colonne + sens. `null` = ordre naturel.
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -102,23 +111,18 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<T | null>(null);
 
-  const load = async () => {
-    // Distingue l'erreur du vide : on remet rows à null (squelette) puis on
-    // signale l'échec via un état d'erreur dédié (et non un tableau vide).
-    setError(null);
-    setRows(null);
-    try {
-      setRows(await api.get<T[]>(endpoint));
-    } catch (e) {
-      const msg = (e as ApiError).message || "Échec du chargement.";
-      setError(msg);
-      toast(msg, "error");
-    }
-  };
+  const errMsg = error ? (error as ApiError).message || "Échec du chargement." : null;
+  // Toast sur l'apparition d'une erreur de chargement (transition null → msg).
+  const prevErrRef = useRef<string | null>(null);
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint]);
+    if (errMsg && errMsg !== prevErrRef.current) toast(errMsg, "error");
+    prevErrRef.current = errMsg;
+  }, [errMsg, toast]);
+
+  // Revalidation explicite (retry, post-mutation, action de ligne).
+  const reload = async () => {
+    await mutate();
+  };
 
   // QW-1 — Persistance recherche + tri dans l'URL (sans next/navigation pour
   // éviter la contrainte Suspense au build) : on lit l'état au montage…
@@ -183,7 +187,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
         toast("Enregistré", "ok");
       }
       close();
-      await load();
+      await mutate();
     } catch (e) {
       toast((e as ApiError).message, "error");
     } finally {
@@ -231,7 +235,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
       await api.del(`${endpoint}/${deleting.id}`);
       toast("Supprimé", "ok");
       setDeleting(null);
-      await load();
+      await mutate();
     } catch (e) {
       toast((e as ApiError).message, "error");
       setDeleting(null);
@@ -265,9 +269,9 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
         </div>
       </div>
 
-      {error ? (
-        <ErrorState message={error} onRetry={() => void load()} />
-      ) : rows === null ? (
+      {errMsg ? (
+        <ErrorState message={errMsg} onRetry={() => void reload()} />
+      ) : !rows ? (
         <TableSkeleton cols={columns.length + 1} />
       ) : rows.length === 0 ? (
         <Empty
@@ -327,7 +331,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
                   ))}
                   <td>
                     <div className="row-actions">
-                      {props.extraActions?.(row, load)}
+                      {props.extraActions?.(row, reload)}
                       {canEdit(row) && (
                         <button className="btn btn-sm btn-ghost" onClick={() => openEdit(row)}>
                           Éditer

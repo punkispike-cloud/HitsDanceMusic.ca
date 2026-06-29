@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useArtists } from "@/lib/hooks";
 import { Spinner, ErrorState } from "@/components/ui";
-import { SLOT_TAGS, tagColor, isEditorialAdmin, type Artist, type Show } from "@/lib/types";
+import { SLOT_TAGS, tagColor, isEditorialAdmin, type Show } from "@/lib/types";
 
 const columns: Column<Show>[] = [
   { key: "title", label: "Titre" },
@@ -36,21 +36,15 @@ const columns: Column<Show>[] = [
 
 export default function EmissionsPage() {
   const { user } = useAuth();
-  const [artists, setArtists] = useState<Artist[] | null>(null);
-  // On distingue l'erreur du chargement : null + error (jamais setArtists([])).
-  const [error, setError] = useState<string | null>(null);
+  const { data: artists, error, mutate } = useArtists();
 
-  const loadArtists = () => {
-    setError(null);
-    setArtists(null);
-    api
-      .get<Artist[]>("/v1/admin/artists")
-      .then(setArtists)
-      .catch((e) => setError((e as ApiError).message || "Échec du chargement des animateurs."));
-  };
-  useEffect(loadArtists, []);
-
-  if (error) return <ErrorState message={error} onRetry={loadArtists} />;
+  if (error)
+    return (
+      <ErrorState
+        message={(error as ApiError).message || "Échec du chargement des animateurs."}
+        onRetry={() => void mutate()}
+      />
+    );
   if (!artists) return <Spinner />;
 
   const fields: FieldConfig[] = [

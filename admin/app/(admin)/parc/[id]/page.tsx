@@ -4,15 +4,16 @@
    KPIs, courbe de visiteurs, checklist d'onboarding, fiche contact, actions.
    Accès via le Parc (clic sur le nom d'une radio). */
 
-import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
+import { useRadioDetail } from "@/lib/hooks";
 import { Empty, Spinner, ErrorState } from "@/components/ui";
-import { TrendChart, type TrendPoint } from "@/components/trend-chart";
-import { formatDuration, isCrossRadio, type RadioSummary, type RadioHealth, type OwnerTimeseriesPoint, type RadioStatus } from "@/lib/types";
+import { TrendChart } from "@/components/trend-chart";
+import { formatDuration, isCrossRadio, type RadioStatus } from "@/lib/types";
 import { RadioEditPanel } from "../page";
 
 const STATUS_LABEL: Record<RadioStatus, string> = { active: "Active", provisioning: "En montage", paused: "Suspendue" };
@@ -21,42 +22,20 @@ export default function RadioDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { selectedId, selectRadio } = useRadio();
-  const [radio, setRadio] = useState<RadioSummary | null | undefined>(undefined);
-  const [series, setSeries] = useState<TrendPoint[]>([]);
-  const [health, setHealth] = useState<RadioHealth | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
   const crossRadio = isCrossRadio(user?.role);
   const isOwner = user?.role === "owner";
 
-  const load = useCallback(() => {
-    if (!crossRadio) return;
-    // En cas d'échec on garde radio=undefined + error (ne PAS confondre erreur et radio introuvable).
-    setError(null);
-    api
-      .get<RadioSummary[]>("/v1/owner/radios")
-      .then((rows) => setRadio(rows.find((r) => r.id === id) ?? null))
-      .catch((e) => {
-        setRadio(undefined);
-        setError((e as ApiError).message || "Impossible de charger la radio.");
-      });
-    api
-      .get<OwnerTimeseriesPoint[]>(`/v1/owner/timeseries?days=30&radio=${id}`)
-      .then((rows) => setSeries(rows.map((r) => ({ day: r.day, value: r.sessions }))))
-      .catch(() => setSeries([]));
-    api
-      .get<RadioHealth[]>("/v1/owner/health")
-      .then((h) => setHealth(h.find((x) => x.id === id) ?? null))
-      .catch(() => setHealth(null));
-  }, [crossRadio, id]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Détail d'une radio, NON radio-scopé (console owner). `radioId` figure dans
+  // la clé → re-fetch auto quand on change de radio cible ; `enabled = crossRadio`
+  // évite un fetch (et un 403) pour les non-cross-radio. `radio` vaut `undefined`
+  // (chargement) puis `null` (introuvable) ou la radio.
+  const { radio, health, series, error, reload } = useRadioDetail(id, crossRadio);
+  const loadError = error ? (error as ApiError).message || "Impossible de charger la radio." : null;
 
   if (!crossRadio) return <Empty label="Réservé à l'opérateur (En Ondes) et à l'équipe IT." />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (loadError) return <ErrorState message={loadError} onRetry={reload} />;
   if (radio === undefined) return <Spinner />;
   if (radio === null) return <Empty label="Radio introuvable." />;
 
@@ -168,7 +147,7 @@ export default function RadioDetailPage() {
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
-            load();
+            void reload();
           }}
         />
       )}
