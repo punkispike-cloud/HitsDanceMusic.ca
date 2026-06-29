@@ -1,6 +1,6 @@
 /* Stats d'écoute locales (jamais transmises). */
 
-import { $, escapeHtml } from "./util.js";
+import { $, escapeHtml, safeAnimate, prefersReducedMotion, EASE_OUT } from "./util.js";
 import { store, STORAGE } from "./store.js";
 import { getCurrentSlot } from "./schedule.js";
 import { getAudio } from "./player.js";
@@ -86,6 +86,10 @@ export function renderStatsPage() {
       <button type="button" id="exportStats" class="btn btn-soft">Exporter (.json)</button>
       <button type="button" id="resetStats" class="btn btn-ghost">Réinitialiser</button>
     </div>`;
+
+  // Polish (CSS-free) : cascade d'apparition des cartes + count-up des 2 KPIs.
+  animateStatsCards(root, s);
+
   $("#exportStats")?.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -99,4 +103,35 @@ export function renderStatsPage() {
       stats.reset(); renderStatsPage(); toast("Statistiques réinitialisées.", "info");
     }
   });
+}
+
+/* Apparition en cascade des 4 cartes + comptage animé des 2 KPIs chiffrés. */
+function animateStatsCards(root, s) {
+  const cards = root.querySelectorAll(".stat-card");
+  cards.forEach((el, i) => safeAnimate(el, [
+    { opacity: 0, transform: "translateY(8px)" },
+    { opacity: 1, transform: "translateY(0)" },
+  ], { duration: 520, delay: i * 90, easing: EASE_OUT, fill: "both" }));
+  if (prefersReducedMotion()) return;
+  // Carte 1 = Temps total (formaté), carte 2 = Sessions (entier) — jamais les dates.
+  const strongs = root.querySelectorAll(".stat-card strong");
+  countUp(strongs[0], s.totalSec, (v) => formatDuration(Math.round(v)));
+  countUp(strongs[1], s.sessions, (v) => String(Math.round(v)));
+}
+
+/* Incrémente le texte d'un élément de 0 à `target` (rAF), format préservé. */
+function countUp(el, target, fmt) {
+  if (!el || typeof target !== "number" || target <= 0) return;
+  const duration = 900;
+  let startTs = 0;
+  el.textContent = fmt(0);
+  const step = (ts) => {
+    if (!startTs) startTs = ts;
+    const p = Math.min(1, (ts - startTs) / duration);
+    const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    el.textContent = fmt(target * eased);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(target);
+  };
+  requestAnimationFrame(step);
 }

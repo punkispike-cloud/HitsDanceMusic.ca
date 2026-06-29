@@ -3,8 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Politique de confidentialité — Hits Dance Music. Données collectées, conservation et droits (Loi 25)." />
+    <meta name="description" content="Politique de confidentialité — Hits Dance Music. Données collectées, conservation, consentement et droits (Loi 25 / RGPD)." />
     <meta name="robots" content="all" />
+    <meta property="og:title" content="Politique de confidentialité | Hits Dance Music" />
+    <meta property="og:description" content="Données collectées, durée de conservation, consentement à la mesure d'audience et tes droits (Loi 25 / RGPD)." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hitsdancemusic.ca/confidentialite.html" />
+    <meta property="og:locale" content="fr_CA" />
+    <meta property="og:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Politique de confidentialité | Hits Dance Music" />
+    <meta name="twitter:description" content="Données collectées, durée de conservation, consentement à la mesure d'audience et tes droits (Loi 25 / RGPD)." />
+    <meta name="twitter:image" content="https://hitsdancemusic.ca/assets/landing-bg.jpg" />
     <meta name="theme-color" content="#0f0f12" />
     <script src="assets/theme-init.js"></script>
     <title>Confidentialité | Hits Dance Music</title>
@@ -25,7 +35,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Syne:wght@700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.bundle.css" />
 <!--#endinclude-->
   </head>
   <body>
@@ -48,6 +58,7 @@
         <p class="eyebrow"><span></span> Loi 25</p>
         <h1>Politique de confidentialité</h1>
         <p>Comment Hits Dance Music traite tes renseignements personnels.</p>
+        <p class="legal-date"><small>Dernière mise à jour : 29 juin 2026</small></p>
       </section>
 
       <section class="section legal">
@@ -62,11 +73,41 @@
           <li>des mesures d'usage : pages vues, temps passé sur le site, temps d'écoute par émission.</li>
         </ul>
 
+        <h2>Mesure d'audience et consentement</h2>
+        <p>
+          La mesure d'audience (pages vues, temps d'écoute) et le compteur de présence
+          en temps réel reposent sur un <strong>identifiant anonyme</strong> stocké dans
+          ton navigateur (<code>hr.clientId</code>). <strong>Aucune donnée n'est collectée
+          avant ton consentement</strong> : tant que tu n'as pas accepté, aucun identifiant
+          n'est créé et aucun beacon n'est envoyé.
+        </p>
+        <p>
+          Tu peux à tout moment modifier ton choix — la bannière réapparaîtra alors à la
+          prochaine visite :
+        </p>
+        <p>
+          État actuel : <strong><span id="consentStatus">Non défini</span></strong>
+          <button type="button" id="consentReset" class="text-link">Modifier mes choix</button>
+        </p>
+
         <h2>Finalité</h2>
         <p>
           Ces données servent uniquement à des <strong>statistiques d'audience agrégées</strong>
           (nombre de visiteurs, émissions les plus écoutées). Elles ne sont ni vendues, ni
           utilisées à des fins publicitaires.
+        </p>
+
+        <h2>Sous-traitants et tiers</h2>
+        <p>Ces tiers traitent certaines données techniques pour fournir le service :</p>
+        <ul>
+          <li><strong>Railway</strong> — hébergement de l'API, de la mesure d'audience et du compteur de présence (adresses IP, identifiants anonymes, mesures d'usage).</li>
+          <li><strong>AsuraHosting</strong> — diffusion du flux audio (l'adresse IP de l'auditeur est transmise à l'hôte du flux à la lecture).</li>
+          <li><strong>Google Fonts</strong> — polices d'écriture (l'adresse IP est transmise à Google au chargement des polices).</li>
+        </ul>
+        <p>
+          Aucun autre tiers publicitaire ni revendeur de données n'a accès à tes
+          renseignements. Les pochettes d'album proviennent d'Apple iTunes et sont
+          récupérées directement par ton navigateur.
         </p>
 
         <h2>Durée de conservation</h2>
@@ -78,17 +119,20 @@
 
         <h2>Tes droits</h2>
         <p>
-          Conformément à la Loi 25 (Québec), tu peux demander l'accès, la rectification
-          ou la <strong>suppression</strong> de tes renseignements personnels. Écris-nous via le
-          <a class="text-link" href="contact.html">formulaire de contact</a> et nous traiterons
-          ta demande dans les meilleurs délais.
+          Conformément à la Loi 25 (Québec) et au RGPD, tu peux demander l'accès, la
+          rectification ou la <strong>suppression</strong> de tes renseignements personnels.
+          Écris-nous via le <a class="text-link" href="contact.html">formulaire de contact</a>
+          et nous traiterons ta demande dans les meilleurs délais.
         </p>
 
-        <h2>Cookies & stockage local</h2>
+        <h2>Cookies &amp; stockage local</h2>
         <p>
           Le site utilise le stockage local du navigateur pour mémoriser tes préférences
-          (volume, thème, favoris) et un identifiant anonyme de session. Aucun cookie
-          publicitaire n'est déposé.
+          (volume, thème, favoris : clés <code>hr.volume</code>, <code>hr.mute</code>,
+          <code>hr.favs</code>…) ainsi que ton <strong>choix de consentement</strong>
+          (<code>hr.consent</code>) et, seulement après acceptation, un identifiant
+          anonyme de session (<code>hr.clientId</code>). Aucun cookie publicitaire
+          n'est déposé.
         </p>
       </section>
 

@@ -16,3 +16,9 @@ brand/clients.json
 
 # Worktree d'aperçu client (branche client/rockradio)
 .preview-rock/
+
+# Tests visuels Playwright — artefacts transitoires (les baselines, elles, se
+# versionnent : tests/visual/*-snapshots/)
+test-results/
+playwright-report/
+blob-report/

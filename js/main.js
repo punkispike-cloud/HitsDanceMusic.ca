@@ -49,6 +49,7 @@ import { initMultiTabSync } from "./multi-tab.js";
 
 import { initPresence } from "./presence.js";
 import { initAnalytics } from "./analytics.js";
+import { initConsent, hasAnalyticsConsent, onConsentChange, clearConsent, getConsent } from "./consent.js";
 import { registerSW } from "./sw-register.js";
 
 import { bindKeyboard, setKeyboardHooks } from "./keyboard.js";
@@ -275,8 +276,35 @@ function initIdle() {
     togglePip:    () => void togglePip(),
   });
 
-  // Service worker (PWA shell) + Compteur live (WS) + Analytics d'audience
+  // Service worker (PWA shell) + Consentement audience + Compteur live (WS) + Analytics.
+  // La mesure d'audience (presence + beacons /v1/track) n'est démarrée qu'après
+  // consentement explicite (Loi 25 / RGPD). Avant accord : zéro collecte.
   registerSW();
+  initConsent();
+  if (hasAnalyticsConsent()) startAudience();
+  onConsentChange((c) => { if (c === "yes") startAudience(); });
+
+  // Page Confidentialité : bouton « Modifier mes choix » → efface le consentement
+  // et recharge pour réafficher la bannière. No-op sur les autres pages.
+  const consentReset = document.getElementById("consentReset");
+  if (consentReset) {
+    consentReset.addEventListener("click", () => { clearConsent(); location.reload(); });
+  }
+  const consentStatus = document.getElementById("consentStatus");
+  if (consentStatus) {
+    const c = getConsent();
+    consentStatus.textContent = c === "yes" ? "Accepté"
+      : c === "no" ? "Refusé"
+      : "Non défini — la bannière réapparaîtra à la prochaine visite.";
+  }
+}
+
+// initPresence ajoute des listeners à chaque appel (non idempotente) → on garde
+// un drapeau pour ne démarrer l'audience qu'une seule fois (au consentement).
+let audienceStarted = false;
+function startAudience() {
+  if (audienceStarted) return;
+  audienceStarted = true;
   initPresence();
   initAnalytics();
 }

@@ -1,8 +1,17 @@
 /* Favoris animateurs / shows (filtre "Mes favoris"). */
 
-import { $$ } from "./util.js";
+import { $$, safeAnimate } from "./util.js";
 import { store, STORAGE } from "./store.js";
 import { toast } from "./toast.js";
+
+// Pop du cœur au clic (feedback immédiat avant le toast, CSS-free).
+function popHeart(btn) {
+  safeAnimate(btn, [
+    { transform: "scale(1) rotate(0)" },
+    { transform: "scale(1.3) rotate(8deg)" },
+    { transform: "scale(1) rotate(0)" },
+  ], { duration: 220, easing: "ease-out" });
+}
 
 function getFavs() { return new Set(store.getJSON(STORAGE.favs, [])); }
 function setFavs(set) { store.setJSON(STORAGE.favs, [...set]); }
@@ -40,7 +49,7 @@ export function injectFavButtons() {
     btn.dataset.favKey = key;
     btn.dataset.favLabel = name;
     btn.innerHTML = HEART_SVG;
-    btn.addEventListener("click", (e) => { e.stopPropagation(); toggleFav(key, name); });
+    btn.addEventListener("click", (e) => { e.stopPropagation(); popHeart(btn); toggleFav(key, name); });
     card.appendChild(btn);
   });
   $$(".show-detail").forEach((card) => {
@@ -54,7 +63,7 @@ export function injectFavButtons() {
     btn.dataset.favKey = key;
     btn.dataset.favLabel = title;
     btn.innerHTML = HEART_SVG;
-    btn.addEventListener("click", (e) => { e.stopPropagation(); toggleFav(key, title); });
+    btn.addEventListener("click", (e) => { e.stopPropagation(); popHeart(btn); toggleFav(key, title); });
     card.appendChild(btn);
   });
   syncFavButtons();

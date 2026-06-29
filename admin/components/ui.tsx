@@ -132,8 +132,24 @@ export function Spinner({ label = "Chargement…" }: { label?: string }) {
   return <div className="loading" role="status">{label}</div>;
 }
 
-export function Empty({ label = "Rien à afficher." }: { label?: string }) {
-  return <div className="empty">{label}</div>;
+/* État vide, éventuellement actionnable : `hint` explique, `action` propose
+   une porte de sortie (ex. « + Nouveau ») au lieu d'un cul-de-sac. */
+export function Empty({
+  label = "Rien à afficher.",
+  hint,
+  action,
+}: {
+  label?: string;
+  hint?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty">
+      <div>{label}</div>
+      {hint && <div className="muted" style={{ marginTop: 6 }}>{hint}</div>}
+      {action && <div style={{ marginTop: 14 }}>{action}</div>}
+    </div>
+  );
 }
 
 /* ── Accès refusé (distinct de l'état vide) ── */

@@ -219,10 +219,15 @@
     .foot-legal a:hover { color: var(--accent-bright); }
     .foot-legal .sep { color: var(--faint); }
 
+    /* Révélation au défilement (classe posée par pro.js, jamais sans JS) */
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+    .reveal.is-revealed { opacity: 1; transform: none; }
+
     @media (max-width: 600px) { section { padding: 48px 0; } }
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; }
       details summary::after { transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>

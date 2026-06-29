@@ -11,7 +11,7 @@
  *   node scripts/build-sw.mjs --check    # exit 1 si hash hors sync
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,19 @@ if (!shellMatch) {
 }
 const shellEntries = [...shellMatch[1].matchAll(/"\.\/([^"]+)"/g)].map((m) => m[1]).filter(Boolean);
 console.log(`[build-sw] ${shellEntries.length} ressources dans le SHELL`);
+
+// Détection de drift : avertir si un module js/ n'est pas dans le SHELL.
+// Source classique de drift offline = un nouveau module oublié du précache.
+// (Warning seulement — n'échoue pas le build : certains fichiers peuvent être
+// intentionnellement exclus, ex. scripts de test.)
+const shellSet = new Set(shellEntries);
+try {
+  const jsFiles = (await readdir(join(root, "js"))).filter((f) => f.endsWith(".js"));
+  const untracked = jsFiles.filter((f) => !shellSet.has(`js/${f}`));
+  if (untracked.length) {
+    console.warn(`[build-sw] ⚠ ${untracked.length} module(s) js/ hors SHELL : ${untracked.join(", ")}`);
+  }
+} catch { /* pas de dossier js/ — ignore */ }
 
 // Extensions texte : on normalise les fins de ligne (CRLF → LF) AVANT de hacher
 // pour que le hash soit identique quel que soit le checkout (Windows CRLF vs

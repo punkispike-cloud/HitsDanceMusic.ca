@@ -125,6 +125,18 @@ table.data th { color: var(--txt-dim); font-size: 0.78rem; text-transform: upper
 table.data tr:last-child td { border-bottom: none; }
 table.data tr:hover td { background: rgba(255,255,255,0.02); }
 .row-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+/* Tri de colonne (QW-1) : l'en-tête devient un bouton sans changer son apparence. */
+.th-sort {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 24px;
+  background: none; border: 0; padding: 0; margin: 0; cursor: pointer;
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+}
+.th-sort:hover { color: var(--txt); }
+.th-arrow { font-size: 0.72em; color: var(--accent-2, var(--accent)); }
+
+/* Étapes d'accueil (QW-2) : onboarding première utilisation (dashboard vide). */
+.onboarding-steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 8px; color: var(--txt-dim); }
+.onboarding-steps li { line-height: 1.55; }
 
 /* ── Champs ── */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
@@ -351,4 +363,34 @@ textarea:focus-visible,
   .skeleton::after { animation: none; }
   .sidebar { transition: none; }
   * { scroll-behavior: auto; }
+}
+
+/* ====================== POLISH VISUEL (motion & profondeur) ====================== */
+:root { --ease: cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Retour au clic sur boutons & onglets */
+.btn { transition: filter 0.15s, background 0.15s, border-color 0.15s, transform 0.12s; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+.day-tab { transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.12s; }
+.day-tab:not(.active):hover { background: var(--panel-2); color: var(--txt); }
+.day-tab:active { transform: scale(0.96); }
+
+/* Cartes statistiques : profondeur au survol */
+.stat-card { transition: border-color 0.2s var(--ease), transform 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.stat-card:hover { transform: translateY(-2px); border-color: var(--line-2); box-shadow: 0 14px 40px -24px rgba(0, 0, 0, 0.8); }
+
+/* Lignes de grille horaire : retour au survol */
+.slot-row { transition: background 0.16s var(--ease), border-color 0.16s var(--ease); }
+.slot-row:hover { background: var(--panel-2); }
+
+/* Entrée de la modale + voile */
+.modal-overlay { animation: overlay-in 0.18s ease; }
+.modal { animation: modal-in 0.22s var(--ease); }
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .day-tab, .stat-card, .slot-row { transition: none; }
+  .stat-card:hover, .btn:active, .day-tab:active { transform: none; }
+  .modal-overlay, .modal { animation: none; }
 }

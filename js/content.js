@@ -5,9 +5,29 @@
    - animateurs.html  : .talent-grid.extended (tous)
    - emissions.html   : .show-detail-grid (toutes) */
 
-import { escapeHtml } from "./util.js";
+import { escapeHtml, safeAnimate, prefersReducedMotion, EASE_OUT } from "./util.js";
 import { API_BASE } from "./api-config.js";
 import { wireTalentCards } from "./animateur-detail.js";
+
+/* Révélation en cascade au défilement (IntersectionObserver + WAAPI, CSS-free).
+   Ne cible QUE .show-detail (émissions) — extendScrollReveal (ui-extras.js)
+   gère déjà .show-card / .talent-card, donc aucun doublon. */
+function revealOnScroll(els) {
+  if (!els.length || prefersReducedMotion() || !("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const el = entry.target;
+      const i = Number(el.dataset.revealIdx || 0);
+      safeAnimate(el, [
+        { opacity: 0, transform: "translateY(20px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ], { duration: 480, delay: Math.min(i * 60, 300), easing: EASE_OUT, fill: "both" });
+      io.unobserve(el);
+    }
+  }, { threshold: 0.1 });
+  els.forEach((el, i) => { el.dataset.revealIdx = String(i); io.observe(el); });
+}
 
 async function fetchJson(path) {
   try {
@@ -104,6 +124,7 @@ export async function loadContentFromApi() {
   if (showGrid && Array.isArray(shows) && shows.length) {
     const nameById = new Map((Array.isArray(artists) ? artists : []).map((a) => [a.id, a.name]));
     showGrid.innerHTML = shows.map((s) => showCardHtml(s, nameById)).join("");
+    revealOnScroll(showGrid.querySelectorAll(".show-detail"));
   }
 
   return touchedTalent;

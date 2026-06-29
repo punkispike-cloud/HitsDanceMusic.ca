@@ -3,7 +3,7 @@
    passages calculés côté serveur sur les VRAIES FK), avec repli sur l'objet
    animateur déjà en mémoire si l'API échoue. */
 
-import { escapeHtml } from "./util.js";
+import { escapeHtml, safeAnimate } from "./util.js";
 import { API_BASE } from "./api-config.js";
 import { SLOT_TAGS } from "./schedule.js";
 import { DAY_NAMES } from "./time.js";
@@ -150,7 +150,15 @@ export function wireTalentCards(grid, artists) {
   grid.addEventListener("click", (e) => {
     if (e.target.closest("a")) return; // laisse les liens sociaux fonctionner
     const card = e.target.closest(".talent-card");
-    if (card && grid.contains(card)) openFrom(card);
+    if (card && grid.contains(card)) {
+      // Retour « pression » au tap avant l'ouverture de la fiche (CSS-free).
+      safeAnimate(card, [
+        { transform: "scale(1)" },
+        { transform: "scale(0.98)" },
+        { transform: "scale(1)" },
+      ], { duration: 150, easing: "ease-out" });
+      openFrom(card);
+    }
   });
   grid.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;

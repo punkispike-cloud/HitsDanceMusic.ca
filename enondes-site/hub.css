@@ -326,6 +326,40 @@ a:focus-visible, button:focus-visible, .chip:focus-visible, .swchip:focus-visibl
 
 @media (max-width: 680px) { .player-ctls .prev, .player-ctls .next { display: none; } .vol, .viz { display: none; } .cover { width: 48px; height: 48px; } :root { --player-h: 78px; } }
 
+/* ============================ REPRISE DE SESSION (QW-3) ============================ */
+.resume-bar {
+  position: fixed; left: 50%; z-index: 45;
+  bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px);
+  background: linear-gradient(180deg, rgba(11, 15, 27, 0.96), rgba(6, 8, 15, 0.98));
+  border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
+  padding: 8px 8px 8px 16px;
+  box-shadow: var(--shadow-soft), 0 0 40px -16px rgba(var(--glow), 0.6);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px);
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+}
+.resume-bar.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+.resume-bar .resume-ico { fill: var(--accent-bright); flex: 0 0 auto; }
+.resume-bar .resume-txt { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-bar .resume-go {
+  flex: 0 0 auto; min-height: 38px; touch-action: manipulation; cursor: pointer; font: inherit;
+  font-size: 0.85rem; font-weight: 700; color: #08111f; background: var(--brand-grad);
+  border: 0; border-radius: var(--r-pill); padding: 8px 16px; transition: transform 0.15s var(--ease);
+}
+.resume-bar .resume-go:active { transform: scale(0.96); }
+.resume-bar .resume-dismiss {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--hairline); background: var(--surface); color: var(--muted); font-size: 0.85rem;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.resume-bar .resume-dismiss:hover { color: var(--txt); border-color: var(--hairline-strong); }
+@media (max-width: 680px) { .resume-bar { bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 10px); } }
+
+/* État vide actionnable (QW-2) : message + bouton de reprise, centré dans la grille */
+.empty--cta { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.empty--cta p { color: var(--muted); }
+
 /* ============================ FICHE / SHEET ============================ */
 .sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; visibility: hidden; }
 .sheet.show { visibility: visible; }

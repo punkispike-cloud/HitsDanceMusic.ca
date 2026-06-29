@@ -25,6 +25,9 @@ export interface Column<T> {
   key: string;
   label: string;
   render?: (row: T) => ReactNode;
+  /** Colonne triable (par défaut oui). Mettre `false` pour les colonnes
+      composites/non pertinentes (ex. miniature, badge). */
+  sortable?: boolean;
 }
 
 type FormValues = Record<string, string | number | boolean | null>;
@@ -91,6 +94,9 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
   const [rows, setRows] = useState<T[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // Tri persistant (QW-1) : clé de colonne + sens. `null` = ordre naturel.
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [editing, setEditing] = useState<T | "new" | null>(null);
   const [values, setValues] = useState<FormValues>({});
   const [saving, setSaving] = useState(false);
@@ -113,6 +119,39 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
+
+  // QW-1 — Persistance recherche + tri dans l'URL (sans next/navigation pour
+  // éviter la contrainte Suspense au build) : on lit l'état au montage…
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q");
+    const sort = sp.get("sort"); // format "clé:asc|desc"
+    if (q) setQuery(q);
+    if (sort) {
+      const [k, d] = sort.split(":");
+      if (k) {
+        setSortKey(k);
+        setSortDir(d === "desc" ? "desc" : "asc");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // …et on le réécrit (replaceState : pas d'entrée d'historique parasite).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const q = query.trim();
+    q ? sp.set("q", q) : sp.delete("q");
+    sortKey ? sp.set("sort", `${sortKey}:${sortDir}`) : sp.delete("sort");
+    const qs = sp.toString();
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `${window.location.pathname}?${qs}` : window.location.pathname,
+    );
+  }, [query, sortKey, sortDir]);
 
   const openNew = () => {
     setValues(emptyForm(fields));
@@ -152,11 +191,39 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
     }
   };
 
-  // Recherche instantanée côté client (sur le libellé de ligne).
-  const visibleRows =
+  const isSortable = (c: Column<T>) => c.sortable !== false;
+  const toggleSort = (key: string) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+  const resetView = () => {
+    setQuery("");
+    setSortKey(null);
+    setSortDir("asc");
+  };
+  const viewActive = query.trim().length > 0 || sortKey !== null;
+
+  // Recherche instantanée (sur le libellé de ligne) puis tri (QW-1).
+  const filtered =
     rows && query.trim()
       ? rows.filter((r) => rowLabel(r).toLowerCase().includes(query.trim().toLowerCase()))
       : rows;
+  const visibleRows =
+    filtered && sortKey
+      ? [...filtered].sort((a, b) => {
+          const dir = sortDir === "asc" ? 1 : -1;
+          const av = (a as Record<string, unknown>)[sortKey];
+          const bv = (b as Record<string, unknown>)[sortKey];
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1; // valeurs vides en dernier
+          if (bv == null) return -1;
+          if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+          return String(av).localeCompare(String(bv), "fr-CA", { numeric: true }) * dir;
+        })
+      : filtered;
 
   const doDelete = async () => {
     if (!deleting) return;
@@ -185,6 +252,11 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
               style={{ width: 200 }}
             />
           )}
+          {rows && rows.length > 0 && viewActive && (
+            <button className="btn btn-ghost btn-sm" type="button" onClick={resetView}>
+              Réinitialiser
+            </button>
+          )}
           {canCreate && (
             <button className="btn btn-primary" onClick={openNew}>
               + Nouveau
@@ -198,7 +270,17 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
       ) : rows === null ? (
         <TableSkeleton cols={columns.length + 1} />
       ) : rows.length === 0 ? (
-        <Empty label="Aucune entrée pour l'instant." />
+        <Empty
+          label="Aucune entrée pour l'instant."
+          hint={canCreate ? "Crée ta première entrée — elle apparaîtra ici." : undefined}
+          action={
+            canCreate ? (
+              <button className="btn btn-primary" type="button" onClick={openNew}>
+                + Nouveau
+              </button>
+            ) : undefined
+          }
+        />
       ) : visibleRows && visibleRows.length === 0 ? (
         <Empty label={`Aucun résultat pour « ${query} ».`} />
       ) : (
@@ -207,7 +289,30 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
             <thead>
               <tr>
                 {columns.map((c) => (
-                  <th key={c.key} scope="col">{c.label}</th>
+                  <th
+                    key={c.key}
+                    scope="col"
+                    aria-sort={
+                      isSortable(c)
+                        ? sortKey === c.key
+                          ? sortDir === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                        : undefined
+                    }
+                  >
+                    {isSortable(c) ? (
+                      <button type="button" className="th-sort" onClick={() => toggleSort(c.key)}>
+                        {c.label}
+                        <span aria-hidden="true" className="th-arrow">
+                          {sortKey === c.key ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                        </span>
+                      </button>
+                    ) : (
+                      c.label
+                    )}
+                  </th>
                 ))}
                 <th scope="col" style={{ textAlign: "right" }}>Actions</th>
               </tr>

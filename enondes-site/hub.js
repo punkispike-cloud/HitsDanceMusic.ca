@@ -10,7 +10,7 @@
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const LS = { station: "eo.station", volume: "eo.volume", muted: "eo.muted", favs: "eo.favs" };
+const LS = { station: "eo.station", volume: "eo.volume", muted: "eo.muted", favs: "eo.favs", playing: "eo.playing" };
 
 const state = {
   stations: [],
@@ -48,6 +48,8 @@ const ink = (hex) => {
 };
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const byId = (id) => document.getElementById(id);
+const prefersReducedMotion = () =>
+  typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function setAccent(st) {
   const r = document.documentElement.style;
@@ -174,6 +176,17 @@ function renderFilters() {
   }
 }
 
+// Réinitialise recherche + filtres (déclenché depuis l'état vide actionnable, QW-2).
+function resetFilters() {
+  state.filter.q = "";
+  state.filter.genre = null;
+  state.filter.favsOnly = false;
+  const qInput = byId("q");
+  if (qInput) qInput.value = "";
+  renderFilters();
+  renderGrid();
+}
+
 /* ───────────────── Grille ───────────────── */
 function stationCard(st) {
   const card = document.createElement("article");
@@ -213,7 +226,15 @@ function renderGrid() {
   if (count) count.textContent = `${list.length} station${list.length > 1 ? "s" : ""}`;
   grid.innerHTML = "";
   if (!list.length) {
-    grid.innerHTML = `<p class="empty">Aucune station ne correspond à ta recherche.</p>`;
+    // État vide ACTIONNABLE (QW-2) : message contextuel + bouton pour repartir,
+    // au lieu d'un cul-de-sac. Les libellés sont statiques (aucune injection).
+    const favsOnly = state.filter.favsOnly;
+    const msg = favsOnly
+      ? "Aucune station en favori pour l'instant."
+      : "Aucune station ne correspond à ta recherche.";
+    const cta = favsOnly ? "Voir toutes les stations" : "Réinitialiser la recherche";
+    grid.innerHTML = `<div class="empty empty--cta"><p>${msg}</p><button class="chip on" type="button" id="resetFilters">${cta}</button></div>`;
+    byId("resetFilters")?.addEventListener("click", resetFilters);
     markActiveCard();
     return;
   }
@@ -254,18 +275,29 @@ function selectStation(st, autoplay) {
   if (!st || st.status === "coming" || !st.stream) return;
   const switching = state.current?.slug !== st.slug;
   state.current = st;
-  setAccent(st);
   store(LS.station, st.slug);
 
-  byId("player").classList.add("show");
-  byId("pStation").textContent = st.name;
-  byId("pTrack").textContent = st.shortName;
-  byId("pSub").textContent = st.genre || "En direct";
-  state.track = null; state.cover = null;
-  setCover(null, st);
-  markActiveCard();
+  // Mise à jour visuelle du lecteur (accent, textes, pochette, carte active).
+  const applyVisuals = () => {
+    setAccent(st);
+    byId("player").classList.add("show");
+    byId("pStation").textContent = st.name;
+    byId("pTrack").textContent = st.shortName;
+    byId("pSub").textContent = st.genre || "En direct";
+    state.track = null; state.cover = null;
+    setCover(null, st);
+    markActiveCard();
+    updateHeroOnair();
+    if (sheetOpenFor()) renderSheet(st); // garde la fiche en phase
+  };
+  // Fondu-enchaîné au changement de station (View Transitions API), avec repli
+  // direct si l'API est absente ou si l'utilisateur préfère un mouvement réduit.
+  if (switching && document.startViewTransition && !prefersReducedMotion()) {
+    document.startViewTransition(applyVisuals);
+  } else {
+    applyVisuals();
+  }
   updateMediaSession({ title: st.shortName, artist: st.genre || "En direct" }, st);
-  updateHeroOnair();
 
   if (switching) {
     stopReconnect();
@@ -274,7 +306,6 @@ function selectStation(st, autoplay) {
   }
   if (autoplay) startPlayback();
   restartNowPlaying();
-  if (sheetOpenFor()) renderSheet(st); // garde la fiche en phase
 }
 
 function setLoadingUI(on) {
@@ -282,6 +313,8 @@ function setLoadingUI(on) {
 }
 async function startPlayback() {
   state.intent = true;
+  store(LS.playing, "1"); // mémorise l'intention d'écoute pour la reprise de session (QW-3)
+  hideResumePrompt();
   setLoadingUI(true);
   try {
     if (!audio.src && state.current) audio.src = state.current.stream;
@@ -289,7 +322,7 @@ async function startPlayback() {
   } catch (e) { setPlayingUI(false); console.warn("[hub] lecture refusée", e?.message || e); }
   finally { setLoadingUI(false); }
 }
-function pausePlayback() { state.intent = false; audio.pause(); }
+function pausePlayback() { state.intent = false; store(LS.playing, "0"); audio.pause(); }
 function togglePlay() { audio.paused ? startPlayback() : pausePlayback(); }
 
 function setPlayingUI(on, label) {
@@ -476,6 +509,29 @@ function wireNetwork() {
   sync();
 }
 
+/* ───────────────── Reprise de session (QW-3) ───────────────── */
+/* L'autoplay est bloqué par le navigateur sans geste utilisateur : plutôt qu'un
+ * échec muet, on propose une reprise EN UN TAP de la dernière station écoutée. */
+let resumeTimer = null;
+function showResumePrompt(st) {
+  const bar = byId("resumeBar");
+  if (!bar) return;
+  const txt = bar.querySelector(".resume-txt");
+  if (txt) txt.textContent = `Reprendre ${st.shortName} ?`;
+  bar.hidden = false;
+  requestAnimationFrame(() => bar.classList.add("show")); // déclenche la transition d'entrée
+  announce(`Reprendre l'écoute de ${st.shortName} ? Appuie sur Reprendre.`);
+  clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(hideResumePrompt, 12000); // se retire seule après 12 s
+}
+function hideResumePrompt() {
+  const bar = byId("resumeBar");
+  if (!bar) return;
+  clearTimeout(resumeTimer);
+  bar.classList.remove("show");
+  setTimeout(() => { bar.hidden = true; }, 300); // attend la fin de la transition
+}
+
 /* ───────────────── Volume ───────────────── */
 function wireVolume() {
   const slider = byId("vol");
@@ -617,7 +673,12 @@ async function loadStations() {
 
   const last = stationBySlug(load(LS.station));
   const restore = (last && last.status !== "coming") ? last : liveStations()[0];
-  if (restore) selectStation(restore, false);
+  if (restore) {
+    selectStation(restore, false);
+    // Reprise de session (QW-3) : si l'utilisateur écoutait précisément cette
+    // station à sa dernière visite, on propose de reprendre la lecture.
+    if (last && restore.slug === last.slug && load(LS.playing) === "1") showResumePrompt(restore);
+  }
 }
 
 /* ───────────────── Init ───────────────── */
@@ -640,6 +701,10 @@ async function init() {
   byId("pNext").addEventListener("click", () => step(1));
   // Tap sur l'info du player → fiche now-playing étendue
   byId("pInfo").addEventListener("click", () => { if (state.current) openSheet(state.current); });
+
+  // Reprise de session (QW-3)
+  byId("resumeGo")?.addEventListener("click", () => { hideResumePrompt(); startPlayback(); });
+  byId("resumeDismiss")?.addEventListener("click", hideResumePrompt);
 
   // Délégation des clics de carte
   byId("grid").addEventListener("click", (e) => {
