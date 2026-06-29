@@ -8,6 +8,31 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { api, setAccessToken, setSelectedRadioId, setOnUnauthorized, API_BASE } from "./api";
 import type { AuthUser } from "./types";
 
+/* Cookie marqueur de session pour la garde anti-flash du middleware (admin/
+   middleware.ts). NON sensible : valeur "1", posé sur l'origine admin (path /).
+
+   Pourquoi un marqueur séparé plutôt que le cookie httpOnly `hr_refresh` ?
+   - `hr_refresh` est posé par l'API avec `path: "/auth"` et, en prod, l'admin et
+     l'API sont sur des domaines distincts (cross-site). Le navigateur ne l'envoie
+     donc JAMAIS vers l'origine admin ni vers une route non-/auth → un middleware
+     Next sur l'admin ne pourrait pas le lire sur /parc, /dashboard, etc.
+   - Ce marqueur présence-only est lisible côté serveur (admin/middleware.ts) et
+     évite le flash de contenu sur un accès direct URL (ex. /parc).
+
+   Garde NON sécuritaire : l'API reste la source de vérité. Un marqueur isolé
+   sans session réelle → la reprise silencieuse /auth/refresh échoue → l'admin
+   bascule en redirect client vers /login (et efface le marqueur). max-age aligné
+   sur REFRESH_TOKEN_TTL (30 j côté API). */
+const SESSION_COOKIE = "hr_session";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 j
+
+function writeSessionMarker(present: boolean) {
+  if (typeof document === "undefined") return;
+  const secure = location.protocol === "https:" ? "; secure" : "";
+  const rest = present ? `max-age=${SESSION_MAX_AGE}` : "max-age=0";
+  document.cookie = `${SESSION_COOKIE}=${present ? "1" : ""}; path=/; samesite=lax; ${rest}${secure}`;
+}
+
 interface AuthState {
   user: AuthUser | null;
   ready: boolean;
@@ -37,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (alive && data.accessToken) {
             setAccessToken(data.accessToken);
             setUser(data.user);
+            writeSessionMarker(true);
           }
         }
       } catch {
@@ -55,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnUnauthorized(() => {
       setAccessToken(null);
       setUser(null);
+      writeSessionMarker(false);
     });
     return () => setOnUnauthorized(null);
   }, []);
@@ -78,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetRadio();
     setAccessToken(data.accessToken);
     setUser(data.user);
+    writeSessionMarker(true);
   }, []);
 
   const logout = useCallback(async () => {
@@ -85,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetRadio();
     setAccessToken(null);
     setUser(null);
+    writeSessionMarker(false);
   }, []);
 
   return (
