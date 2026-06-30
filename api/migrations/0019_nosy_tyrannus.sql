@@ -1,0 +1,1 @@
+ALTER TABLE "radios" ADD COLUMN "distribution" jsonb DEFAULT '{}'::jsonb NOT NULL;

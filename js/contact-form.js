@@ -1,7 +1,13 @@
-/* Formulaire contact + autocomplete iTunes (demande de titre) + honeypot. */
+/* Formulaire contact + autocomplete iTunes (demande de titre) + honeypot.
+   Quand l'auditeur choisit un titre, la demande est poussée dans la file
+   animateur (POST /v1/requests) au lieu d'ouvrir un mailto:. Sans titre, on
+   garde le comportement mailto d'origine (message général / partenariat). */
 
 import { $, escapeHtml, clampString, fetchWithTimeout, NET_TIMEOUTS } from "./util.js";
 import { toast } from "./toast.js";
+import { API_BASE } from "./api-config.js";
+
+const CLIENT_KEY = "hr.clientId";
 
 export function bindContactForm() {
   const form = $("#contactForm");
@@ -34,23 +40,87 @@ export function bindContactForm() {
     suggestList.hidden = true;
   });
 
-  form.addEventListener("submit", (e) => {
-    const honey = $("#hp_field", form);
-    if (honey && honey.value) { e.preventDefault(); return; }
-    if (!form.checkValidity()) { e.preventDefault(); form.reportValidity(); return; }
-    e.preventDefault();
-    const fd = new FormData(form);
-    const sujet = fd.get("sujet") || "Message Hits Dance Music";
+  /* Même UUID stable que presence/analytics (localStorage hr.clientId). Si
+     absent, on en génère un et on le pose (corrélation avec les autres flux). */
+  function ensureClientId() {
+    try {
+      let id = localStorage.getItem(CLIENT_KEY);
+      if (id) return id;
+      id = crypto.randomUUID();
+      try { localStorage.setItem(CLIENT_KEY, id); } catch { /* mode privé */ }
+      return id;
+    } catch {
+      return crypto.randomUUID();
+    }
+  }
+
+  /* L'autocomplete iTunes produit « Artiste — Titre » (em dash). On sépare sur
+     le 1er séparateur trouvé ; sans séparateur, tout va dans le titre. */
+  function splitTrack(s) {
+    const em = s.indexOf(" — ");
+    if (em > 0) return { artist: s.slice(0, em).trim(), title: s.slice(em + 3).trim() };
+    const hy = s.indexOf(" - ");
+    if (hy > 0) return { artist: s.slice(0, hy).trim(), title: s.slice(hy + 3).trim() };
+    return { artist: "", title: s.trim() };
+  }
+
+  function openMailto(fd, sujet, track) {
     const body = [
       `Nom : ${fd.get("nom") || ""}`,
       `Email : ${fd.get("email") || ""}`,
       `Sujet : ${sujet}`,
-      `Demande de titre : ${fd.get("track") || "—"}`,
+      `Demande de titre : ${track || "—"}`,
       "",
       String(fd.get("message") || ""),
     ].join("\n");
     const to = form.dataset.mail || "studio@hit.radio";
     location.href = `mailto:${to}?subject=${encodeURIComponent("[Hits Dance Music] " + sujet)}&body=${encodeURIComponent(body)}`;
     toast("Ouverture de ton client email…", "ok");
+  }
+
+  async function submitRequest(fd, track, honey) {
+    const { artist, title } = splitTrack(track);
+    if (!title) { toast("Précise un titre à demander", "warn"); return; }
+    const clientId = ensureClientId();
+    if (!clientId) { toast("Stockage local requis pour envoyer une demande", "error"); return; }
+    try {
+      const r = await fetchWithTimeout(`${API_BASE}/v1/requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+          artist,
+          title,
+          dedication: (fd.get("message") || "").toString().trim() || null,
+          requesterName: (fd.get("nom") || "").toString().trim() || null,
+          _hp: honey ? honey.value : "",
+        }),
+      }, NET_TIMEOUTS.generic);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      toast("Demande envoyée au studio ✓", "ok");
+      form.reset();
+      suggestList.hidden = true;
+    } catch {
+      // Repli gracieux : si l'API est injoignable, on ouvre le courriel.
+      toast("Envoi impossible — on ouvre ton courriel", "warn");
+      openMailto(fd, fd.get("sujet") || "Demande de titre", track);
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const honey = $("#hp_field", form);
+    if (honey && honey.value) return; // honeypot : bot → on sort sans rien faire
+    const fd = new FormData(form);
+    const track = (fd.get("track") || "").toString().trim();
+    // Un titre est choisi → demande dans la file animateur (pas de mailto).
+    if (track) {
+      void submitRequest(fd, track, honey);
+      return;
+    }
+    // Pas de titre → message général → on valide puis on ouvre le courriel.
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const sujet = fd.get("sujet") || "Message Hits Dance Music";
+    openMailto(fd, sujet, track);
   });
 }

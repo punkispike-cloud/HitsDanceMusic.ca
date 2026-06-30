@@ -3,10 +3,11 @@
    publicTenant). En mono-radio, c'est toujours l'unique radio ⇒ zéro drift. */
 
 import { Hono } from "hono";
-import { eq, asc, desc, and, sql } from "drizzle-orm";
+import { z } from "zod";
+import { eq, asc, desc, and, sql, gt } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { artists, shows, episodes, mixes, trackHistory, trackLikes } from "../db/schema.js";
-import { notFound, badRequest } from "../lib/errors.js";
+import { artists, shows, episodes, mixes, trackHistory, trackLikes, songRequests, polls, pollVotes } from "../db/schema.js";
+import { notFound, badRequest, tooMany } from "../lib/errors.js";
 import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist } from "../services/schedule.js";
 import { requireRadioId } from "../services/tenant.js";
 import { fromMinutes } from "../lib/validation.js";
@@ -202,4 +203,180 @@ publicRoutes.delete("/tracks/:id/like", async (c) => {
       and(eq(trackLikes.radioId, radioId), eq(trackLikes.trackId, trackId), eq(trackLikes.clientId, clientId)),
     );
   return c.json({ liked: false, likes: await likeCount(trackId) });
+});
+
+/* ───────────────────────── song_requests (demandes / dédicaces) ─────────────────────────
+   Le site public pousse ici (POST /v1/requests) au lieu d'ouvrir un mailto:. La
+   radio est résolue par publicTenant (hôte HTTP) ; tout est scopé radio. Rate-limit
+   global (par IP) + garde anti-flood par clientId (≤ 5 demandes / min) + honeypot
+   (_hp) côté serveur. ⚖️ Rétention Loi 25 gérée par services/maintenance.ts. */
+
+const requestInput = z.object({
+  clientId: z
+    .string()
+    .trim()
+    .min(8)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/, "clientId invalide"),
+  artist: z.string().trim().max(200).default(""),
+  title: z.string().trim().min(1).max(200),
+  dedication: z.string().trim().max(500).nullish(),
+  requesterName: z.string().trim().max(120).nullish(),
+  showId: z.string().uuid().nullish(),
+  slotId: z.string().uuid().nullish(),
+  _hp: z.string().optional(), // honeypot (champ invisible côté site)
+});
+
+/* POST /v1/requests — dépose une demande dans la file animateur. */
+publicRoutes.post("/requests", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = requestInput.parse(await c.req.json());
+
+  // Honeypot : un bot qui remplit le champ invisible → on simule un succès sans
+  // rien stocker (ne pas le signaler, pour ne pas instruire les bots).
+  if (body._hp && body._hp.trim() !== "") return c.json({ ok: true }, 201);
+
+  // Anti-flood par clientId : max 5 demandes / minute (complément du rate-limit IP).
+  const since = new Date(Date.now() - 60_000);
+  const [recent] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(songRequests)
+    .where(and(eq(songRequests.radioId, radioId), eq(songRequests.clientId, body.clientId), gt(songRequests.createdAt, since)));
+  if ((recent?.n ?? 0) >= 5) {
+    c.header("Retry-After", "60");
+    throw tooMany("Trop de demandes, réessaie dans un instant");
+  }
+
+  const [row] = await db
+    .insert(songRequests)
+    .values({
+      radioId,
+      clientId: body.clientId,
+      artist: body.artist,
+      title: body.title,
+      dedication: body.dedication ?? null,
+      requesterName: body.requesterName ?? null,
+      showId: body.showId ?? null,
+      slotId: body.slotId ?? null,
+      status: "new",
+    })
+    .returning();
+  return c.json({ ok: true, id: row?.id ?? null }, 201);
+});
+
+/* ───────────────────────── polls (sondages en direct) ─────────────────────────
+   Sondage temps-réel posé par l'animateur (créé via /v1/admin/polls). Le site
+   public récupère le sondage actif (GET /v1/polls/active) et vote (POST
+   /v1/polls/:id/vote). Radio résolue par publicTenant (hôte HTTP). Rate-limit
+   global (par IP) + garde anti-flood par clientId (≤ 20 votes / min). Vote
+   idempotent : la contrainte unique (pollId, clientId) bloque les doublons et
+   l'endpoint renvoie le vote existant sur conflit. */
+
+const voteInput = z.object({
+  clientId: z
+    .string()
+    .trim()
+    .min(8)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/, "clientId invalide"),
+  optionIndex: z.number().int().min(0),
+});
+
+/* GET /v1/polls/active?clientId=… — sondage actif de la radio + dépouillement
+   en direct. `clientId` optionnel → renvoie `myVote` (l'option du client) pour
+   que le widget affiche son choix. null si aucun sondage actif. */
+publicRoutes.get("/polls/active", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const clientId = c.req.query("clientId")?.trim() || null;
+  const poll = await db.query.polls.findFirst({
+    where: and(eq(polls.radioId, radioId), eq(polls.status, "active")),
+    orderBy: desc(polls.createdAt),
+  });
+  if (!poll) return c.json(null);
+
+  const rows = await db
+    .select({ optionIndex: pollVotes.optionIndex, count: sql<number>`count(*)::int` })
+    .from(pollVotes)
+    .where(and(eq(pollVotes.pollId, poll.id), eq(pollVotes.radioId, radioId)))
+    .groupBy(pollVotes.optionIndex);
+  const counts = new Map<number, number>();
+  let totalVotes = 0;
+  for (const r of rows) {
+    counts.set(r.optionIndex, r.count);
+    totalVotes += r.count;
+  }
+
+  let myVote: number | null = null;
+  if (clientId) {
+    const [v] = await db
+      .select({ optionIndex: pollVotes.optionIndex })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, poll.id),
+          eq(pollVotes.radioId, radioId),
+          eq(pollVotes.clientId, clientId),
+        ),
+      );
+    myVote = v ? v.optionIndex : null;
+  }
+
+  c.header("Cache-Control", "public, max-age=3");
+  return c.json({
+    id: poll.id,
+    question: poll.question,
+    options: poll.options,
+    showId: poll.showId,
+    slotId: poll.slotId,
+    createdAt: poll.createdAt,
+    results: poll.options.map((label, i) => ({ optionIndex: i, label, count: counts.get(i) ?? 0 })),
+    totalVotes,
+    myVote,
+  });
+});
+
+/* POST /v1/polls/:id/vote — vote anonyme (idempotent sur la contrainte unique). */
+publicRoutes.post("/polls/:id/vote", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  const body = voteInput.parse(await c.req.json());
+  const poll = await db.query.polls.findFirst({
+    where: and(eq(polls.id, id), eq(polls.radioId, radioId), eq(polls.status, "active")),
+  });
+  if (!poll) throw notFound("Sondage introuvable ou fermé");
+  if (body.optionIndex >= poll.options.length) throw badRequest("Option invalide");
+
+  // Anti-flood par clientId : max 20 votes / minute (complément du rate-limit IP).
+  // La contrainte unique (pollId, clientId) rend déjà le re-vote idempotent.
+  const since = new Date(Date.now() - 60_000);
+  const [recent] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(pollVotes)
+    .where(
+      and(eq(pollVotes.radioId, radioId), eq(pollVotes.clientId, body.clientId), gt(pollVotes.createdAt, since)),
+    );
+  if ((recent?.n ?? 0) >= 20) {
+    c.header("Retry-After", "60");
+    throw tooMany("Trop de votes, réessaie dans un instant");
+  }
+
+  // Idempotent : sur conflit (pollId, clientId) on ne crée pas de doublon.
+  await db
+    .insert(pollVotes)
+    .values({ radioId, pollId: id, clientId: body.clientId, optionIndex: body.optionIndex })
+    .onConflictDoNothing();
+
+  // Renvoie le vote effectif (nouveau ou existant) : si l'auditeur re-vote une
+  // autre option, son 1er choix est verrouillé (contrainte unique) — on l'indique.
+  const [vote] = await db
+    .select({ optionIndex: pollVotes.optionIndex })
+    .from(pollVotes)
+    .where(
+      and(
+        eq(pollVotes.pollId, id),
+        eq(pollVotes.radioId, radioId),
+        eq(pollVotes.clientId, body.clientId),
+      ),
+    );
+  return c.json({ voted: true, optionIndex: vote?.optionIndex ?? body.optionIndex }, 201);
 });

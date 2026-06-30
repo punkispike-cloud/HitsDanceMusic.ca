@@ -23,6 +23,7 @@ import {
 import { bindNav, markActiveNav, smoothScrollToHashOnIndex, bindResetGeo, bindMoreMenu, setResetGeoHook } from "./nav.js";
 import { wireInstallButtons } from "./install-pwa.js";
 import { bindContactForm } from "./contact-form.js";
+import { initPolls } from "./polls.js";
 import { buildScheduleTable, downloadIcs, loadScheduleFromApi } from "./schedule.js";
 import { renderHistory, toggleHistory, injectHistorySearch } from "./history-drawer.js";
 import { shareCurrent } from "./share.js";
@@ -230,6 +231,8 @@ function initIdle() {
   void initPodcastsPage();
   void initPushOptIn();
   void initLiveBadge();
+  // Widget sondage en direct (no-op si #pollWidget absent).
+  void initPolls();
   renderCountdown();
   bgInterval(renderCountdown, 30_000);
 
