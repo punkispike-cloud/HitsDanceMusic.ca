@@ -309,6 +309,22 @@ export class StudioEngine {
     return Math.round(d.track.bpm * d.rate);
   }
 
+  /** Force le BPM d'un deck (tap tempo / saisie manuelle), borné à une plage utile. */
+  setBpm(deckId: DeckId, bpm: number): void {
+    const d = this.state[deckId];
+    if (!d.track || !Number.isFinite(bpm)) return;
+    d.track = { ...d.track, bpm: clamp(Math.round(bpm), 40, 300) };
+  }
+
+  /** Ré-estime le BPM depuis le buffer du deck (autocorrélation). Renvoie la valeur. */
+  reanalyzeBpm(deckId: DeckId): number | null {
+    const d = this.state[deckId];
+    if (!d.buffer || !d.track) return null;
+    const bpm = estimateBpm(d.buffer);
+    if (bpm) d.track = { ...d.track, bpm };
+    return bpm;
+  }
+
   /** Réinitialise l'automation (nouveau set) sans décharger les decks. */
   resetAutomation(): void {
     this.automation = [];

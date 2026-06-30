@@ -69,6 +69,7 @@ export default function StudioPage() {
   const [pubArtistId, setPubArtistId] = useState("");
   const downloadUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<Record<DeckId, HTMLInputElement | null>>({ A: null, B: null });
+  const tapRef = useRef<Record<DeckId, number[]>>({ A: [], B: [] });
 
   // Création du moteur au montage (client-only).
   useEffect(() => {
@@ -185,6 +186,35 @@ export default function StudioPage() {
   const onReverb = (deck: DeckId, v: number) => {
     engineRef.current?.setReverb(deck, v);
     sync();
+  };
+  const onSetBpm = (deck: DeckId, bpm: number) => {
+    if (!Number.isFinite(bpm) || bpm <= 0) return;
+    engineRef.current?.setBpm(deck, bpm);
+    sync();
+  };
+  const onReanalyze = (deck: DeckId) => {
+    const bpm = engineRef.current?.reanalyzeBpm(deck);
+    sync();
+    toast(bpm ? `BPM ré-estimé : ${bpm}` : "Analyse BPM impossible", bpm ? "ok" : "warn");
+  };
+  // Tap tempo : médiane des intervalles entre frappes (réinitialisé après 2 s de pause).
+  const onTap = (deck: DeckId) => {
+    const now = performance.now();
+    const arr = tapRef.current[deck];
+    if (arr.length && now - arr[arr.length - 1]! > 2000) arr.length = 0;
+    arr.push(now);
+    if (arr.length > 8) arr.shift();
+    if (arr.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < arr.length; i++) intervals.push(arr[i]! - arr[i - 1]!);
+      intervals.sort((a, b) => a - b);
+      const med = intervals[Math.floor(intervals.length / 2)]!;
+      const bpm = 60000 / med;
+      if (bpm >= 40 && bpm <= 300) {
+        engineRef.current?.setBpm(deck, bpm);
+        sync();
+      }
+    }
   };
   const onCross = (x: number) => {
     engineRef.current?.setCrossfader(x);
@@ -329,6 +359,9 @@ export default function StudioPage() {
             onEq={(band, db) => onEq("A", band, db)}
             onVol={(v) => onVol("A", v)}
             onReverb={(v) => onReverb("A", v)}
+            onTap={() => onTap("A")}
+            onReanalyze={() => onReanalyze("A")}
+            onSetBpm={(b) => onSetBpm("A", b)}
             onPickLibrary={() => setPickerFor("A")}
             onPickDisk={() => fileInputRef.current.A?.click()}
             fileInputRef={(el) => {
@@ -351,6 +384,9 @@ export default function StudioPage() {
             onEq={(band, db) => onEq("B", band, db)}
             onVol={(v) => onVol("B", v)}
             onReverb={(v) => onReverb("B", v)}
+            onTap={() => onTap("B")}
+            onReanalyze={() => onReanalyze("B")}
+            onSetBpm={(b) => onSetBpm("B", b)}
             onPickLibrary={() => setPickerFor("B")}
             onPickDisk={() => fileInputRef.current.B?.click()}
             fileInputRef={(el) => {
@@ -536,6 +572,9 @@ function DeckPanel({
   onEq,
   onVol,
   onReverb,
+  onTap,
+  onReanalyze,
+  onSetBpm,
   onPickLibrary,
   onPickDisk,
   fileInputRef,
@@ -552,6 +591,9 @@ function DeckPanel({
   onEq: (band: EqBand, db: number) => void;
   onVol: (v: number) => void;
   onReverb: (v: number) => void;
+  onTap: () => void;
+  onReanalyze: () => void;
+  onSetBpm: (bpm: number) => void;
   onPickLibrary: () => void;
   onPickDisk: () => void;
   fileInputRef: (el: HTMLInputElement | null) => void;
@@ -559,11 +601,19 @@ function DeckPanel({
 }) {
   const pitchPct = (state.rate - 1) * 100;
   const dur = state.buffer?.duration ?? 0;
+  const bpm = state.track?.bpm ?? null;
+  // Phase de battement (0 = sur le beat) à partir de la position dans le buffer.
+  // Pulse 1 sur le beat, décroît jusqu'au suivant. Rythme correct ; l'alignement
+  // au kick dépend de la piste (anchré au début du buffer, pas détecté).
+  const beatPulse = bpm && state.playing ? 1 - (((position * bpm) / 60) % 1) : 0;
   return (
     <div style={{ padding: 16, border: "1px solid var(--line-2)", borderRadius: 12, background: "var(--panel)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <strong style={{ fontSize: 18 }}>Deck {deck}</strong>
-        {effectiveBpm && <span className="muted">{effectiveBpm} BPM</span>}
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <BeatDot pulse={beatPulse} />
+          {effectiveBpm && <span className="muted">{effectiveBpm} BPM</span>}
+        </span>
       </div>
 
       <div style={{ marginBottom: 8, minHeight: 38 }}>
@@ -613,6 +663,33 @@ function DeckPanel({
         />
       </div>
 
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 11, color: "var(--txt-dim)" }}>BPM</span>
+        <input
+          type="number"
+          min={40}
+          max={300}
+          step={1}
+          value={bpm ? Math.round(bpm) : ""}
+          onChange={(e) => onSetBpm(Number(e.target.value))}
+          disabled={!state.track}
+          aria-label={`BPM deck ${deck}`}
+          style={{ width: 70 }}
+        />
+        <button className="btn btn-sm btn-ghost" type="button" onClick={onTap} disabled={!state.track} title="Taper le tempo">
+          Tap
+        </button>
+        <button
+          className="btn btn-sm btn-ghost"
+          type="button"
+          onClick={onReanalyze}
+          disabled={!state.buffer}
+          title="Ré-estimer le BPM depuis l'audio"
+        >
+          Auto
+        </button>
+      </div>
+
       <LabeledRange
         label="Pitch"
         valueLabel={`${pitchPct > 0 ? "+" : ""}${pitchPct.toFixed(1)}%`}
@@ -638,6 +715,27 @@ function DeckPanel({
 
       <LabeledRange label="Reverb" valueLabel={`${Math.round(state.reverb * 100)}%`} min={0} max={0.9} step={0.01} value={state.reverb} onChange={onReverb} />
     </div>
+  );
+}
+
+function BeatDot({ pulse }: { pulse: number }) {
+  // pulse ∈ [0,1] : 1 sur le beat, décroît. Rendu uniquement via opacité/échelle
+  // (rafraîchi par la boucle rAF de la page). Décoratif → aria-hidden.
+  return (
+    <span
+      aria-hidden="true"
+      title="Battement (au tempo)"
+      style={{
+        width: 11,
+        height: 11,
+        borderRadius: "50%",
+        background: "var(--accent)",
+        display: "inline-block",
+        opacity: 0.2 + 0.8 * pulse,
+        transform: `scale(${0.7 + 0.5 * pulse})`,
+        transition: "opacity 0.06s linear, transform 0.06s linear",
+      }}
+    />
   );
 }
 

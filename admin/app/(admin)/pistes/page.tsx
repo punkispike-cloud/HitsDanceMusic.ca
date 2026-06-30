@@ -89,7 +89,7 @@ export default function PistesPage() {
         rowLabel={(r) => `${r.artist} — ${r.title}`}
         extraActions={(r, reload) =>
           canManage ? (
-            <AudioUpload kind="track" targetId={r.id} hasAudio={!!r.audioUrl} onDone={reload} />
+            <AudioUpload kind="track" targetId={r.id} hasAudio={!!r.audioUrl} currentBpm={r.bpm} onDone={reload} />
           ) : null
         }
         toForm={(r) => ({
