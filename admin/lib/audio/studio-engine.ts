@@ -5,9 +5,10 @@
  *  - render() : replanifie la performance dans un OfflineAudioContext (44,1 kHz)
  *    → AudioBuffer → MP3 (lamejs) ou repli WAV → Blob + tracklist auto.
  *
- *  MVP : une lecture par deck dans le rendu (le dernier événement play gagne ;
- *  re-lancer un deck remplace sa contribution). Couvre le cas d'usage central :
- *  charger A, charger B, lancer A, crossfader vers B, lancer B. */
+ *  Rendu multi-segments : chaque chargement crée un « clip » (buffer + piste)
+ *  ré-utilisable, et le rendu produit une source par clip joué. Un même deck peut
+ *  donc enchaîner plusieurs pistes (set > 2 pistes) ; les ré-cues/seeks d'un même
+ *  clip se collapsent (dernière lecture du clip = trajectoire retenue). */
 
 import { estimateBpm } from "./bpm";
 import { encodeMp3, encodeWav } from "./encode";
@@ -62,6 +63,11 @@ export class StudioEngine {
   crossfader = 0.5;
   private transportStartCtx = 0;
   private started = false;
+  // Banque de clips : chaque chargement crée un clip (buffer + piste) ré-utilisable
+  // par toutes ses lectures. Permet de rendre plusieurs pistes successives sur un
+  // même deck, pas seulement la dernière chargée.
+  private clips = new Map<string, { buffer: AudioBuffer; track: TrackRef }>();
+  private clipSeq = 0;
 
   constructor() {
     const Ctor: typeof AudioContext =
@@ -79,11 +85,15 @@ export class StudioEngine {
   async load(deckId: DeckId, track: TrackRef, data: ArrayBuffer): Promise<{ bpm: number | null }> {
     const buffer = await this.ctx.decodeAudioData(data.slice(0));
     const bpm = track.bpm ?? estimateBpm(buffer);
+    const finalTrack = { ...track, bpm };
+    const clipId = `clip-${++this.clipSeq}`;
+    this.clips.set(clipId, { buffer, track: finalTrack });
     this.state[deckId] = {
       ...this.state[deckId],
       loaded: true,
-      track: { ...track, bpm },
+      track: finalTrack,
       buffer,
+      clipId,
       offset: 0,
     };
     this.applyEq(deckId);
@@ -134,7 +144,7 @@ export class StudioEngine {
     d.playing = true;
     d.playStartCtx = this.ctx.currentTime;
     d.playStartOffset = off;
-    this.automation.push({ t: this.tNow(), type: "play", deck: deckId, offset: off, rate: d.rate });
+    this.automation.push({ t: this.tNow(), type: "play", deck: deckId, offset: off, rate: d.rate, clip: d.clipId });
     src.onended = () => {
       if (this.decks[deckId].source === src) {
         d.playing = false;
@@ -254,24 +264,74 @@ export class StudioEngine {
     this.started = false;
     this.stop("A");
     this.stop("B");
+    // Nouveau set : banque de clips repartie de zéro, en ré-enregistrant les pistes
+    // actuellement chargées pour que les prochaines lectures aient un clip valide.
+    this.clips.clear();
+    for (const id of ["A", "B"] as DeckId[]) {
+      const d = this.state[id];
+      if (d.loaded && d.buffer && d.track) {
+        const clipId = `clip-${++this.clipSeq}`;
+        this.clips.set(clipId, { buffer: d.buffer, track: d.track });
+        d.clipId = clipId;
+      } else {
+        d.clipId = undefined;
+      }
+    }
   }
 
   /* ───────────────────────── Rendu ───────────────────────── */
 
   async render(): Promise<RenderResult> {
-    const plays = this.automation
-      .filter((e): e is AutomationEvent & { deck: DeckId; offset: number; rate?: number } =>
-        e.type === "play" && !!e.deck && !!this.state[e.deck].buffer,
-      )
-      // Dernier play par deck (un deck = une source dans le rendu MVP).
-      .filter((e, _i, arr) => e === arr.filter((p) => p.deck === e.deck).at(-1));
+    // Un « segment » = une lecture effective d'un clip. On garde la DERNIÈRE lecture
+    // par clip (ré-cues/seeks d'un même clip écrasent la trajectoire), ce qui autorise
+    // plusieurs clips successifs par deck tout en ignorant les seeks intermédiaires.
+    const playEvents = this.automation.filter(
+      (e): e is AutomationEvent & { deck: DeckId; offset: number; clip: string } =>
+        e.type === "play" && !!e.deck && e.offset != null && !!e.clip && this.clips.has(e.clip),
+    );
+    const lastByClip = new Map<string, (typeof playEvents)[number]>();
+    for (const e of playEvents) lastByClip.set(e.clip, e); // tableau ordonné dans le temps → la dernière gagne
 
-    if (plays.length === 0) throw new Error("Rien à rendre : charge une piste et lance la lecture.");
+    const segments = Array.from(lastByClip.values())
+      .map((e) => {
+        const clip = this.clips.get(e.clip)!;
+        return {
+          deck: e.deck,
+          t: e.t,
+          offset: e.offset,
+          rate: e.rate ?? 1,
+          buffer: clip.buffer,
+          track: clip.track,
+          cutAt: null as number | null,
+          ratesInWindow: [] as { t: number; rate: number }[],
+        };
+      })
+      .sort((a, b) => a.t - b.t);
 
-    // Durée totale = fin exacte du buffer le plus tardif (avec pitch variable).
+    if (segments.length === 0) throw new Error("Rien à rendre : charge une piste et lance la lecture.");
+
+    // Bornes : démarrer un nouveau clip sur un deck coupe la source précédente du même
+    // deck (comportement live : play() fait stopSource() d'abord). Les paliers de pitch
+    // de la fenêtre du segment pilotent sa source.
+    for (const seg of segments) {
+      let cut: number | null = null;
+      for (const o of segments) {
+        if (o.deck === seg.deck && o.t > seg.t) cut = cut == null ? o.t : Math.min(cut, o.t);
+      }
+      seg.cutAt = cut;
+      seg.ratesInWindow = this.automation
+        .filter(
+          (e) =>
+            e.type === "pitch" && e.deck === seg.deck && e.rate != null && e.t > seg.t && (cut == null || e.t < cut),
+        )
+        .sort((a, b) => a.t - b.t) as { t: number; rate: number }[];
+    }
+
+    // Durée totale = fin audible la plus tardive (segment fini naturellement ou coupé).
     let total = 0;
-    for (const p of plays) {
-      const end = this.computeDeckEnd(p.deck, p.t, p.offset, p.rate ?? 1);
+    for (const seg of segments) {
+      const natural = this.segmentEnd(seg.buffer.duration, seg.offset, seg.t, seg.rate, seg.ratesInWindow);
+      const end = seg.cutAt != null ? Math.min(natural, seg.cutAt) : natural;
       total = Math.max(total, end);
     }
     total += 0.08; // queue
@@ -279,28 +339,33 @@ export class StudioEngine {
     const off = new OfflineAudioContext(2, Math.ceil(total * RENDER_SR), RENDER_SR);
     const offMaster = off.createGain();
     offMaster.connect(off.destination);
-    const offA = makeDeckNodes(off, offMaster);
-    const offB = makeDeckNodes(off, offMaster);
-    const offDecks: Record<DeckId, DeckNodes> = { A: offA, B: offB };
+    const offDecks: Record<DeckId, DeckNodes> = { A: makeDeckNodes(off, offMaster), B: makeDeckNodes(off, offMaster) };
 
     this.scheduleParam(offDecks.A.cross.gain, this.automation, "crossfade", (x) => crossGainA(x ?? 0.5));
     this.scheduleParam(offDecks.B.cross.gain, this.automation, "crossfade", (x) => crossGainB(x ?? 0.5));
+
+    // EQ / volume : chaîne partagée par deck (le snapshot t=0 pose la base), planifiée
+    // une fois pour les decks ayant au moins un segment.
+    const usedDecks = new Set(segments.map((s) => s.deck));
     for (const id of ["A", "B"] as DeckId[]) {
+      if (!usedDecks.has(id)) continue;
       const n = offDecks[id];
-      const d = this.state[id];
-      if (!d.buffer) continue;
-      // EQ / volume : on planifie tous les événements du deck (le snapshot t=0 pose la base).
       this.scheduleEq(n.eqLow.gain, this.automation, id, "low");
       this.scheduleEq(n.eqMid.gain, this.automation, id, "mid");
       this.scheduleEq(n.eqHigh.gain, this.automation, id, "high");
       this.scheduleVolume(n.volume.gain, this.automation, id);
-      // Source + pitch.
-      const play = plays.find((p) => p.deck === id)!;
+    }
+
+    // Une source par segment (un même deck peut en enchaîner plusieurs).
+    for (const seg of segments) {
+      const n = offDecks[seg.deck];
       const src = off.createBufferSource();
-      src.buffer = d.buffer;
+      src.buffer = seg.buffer;
       src.connect(n.eqLow);
-      this.scheduleRate(src.playbackRate, this.automation, id, play.t, play.rate ?? d.rate);
-      src.start(play.t, play.offset);
+      src.playbackRate.setValueAtTime(seg.rate, seg.t);
+      for (const r of seg.ratesInWindow) src.playbackRate.setValueAtTime(r.rate, r.t); // un pitch = un palier
+      src.start(seg.t, seg.offset);
+      if (seg.cutAt != null) src.stop(seg.cutAt);
     }
 
     const rendered = await off.startRendering();
@@ -318,25 +383,26 @@ export class StudioEngine {
       ext = "wav";
     }
 
-    const tracklist = plays
-      .slice()
-      .sort((a, b) => a.t - b.t)
-      .map((p, i) => {
-        const tr = this.state[p.deck].track!;
-        return { pos: i + 1, artist: tr.artist, title: tr.title, timestamp: Math.round(p.t) };
-      });
+    const tracklist = segments.map((seg, i) => ({
+      pos: i + 1,
+      artist: seg.track.artist,
+      title: seg.track.title,
+      timestamp: Math.round(seg.t),
+    }));
 
     return { blob, mime, ext, durationSec: Math.round(rendered.duration), tracklist };
   }
 
-  /** Fin exacte de lecture d'un deck (pitch variable) par simulation des paliers. */
-  private computeDeckEnd(deckId: DeckId, playT: number, offset: number, initialRate: number): number {
-    const bufDur = this.state[deckId].buffer!.duration;
-    const rates = this.automation
-      .filter((e) => e.type === "pitch" && e.deck === deckId && e.t >= playT && e.rate != null)
-      .sort((a, b) => a.t - b.t) as { t: number; rate: number }[];
+  /** Fin de lecture d'un segment (pitch variable) par simulation des paliers. */
+  private segmentEnd(
+    bufDur: number,
+    offset: number,
+    startT: number,
+    initialRate: number,
+    rates: { t: number; rate: number }[],
+  ): number {
     let remaining = bufDur - offset;
-    let t = playT;
+    let t = startT;
     let curRate = initialRate;
     for (const r of rates) {
       const dt = r.t - t;
@@ -391,22 +457,6 @@ export class StudioEngine {
     param.setValueAtTime(pts[0]!.volume, pts[0]!.t);
     for (let i = 1; i < pts.length; i++) {
       param.linearRampToValueAtTime(pts[i]!.volume, pts[i]!.t);
-    }
-  }
-
-  private scheduleRate(
-    param: AudioParam,
-    events: AutomationEvent[],
-    deck: DeckId,
-    playT: number,
-    initialRate: number,
-  ): void {
-    param.setValueAtTime(initialRate, playT);
-    const pts = events
-      .filter((e) => e.type === "pitch" && e.deck === deck && e.t > playT && e.rate != null)
-      .sort((a, b) => a.t - b.t) as { t: number; rate: number }[];
-    for (const p of pts) {
-      param.setValueAtTime(p.rate, p.t); // changement en marche (pas de rampe : un pitch est un palier)
     }
   }
 

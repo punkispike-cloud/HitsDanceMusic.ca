@@ -68,7 +68,7 @@ Rien de bloquant côté code pour un premier test une fois R2 configuré :
 |----------|--------|
 | **Hors périmètre actuel** | **Live DJ** : deck → `input.harbor` AzuraCast via Webcaster.js (nécessite serveur AzuraCast / Oracle) |
 | **Amélioration** | Effets avancés (loops, reverb, key detection) |
-| **Amélioration** | Rendu offline : plusieurs reprises `play` par deck (aujourd'hui MVP = dernier `play` par deck) |
+| ~~Rendu offline multi-`play` par deck~~ | ✅ **FAIT** : rendu multi-segments (banque de clips → 1 source par clip joué ; set > 2 pistes par deck ; ré-cues/seeks collapsés). `studio-engine.ts` `render()`. |
 | **Amélioration** | Route publique `/v1/library` si un jour le site public doit lister la bibliothèque |
 | **Parallèle (autre chantier)** | Pages admin **Demandes**, **Sondages** ; migrations polls (`0018`/`0019`) — voir fichiers non liés au studio |
 

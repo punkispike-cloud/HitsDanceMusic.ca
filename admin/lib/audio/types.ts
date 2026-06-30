@@ -28,12 +28,14 @@ export interface AutomationEvent {
   band?: EqBand; // eq
   gainDb?: number; // eq (dB)
   volume?: number; // volume (0..1)
+  clip?: string; // play : id du clip (buffer + piste) actif → rendu multi-segments
 }
 
 export interface DeckState {
   loaded: boolean;
   track: TrackRef | null;
   buffer: AudioBuffer | null;
+  clipId?: string; // id du clip courant dans la banque du moteur (rendu multi-segments)
   playing: boolean;
   offset: number; // position de cue / départ (s)
   rate: number; // playbackRate (1 + pitch%)
