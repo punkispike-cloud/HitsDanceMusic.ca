@@ -22,6 +22,7 @@ import type {
   Show,
   Episode,
   Mix,
+  Track,
   AdminUser,
   ScheduleSlot,
   AnalyticsOverview,
@@ -37,6 +38,14 @@ import type {
   RadioHealth,
   OwnerTimeseriesPoint,
   TrackHistoryEntry,
+  SongRequest,
+  RequestStatus,
+  TopTrack,
+  Poll,
+  PollResults,
+  PollStatus,
+  DistributionPackage,
+  DistributionChannel,
 } from "./types";
 
 export { rkey } from "./keys";
@@ -75,6 +84,12 @@ export function useMixes() {
   return useSWR<Mix[]>(rkey("/v1/admin/mixes", selectedId), LIST);
 }
 
+/** Bibliothèque de pistes (source material du studio de mix). Radio-scopée. */
+export function useLibrary() {
+  const { selectedId } = useRadio();
+  return useSWR<Track[]>(rkey("/v1/admin/library", selectedId), LIST);
+}
+
 export function useUsers() {
   const { selectedId } = useRadio();
   return useSWR<AdminUser[]>(rkey("/v1/admin/users", selectedId), LIST);
@@ -100,6 +115,41 @@ export function useRecentTracks() {
     keepPreviousData: true,
     refreshInterval: 20_000,
   });
+}
+
+/** File des demandes / dédicaces — rafraîchie toutes les 5 s (temps-réel animateur).
+ *  `status` filtre côté API (encodé dans la clé → re-fetch au changement de filtre).
+ *  Hook réutilisable : la future page Studio l'appellera avec `status="new"`. */
+export function useRequests(status?: RequestStatus) {
+  const { selectedId } = useRadio();
+  const path = status
+    ? `/v1/admin/requests?status=${status}&limit=200`
+    : `/v1/admin/requests?limit=200`;
+  return useSWR<SongRequest[]>(rkey(path, selectedId), {
+    keepPreviousData: true,
+    refreshInterval: 5_000,
+  });
+}
+
+/** Sondages en direct — rafraîchis toutes les 5 s (résultats temps-réel).
+ *  `status` filtre côté API (encodé dans la clé → re-fetch au changement). */
+export function usePolls(status?: PollStatus) {
+  const { selectedId } = useRadio();
+  const path = status ? `/v1/admin/polls?status=${status}&limit=200` : `/v1/admin/polls?limit=200`;
+  return useSWR<Poll[]>(rkey(path, selectedId), {
+    keepPreviousData: true,
+    refreshInterval: 5_000,
+  });
+}
+
+/** Dépouillement en direct d'un sondage — polling 5 s. `id` null → pas de fetch.
+ *  Passer `{ refreshInterval: 0 }` pour un sondage fermé (pas de re-polling). */
+export function usePollResults(id: string | null, opts: SWRConfiguration<PollResults> = {}) {
+  const { selectedId } = useRadio();
+  return useSWR<PollResults>(
+    id ? rkey(`/v1/admin/polls/${id}/results`, selectedId) : null,
+    { keepPreviousData: true, refreshInterval: 5_000, ...opts },
+  );
 }
 
 /* ──────────────────── Hooks radio-scopés (statistiques) ────────────────────
@@ -130,6 +180,16 @@ export function useAnalyticsSessions(enabled: boolean, opts: SWRConfiguration<An
 export function useAnalyticsShows(opts: SWRConfiguration<AnalyticsShow[]> = {}) {
   const { selectedId } = useRadio();
   return useSWR<AnalyticsShow[]>(rkey("/v1/admin/analytics/shows", selectedId), { ...LIST, ...opts });
+}
+
+/** Top titres (feedback de programmation) sur `days` jours — `days` encodé dans
+ *  le chemin → re-fetch au changement de période. Polling « lourd » (60 s). */
+export function useTopTracks(days: number, opts: SWRConfiguration<TopTrack[]> = {}) {
+  const { selectedId } = useRadio();
+  return useSWR<TopTrack[]>(
+    rkey(`/v1/admin/analytics/top-tracks?days=${days}`, selectedId),
+    { ...LIST, ...opts },
+  );
 }
 
 /** Série quotidienne sur `days` jours — `days` est encodé dans le chemin (query)
@@ -244,4 +304,23 @@ export function useRadioDetail(id: string, enabled: boolean) {
     error,
     reload,
   };
+}
+
+/* ─────────────────────── Distribution (parc/[id]) ────────────────────────── */
+
+/** Outil d'inscription d'une radio sur les plateformes externes (TuneIn, Radio
+ *  Garden, Alexa, podcasts). Hook NON radio-scopé : la clé pointe vers la
+ *  console owner (`/v1/owner/radios/:id/distribution`), qui porte déjà l'id.
+ *  `save` persiste l'état coché via PATCH (jsonb merge) et revalide la clé. */
+export function useDistribution(id: string | null | undefined) {
+  const key = id ? `/v1/owner/radios/${id}/distribution` : null;
+  const { data, error, mutate, isValidating } = useSWR<DistributionPackage>(key);
+  const save = async (checklist: Record<string, boolean>): Promise<DistributionChannel[]> => {
+    const res = await api.patch(`/v1/owner/radios/${id}/distribution`, { checklist });
+    const updated = (res as { checklist?: DistributionChannel[] }).checklist ?? [];
+    if (data) await mutate({ ...data, checklist: updated }, false);
+    else await mutate();
+    return updated;
+  };
+  return { data, error, save, mutate, isValidating };
 }

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
-import { useRadioDetail } from "@/lib/hooks";
+import { useRadioDetail, useDistribution } from "@/lib/hooks";
 import { Empty, Spinner, ErrorState } from "@/components/ui";
 import { TrendChart } from "@/components/trend-chart";
 import { formatDuration, isCrossRadio, type RadioStatus } from "@/lib/types";
@@ -141,6 +141,8 @@ export default function RadioDetailPage() {
         </div>
       </div>
 
+      <DistributionCard id={id} />
+
       {editing && radio && (
         <RadioEditPanel
           radio={radio}
@@ -177,6 +179,129 @@ function Row({ label, value }: { label: string; value: string | null }) {
     <div style={{ display: "flex", gap: 8, padding: "5px 0", borderTop: "1px solid var(--line)", fontSize: 13 }}>
       <span style={{ color: "var(--txt-dim)", width: 90, flexShrink: 0 }}>{label}</span>
       <span style={{ color: value ? "var(--txt)" : "var(--txt-faint)", wordBreak: "break-all" }}>{value || "—"}</span>
+    </div>
+  );
+}
+
+/* Carte « Distribution » : colis de métadonnées copiable (TuneIn, Radio Garden,
+   Alexa, podcasts) + checklist d'inscription persistée dans radios.distribution.
+   Console owner/it (le hook pointe vers /v1/owner/...). */
+function DistributionCard({ id }: { id: string }) {
+  const { data, error, save } = useDistribution(id);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  if (error) {
+    return (
+      <div style={{ ...cardStyle, marginTop: 16 }}>
+        <strong>Distribution &amp; inscriptions</strong>
+        <p style={{ color: "var(--txt-faint)", fontSize: 13, marginTop: 8 }}>
+          Impossible de charger le colis de distribution.
+        </p>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div style={{ ...cardStyle, marginTop: 16 }}>
+        <strong>Distribution &amp; inscriptions</strong>
+        <div style={{ marginTop: 10 }}>
+          <Spinner />
+        </div>
+      </div>
+    );
+  }
+
+  const pkg = data.package;
+  const doneCount = data.checklist.filter((c) => c.done).length;
+
+  const toggle = async (key: string, done: boolean) => {
+    const next: Record<string, boolean> = {};
+    for (const ch of data.checklist) next[ch.key] = ch.done;
+    next[key] = done;
+    setSavingKey(key);
+    try {
+      await save(next);
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const copyAll = [
+    `Nom : ${pkg.name}`,
+    `Slug : ${pkg.slug}`,
+    pkg.streamUrl ? `Flux audio : ${pkg.streamUrl}` : null,
+    pkg.nowPlayingUrl ? `Now-playing : ${pkg.nowPlayingUrl}` : null,
+    `Domaines : ${(pkg.domains ?? []).join(", ") || "—"}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    <div style={{ ...cardStyle, marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <strong>Distribution &amp; inscriptions</strong>
+        <button className="btn btn-sm btn-ghost" type="button" onClick={() => void navigator.clipboard?.writeText(copyAll)}>
+          Copier le colis
+        </button>
+      </div>
+      <p style={{ color: "var(--txt-dim)", fontSize: 12, marginTop: 0, marginBottom: 10 }}>
+        Métadonnées à fournir à TuneIn, Radio Garden, au skill Alexa et aux plateformes de podcasts.
+      </p>
+      <CopyRow label="Nom" value={pkg.name} />
+      <CopyRow label="Slug" value={pkg.slug} />
+      <CopyRow label="Flux audio" value={pkg.streamUrl} />
+      <CopyRow label="Now-playing" value={pkg.nowPlayingUrl} />
+      <CopyRow label="Domaines" value={(pkg.domains ?? []).join(", ") || null} />
+
+      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <strong style={{ fontSize: 13 }}>Inscriptions</strong>
+        <span style={{ color: "var(--txt-dim)", fontSize: 12 }}>
+          {doneCount}/{data.checklist.length}
+        </span>
+      </div>
+      {data.checklist.map((ch) => (
+        <label
+          key={ch.key}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 0",
+            borderTop: "1px solid var(--line)",
+            fontSize: 13,
+            cursor: savingKey ? "wait" : "pointer",
+          }}
+        >
+          <input type="checkbox" checked={ch.done} disabled={!!savingKey} onChange={(e) => void toggle(ch.key, e.target.checked)} />
+          <span style={{ color: ch.done ? "var(--txt)" : "var(--txt-dim)" }}>{ch.label}</span>
+          {savingKey === ch.key && <span style={{ color: "var(--txt-faint)", fontSize: 11 }}>…</span>}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!value) return;
+    try {
+      await navigator.clipboard?.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard indisponible (contexte non sécurisé) — ignore. */
+    }
+  };
+  return (
+    <div style={{ display: "flex", gap: 8, padding: "5px 0", borderTop: "1px solid var(--line)", fontSize: 13, alignItems: "center" }}>
+      <span style={{ color: "var(--txt-dim)", width: 110, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: value ? "var(--txt)" : "var(--txt-faint)", wordBreak: "break-all", flex: 1 }}>{value || "—"}</span>
+      {value && (
+        <button className="btn btn-sm btn-ghost" type="button" onClick={() => void copy()} style={{ flexShrink: 0 }}>
+          {copied ? "Copié" : "Copier"}
+        </button>
+      )}
     </div>
   );
 }

@@ -41,7 +41,7 @@ export const slotTag = pgEnum("slot_tag", [
 
 export const contentStatus = pgEnum("content_status", ["draft", "published", "archived"]);
 
-export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover"]);
+export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover", "track"]);
 export const uploadStatus = pgEnum("upload_status", ["pending", "completed", "aborted"]);
 
 const timestamps = {
@@ -76,6 +76,10 @@ export const radios = pgTable(
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     lastAlertAt: timestamp("last_alert_at", { withTimezone: true }),
     lastAlertKind: text("last_alert_kind"), // down | silent
+    // Outil de distribution : état cochable des inscriptions externes (TuneIn,
+    // Radio Garden, Alexa, podcasts…). jsonb merge côté API. Pas de schéma strict
+    // → évolutif sans migration. {} par défaut.
+    distribution: jsonb("distribution").notNull().default(sql`'{}'::jsonb`),
     ...timestamps,
   },
   (t) => ({
@@ -284,6 +288,37 @@ export const mixes = pgTable(
   }),
 );
 
+/* ───────────────────────── tracks (bibliothèque de pistes) ─────────────────────────
+   Pistes libres de droits cataloguées pour le studio de mix (et plus tard la
+   rotation AzuraCast). Audio stocké sur S3/R2. `source`/`license` = journal de
+   conformité (CC0/CC-BY/Pixabay/permission). `artist` est texte libre (les
+   artistes libres de droits ne sont pas dans la table `artists`). */
+
+export const tracks = pgTable(
+  "tracks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    artist: text("artist").notNull(),
+    title: text("title").notNull(),
+    genre: text("genre"),
+    bpm: doublePrecision("bpm"),
+    durationSec: integer("duration_sec"),
+    audioUrl: text("audio_url"),
+    audioKey: text("audio_key"),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    source: text("source"), // FMA / Pixabay / Bandcamp / Internet Archive / …
+    license: text("license"), // CC0 / CC-BY / Pixabay / permission
+    status: contentStatus("status").notNull().default("draft"),
+    ...timestamps,
+  },
+  (t) => ({
+    radioIdx: index("tracks_radio_idx").on(t.radioId),
+    statusIdx: index("tracks_status_idx").on(t.status),
+    artistIdx: index("tracks_artist_idx").on(t.artist),
+  }),
+);
+
 /* ───────────────────────── upload_intents (traçabilité S3 pré-signé) ───────────────────────── */
 
 export const uploadIntents = pgTable(
@@ -396,6 +431,91 @@ export const trackLikes = pgTable(
     uniqIdx: uniqueIndex("track_likes_uniq_idx").on(t.trackId, t.clientId),
     radioIdx: index("track_likes_radio_idx").on(t.radioId),
     trackIdx: index("track_likes_track_idx").on(t.trackId),
+  }),
+);
+
+/* ───────────────────────── song_requests (demandes de titres / dédicaces) ─────────────────────────
+   File temps-réel des demandes d'auditeurs. Alimentée par le site public
+   (POST /v1/requests) et traitée par l'animateur en direct (page DemandeS /
+   future page Studio). client_id = même UUID stable que presence/analytics.
+   Cycle de vie : new → read → queued → played (ou ignored). ⚖️ dedication et
+   requester_name = données potentiellement personnelles → purgées au-delà de
+   ANALYTICS_RETENTION_DAYS par services/maintenance.ts (Loi 25). */
+
+export const requestStatus = pgEnum("request_status", ["new", "read", "queued", "played", "ignored"]);
+
+export const songRequests = pgTable(
+  "song_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    artist: text("artist").notNull().default(""),
+    title: text("title").notNull(),
+    dedication: text("dedication"),
+    requesterName: text("requester_name"),
+    showId: uuid("show_id").references(() => shows.id, { onDelete: "set null" }),
+    slotId: uuid("slot_id").references(() => scheduleSlots.id, { onDelete: "set null" }),
+    status: requestStatus("status").notNull().default("new"),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    handledBy: uuid("handled_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    inboxIdx: index("song_requests_inbox_idx").on(t.radioId, t.status, t.createdAt),
+    radioIdx: index("song_requests_radio_idx").on(t.radioId),
+  }),
+);
+
+/* ───────────────────────── polls (sondages en direct) ─────────────────────────
+   Sondage temps-réel lié optionnellement à une émission/créneau. `options` =
+   tableau des choix (text[]). status active|closed. Un auditeur vote
+   anonymement par client_id (même UUID stable que presence/analytics) — un seul
+   vote par (poll, client) via uniqueIndex. createdBy = l'animateur qui a créé
+   le sondage (effacé si le compte est supprimé). */
+
+export const pollStatus = pgEnum("poll_status", ["active", "closed"]);
+
+export const polls = pgTable(
+  "polls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    showId: uuid("show_id").references(() => shows.id, { onDelete: "set null" }),
+    slotId: uuid("slot_id").references(() => scheduleSlots.id, { onDelete: "set null" }),
+    question: text("question").notNull(),
+    options: text("options").array().notNull(),
+    status: pollStatus("status").notNull().default("active"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    radioStatusIdx: index("polls_radio_status_idx").on(t.radioId, t.status),
+    radioIdx: index("polls_radio_idx").on(t.radioId),
+  }),
+);
+
+/* ───────────────────────── poll_votes (votes anonymes) ─────────────────────────
+   Un vote = (poll, client_id). uniqueIndex (pollId, clientId) → idempotence :
+   re-voter le même sondage ne crée pas de doublon (le endpoint public renvoie
+   le vote existant sur conflit). option_index = index dans polls.options. */
+
+export const pollVotes = pgTable(
+  "poll_votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    pollId: uuid("poll_id")
+      .notNull()
+      .references(() => polls.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    optionIndex: integer("option_index").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pollClientIdx: uniqueIndex("poll_votes_poll_client_idx").on(t.pollId, t.clientId),
+    radioIdx: index("poll_votes_radio_idx").on(t.radioId),
   }),
 );
 
@@ -551,6 +671,10 @@ export const mixesRelations = relations(mixes, ({ one }) => ({
   artist: one(artists, { fields: [mixes.artistId], references: [artists.id] }),
 }));
 
+export const tracksRelations = relations(tracks, ({ one }) => ({
+  radio: one(radios, { fields: [tracks.radioId], references: [radios.id] }),
+}));
+
 /* ───────────────────────── Types inférés ───────────────────────── */
 
 export type User = typeof users.$inferSelect;
@@ -560,6 +684,8 @@ export type Show = typeof shows.$inferSelect;
 export type ScheduleSlot = typeof scheduleSlots.$inferSelect;
 export type Episode = typeof episodes.$inferSelect;
 export type Mix = typeof mixes.$inferSelect;
+export type Track = typeof tracks.$inferSelect;
+export type NewTrack = typeof tracks.$inferInsert;
 export type Role = (typeof userRole.enumValues)[number];
 export type SlotTag = (typeof slotTag.enumValues)[number];
 export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
@@ -571,3 +697,8 @@ export type NewRadio = typeof radios.$inferInsert;
 export type RadioStatus = (typeof radioStatus.enumValues)[number];
 export type TrackLike = typeof trackLikes.$inferSelect;
 export type ReportLog = typeof reportLog.$inferSelect;
+export type SongRequest = typeof songRequests.$inferSelect;
+export type RequestStatus = (typeof requestStatus.enumValues)[number];
+export type Poll = typeof polls.$inferSelect;
+export type PollVote = typeof pollVotes.$inferSelect;
+export type PollStatus = (typeof pollStatus.enumValues)[number];

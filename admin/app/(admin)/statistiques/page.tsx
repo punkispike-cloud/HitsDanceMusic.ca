@@ -11,6 +11,7 @@ import {
   useAnalyticsShows,
   useAnalyticsTimeseries,
   useAnalyticsBreakdown,
+  useTopTracks,
 } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
 import { Empty, ErrorState, TableSkeleton } from "@/components/ui";
@@ -272,12 +273,14 @@ export default function StatistiquesPage() {
   const showsRes = useAnalyticsShows({ refreshInterval: heavyInterval });
   const seriesRes = useAnalyticsTimeseries(days, { refreshInterval: heavyInterval });
   const breakdownRes = useAnalyticsBreakdown({ refreshInterval: heavyInterval });
+  const topTracksRes = useTopTracks(days, { refreshInterval: heavyInterval });
   const overview = overviewRes.data;
   const geo = geoRes.data;
   const sessions = sessionsRes.data;
   const shows = showsRes.data;
   const series = seriesRes.data;
   const breakdown = breakdownRes.data;
+  const topTracks = topTracksRes.data;
   // Erreur : seul le 1er échec (aucune donnée encore) bascule en état erreur —
   // les hoquets réseau ultérieurs gardent l'affichage précédent (best-effort).
   const error = !overview && overviewRes.error ? "Impossible de charger les statistiques." : null;
@@ -582,6 +585,49 @@ export default function StatistiquesPage() {
                     </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <h2 style={{ marginTop: 28 }}>Titres les plus diffusés ({days} derniers jours)</h2>
+          {!topTracks || topTracks.length === 0 ? (
+            <Empty label="Pas encore de titres diffusés sur cette période." />
+          ) : (
+            <div className="table-wrap">
+              <p className="muted" style={{ fontSize: "0.82rem", marginBottom: 10 }}>
+                Passages = fois jouées à l&apos;antenne · 🤘 = likes · Écoute moy. &amp; Skip =
+                contexte radio sur la période (skip = écoute &lt; 15 s).
+              </p>
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th scope="col">Titre</th>
+                    <th scope="col">Artiste</th>
+                    <th scope="col">Passages</th>
+                    <th scope="col">🤘</th>
+                    <th scope="col">Écoute moy.</th>
+                    <th scope="col">Skip</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topTracks.map((t, i) => (
+                    <tr key={t.trackId ?? i}>
+                      <th scope="row">{t.title}</th>
+                      <td>{t.artist || "—"}</td>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.playCount}</td>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.likeCount}</td>
+                      <td className="muted">{formatDuration(t.avgListenSec)}</td>
+                      <td>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span aria-hidden="true" style={{ width: 48, height: 6, background: "var(--panel-2)", borderRadius: 3, display: "inline-block" }}>
+                            <span style={{ display: "block", width: `${t.skipRate}%`, height: "100%", background: "var(--warn, #d97706)", borderRadius: 3, minWidth: t.skipRate ? 2 : 0 }} />
+                          </span>
+                          <span style={{ fontVariantNumeric: "tabular-nums", width: 34, textAlign: "right" }}>{t.skipRate} %</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

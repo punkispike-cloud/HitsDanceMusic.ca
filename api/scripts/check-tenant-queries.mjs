@@ -49,12 +49,14 @@ const SCAN_DIRS = [join(ROOT, "src", "routes"), join(ROOT, "src", "services")];
 const TENANT_TABLES = [
   "artists", "users", "shows", "scheduleSlots", "episodes", "mixes",
   "uploadIntents", "analyticsSessions", "analyticsShowListen", "trackHistory",
-  "trackLikes", "pushSubscriptions", "auditLog", "reportLog",
+  "trackLikes", "pushSubscriptions", "auditLog", "reportLog", "songRequests",
+  "polls", "pollVotes",
 ];
 const TENANT_SNAKE = [
   "artists", "users", "shows", "schedule_slots", "episodes", "mixes",
   "upload_intents", "analytics_sessions", "analytics_show_listen", "track_history",
-  "track_likes", "push_subscriptions", "audit_log", "report_log",
+  "track_likes", "push_subscriptions", "audit_log", "report_log", "song_requests",
+  "polls", "poll_votes",
 ];
 
 /* Fichiers entièrement cross-radio par conception → ignorés. */

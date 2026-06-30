@@ -7,7 +7,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, and, ilike, or, type SQL } from "drizzle-orm";
+import { eq, and, ilike, or, desc, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import {
   artists,
@@ -16,6 +16,10 @@ import {
   users,
   episodes,
   mixes,
+  tracks,
+  songRequests,
+  polls,
+  pollVotes,
 } from "../db/schema.js";
 import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
@@ -37,6 +41,7 @@ import { sendEmail, inviteEmailHtml } from "../services/email.js";
 import { env, isResendConfigured } from "../env.js";
 import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
+import type { RequestStatus } from "../db/schema.js";
 
 export const adminRoutes = new Hono<AppBindings>();
 
@@ -428,6 +433,74 @@ adminRoutes.delete("/mixes/:id", requireOwnershipOrAdmin(loadMixOwner), async (c
   return c.json({ ok: true });
 });
 
+/* ═══════════════════════ LIBRARY (bibliothèque de pistes du studio) ═══════════════════════
+   Pistes libres de droits cataloguées pour le studio de mix. Monté sous
+   /v1/admin/library (pour ne pas écraser /v1/admin/tracks/recent = historique
+   now-playing). Pas d'ownership par artiste (`artist` est texte libre) : écriture
+   = animateur+/superadmin/owner, cloisonnée par radio via le tenant. */
+
+const trackInput = z.object({
+  artist: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
+  genre: z.string().trim().max(80).nullish(),
+  bpm: z.number().positive().nullish(),
+  durationSec: z.number().int().positive().nullish(),
+  source: z.string().trim().max(80).nullish(),
+  license: z.string().trim().max(80).nullish(),
+  status: z.enum(["draft", "published", "archived"]).optional(),
+});
+
+adminRoutes.get("/library", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const q = c.req.query("q")?.trim();
+  const status = c.req.query("status")?.trim();
+  const where = and(
+    eq(tracks.radioId, radioId),
+    q ? or(ilike(tracks.artist, `%${q}%`), ilike(tracks.title, `%${q}%`), ilike(tracks.genre, `%${q}%`)) : undefined,
+    status ? eq(tracks.status, status as "draft" | "published" | "archived") : undefined,
+  );
+  return c.json(
+    await db.select().from(tracks).where(where).orderBy(desc(tracks.createdAt)).limit(listLimit(c)).offset(listOffset(c)),
+  );
+});
+
+adminRoutes.post("/library", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = trackInput.parse(await c.req.json());
+  const [row] = await db
+    .insert(tracks)
+    .values({
+      ...body,
+      radioId,
+      status: body.status ?? "draft",
+    })
+    .returning();
+  return c.json(row, 201);
+});
+
+adminRoutes.patch("/library/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  const body = trackInput.partial().parse(await c.req.json());
+  const [row] = await db
+    .update(tracks)
+    .set({ ...body, updatedAt: new Date() })
+    .where(and(eq(tracks.id, id), eq(tracks.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Piste introuvable");
+  return c.json(row);
+});
+
+adminRoutes.delete("/library/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const [row] = await db
+    .delete(tracks)
+    .where(and(eq(tracks.id, c.req.param("id")), eq(tracks.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Piste introuvable");
+  return c.json({ ok: true });
+});
+
 /* ═══════════════════════ USERS (admin de la radio) ═══════════════════════ */
 
 const userPatch = z.object({
@@ -592,4 +665,155 @@ adminRoutes.delete("/users/:id", requireEditorialAdmin, async (c) => {
   assertCanManageUser(actor, target.role); // anti-escalade : pas de suppression d'un rang supérieur
   await db.delete(users).where(eq(users.id, id));
   return c.json({ ok: true });
+});
+
+/* ═══════════════════════ SONG REQUESTS (demandes / dédicaces) ═══════════════════════
+   File temps-réel des demandes d'auditeurs (POST /v1/requests côté public). La
+   lecture est ouverte à tout authentifié (l'animateur voit sa file en direct) ;
+   le traitement (PATCH statut) est réservé à l'animateur + aux admins éditoriaux
+   (superadmin/owner) — `it` (technique, pas à l'antenne) et `lecteur` sont exclus.
+   Toute mutation est tracée par auditMiddleware (entity = "requests"). */
+
+const REQUEST_STATUSES = ["new", "read", "queued", "played", "ignored"] as const;
+const requestPatch = z.object({
+  status: z.enum(REQUEST_STATUSES),
+});
+
+adminRoutes.get("/requests", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const statusParam = c.req.query("status");
+  const status =
+    statusParam && (REQUEST_STATUSES as readonly string[]).includes(statusParam) ? statusParam : undefined;
+  const where = and(
+    eq(songRequests.radioId, radioId),
+    status ? eq(songRequests.status, status as RequestStatus) : undefined,
+  );
+  return c.json(
+    await db
+      .select()
+      .from(songRequests)
+      .where(where)
+      .orderBy(desc(songRequests.createdAt))
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
+});
+
+adminRoutes.patch("/requests/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  const body = requestPatch.parse(await c.req.json());
+  const user = c.get("user");
+  const [row] = await db
+    .update(songRequests)
+    .set({ status: body.status, handledAt: new Date(), handledBy: user.userId })
+    .where(and(eq(songRequests.id, id), eq(songRequests.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Demande introuvable");
+  return c.json(row);
+});
+
+/* ═══════════════════════ POLLS (sondages en direct) ═══════════════════════
+   Sondage temps-réel : l'animateur pose une question à l'antenne, les auditeurs
+   votent depuis le site public (POST /v1/polls/:id/vote). Création/fermeture =
+   animateur+/superadmin/owner (`it` exclu, pas à l'antenne). Lecture ouverte à
+   tout authentifié. Tout est scopé radio. Mutations tracées par auditMiddleware
+   (entity = "polls"). */
+
+const pollInput = z.object({
+  question: z.string().trim().min(1).max(280),
+  options: z.array(z.string().trim().min(1).max(120)).min(2).max(6),
+  showId: z.string().uuid().nullish(),
+  slotId: z.string().uuid().nullish(),
+});
+
+adminRoutes.get("/polls", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const statusParam = c.req.query("status");
+  const status = statusParam === "active" || statusParam === "closed" ? statusParam : undefined;
+  return c.json(
+    await db
+      .select()
+      .from(polls)
+      .where(and(eq(polls.radioId, radioId), status ? eq(polls.status, status) : undefined))
+      .orderBy(desc(polls.createdAt))
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
+});
+
+adminRoutes.post("/polls", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const user = c.get("user");
+  const body = pollInput.parse(await c.req.json());
+  // Valide l'appartenance du show/slot à la radio (lien optionnel mais sécurisé).
+  if (body.showId) {
+    const s = await db.query.shows.findFirst({
+      where: and(eq(shows.id, body.showId), eq(shows.radioId, radioId)),
+      columns: { id: true },
+    });
+    if (!s) throw badRequest("Émission inconnue");
+  }
+  if (body.slotId) {
+    const s = await db.query.scheduleSlots.findFirst({
+      where: and(eq(scheduleSlots.id, body.slotId), eq(scheduleSlots.radioId, radioId)),
+      columns: { id: true },
+    });
+    if (!s) throw badRequest("Créneau inconnu");
+  }
+  const [row] = await db
+    .insert(polls)
+    .values({
+      radioId,
+      question: body.question,
+      options: body.options,
+      showId: body.showId ?? null,
+      slotId: body.slotId ?? null,
+      createdBy: user.userId,
+      status: "active",
+    })
+    .returning();
+  return c.json(row, 201);
+});
+
+/* PATCH /polls/:id — ferme le sondage (status → closed, closedAt). Seule
+   mutation gérée : on ne réouvre pas un sondage (un nouveau sondage remplace
+   l'ancien). Body optionnel ({ status: "closed" }) pour l'audit. */
+adminRoutes.patch("/polls/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  // Body optionnel : on valide seulement qu'il ne demande pas autre chose que closed.
+  z.object({ status: z.enum(["closed"]).optional() }).parse(await c.req.json().catch(() => ({})));
+  const [row] = await db
+    .update(polls)
+    .set({ status: "closed", closedAt: new Date() })
+    .where(and(eq(polls.id, id), eq(polls.radioId, radioId), eq(polls.status, "active")))
+    .returning();
+  if (!row) throw notFound("Sondage introuvable (ou déjà fermé)");
+  return c.json(row);
+});
+
+/* GET /polls/:id/results — dépouillement en direct (tally par option). */
+adminRoutes.get("/polls/:id/results", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  const poll = await db.query.polls.findFirst({ where: and(eq(polls.id, id), eq(polls.radioId, radioId)) });
+  if (!poll) throw notFound("Sondage introuvable");
+  const rows = await db
+    .select({ optionIndex: pollVotes.optionIndex, count: sql<number>`count(*)::int` })
+    .from(pollVotes)
+    .where(and(eq(pollVotes.pollId, id), eq(pollVotes.radioId, radioId)))
+    .groupBy(pollVotes.optionIndex);
+  const counts = new Map<number, number>();
+  let totalVotes = 0;
+  for (const r of rows) {
+    counts.set(r.optionIndex, r.count);
+    totalVotes += r.count;
+  }
+  const results = poll.options.map((label, i) => ({
+    optionIndex: i,
+    label,
+    count: counts.get(i) ?? 0,
+  }));
+  return c.json({ results, totalVotes });
 });

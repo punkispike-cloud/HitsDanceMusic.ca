@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { api, ApiError } from "@/lib/api";
+import { estimateBpm } from "@/lib/audio/bpm";
 import { useToast } from "./toast";
 import { Modal } from "./ui";
 
@@ -46,15 +47,33 @@ function readDuration(file: File): Promise<number | undefined> {
   });
 }
 
+/** Estime le BPM d'un fichier audio côté client (décodage via OfflineAudioContext,
+ *  pas de lecture/geste requis). Best-effort : null en cas d'échec. */
+async function analyzeBpm(file: File): Promise<number | null> {
+  try {
+    const data = await file.arrayBuffer();
+    const Ctor: typeof OfflineAudioContext =
+      window.OfflineAudioContext ??
+      (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+    const ctx = new Ctor(1, 1, 44100);
+    const buffer = await ctx.decodeAudioData(data);
+    return estimateBpm(buffer);
+  } catch {
+    return null;
+  }
+}
+
 export function AudioUpload({
   kind,
   targetId,
   hasAudio,
+  currentBpm,
   onDone,
 }: {
-  kind: "episode" | "mix";
+  kind: "episode" | "mix" | "track";
   targetId: string;
   hasAudio: boolean;
+  currentBpm?: number | null; // pistes : si vide, on auto-estime le BPM au téléversement
   onDone: () => void | Promise<void>;
 }) {
   const toast = useToast();
@@ -85,7 +104,20 @@ export function AudioUpload({
         targetId,
         durationSec,
       });
-      toast("Audio téléversé", "ok");
+      // Pistes sans BPM : estimer et enregistrer (best-effort, ne bloque pas le succès).
+      let bpmMsg = "";
+      if (kind === "track" && !currentBpm) {
+        const bpm = await analyzeBpm(file);
+        if (bpm) {
+          try {
+            await api.patch(`/v1/admin/library/${targetId}`, { bpm });
+            bpmMsg = ` · BPM estimé : ${bpm}`;
+          } catch {
+            /* l'audio est en place ; l'échec du BPM n'est pas bloquant */
+          }
+        }
+      }
+      toast(`Audio téléversé${bpmMsg}`, "ok");
       setOpen(false);
       await onDone();
     } catch (e) {
@@ -103,7 +135,7 @@ export function AudioUpload({
         {hasAudio ? "Remplacer l'audio" : "Ajouter l'audio"}
       </button>
       {open && (
-        <Modal title={`Téléverser l'audio (${kind === "episode" ? "podcast" : "mix"})`} onClose={() => (busy ? null : setOpen(false))}>
+        <Modal title={`Téléverser l'audio (${kind === "episode" ? "podcast" : kind === "track" ? "piste" : "mix"})`} onClose={() => (busy ? null : setOpen(false))}>
           <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
             Formats : MP3, M4A, AAC, OGG, WAV. L&apos;envoi se fait directement vers S3.
           </p>

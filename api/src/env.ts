@@ -126,13 +126,26 @@ export const env = {
   // Le provisioning crée alors le tenant sans station de flux.
   AZURACAST_BASE_URL: optional("AZURACAST_BASE_URL", ""),
   AZURACAST_API_KEY: optional("AZURACAST_API_KEY", ""),
+  // Replay / catch-up : ingère les enregistrements AzuraCast en brouillons
+  // d'épisodes. DÉSACTIVÉ par défaut — activer explicitement en prod une fois
+  // l'API recordings d'AzuraCast validée. Inactif tant que AzuraCast n'est pas
+  // configuré (cf. isReplayEnabled).
+  AZURACAST_REPLAY_ENABLED: optional("AZURACAST_REPLAY_ENABLED", "false"),
+  REPLAY_INTERVAL_MS: intOpt("REPLAY_INTERVAL_MS", 15 * 60_000), // 15 min
 
-  // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés
+  // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés.
+  // Compatible Cloudflare R2 (S3 API) : poser S3_ENDPOINT + S3_REGION="auto"
+  // (+ S3_FORCE_PATH_STYLE="true") pointe le client vers R2 au lieu d'AWS.
   S3_REGION: optional("S3_REGION", ""),
   S3_BUCKET: optional("S3_BUCKET", ""),
   S3_ACCESS_KEY_ID: optional("S3_ACCESS_KEY_ID", ""),
   S3_SECRET_ACCESS_KEY: optional("S3_SECRET_ACCESS_KEY", ""),
   S3_PUBLIC_BASE_URL: optional("S3_PUBLIC_BASE_URL", ""),
+  // Endpoint S3 personnalisé (ex. R2 : https://<accountid>.r2.cloudflarestorage.com).
+  // Vide → comportement AWS par défaut (rétro-compatible).
+  S3_ENDPOINT: optional("S3_ENDPOINT", ""),
+  // R2 préfère le path-style ; vide/"false" → virtual-hosted (AWS par défaut).
+  S3_FORCE_PATH_STYLE: optional("S3_FORCE_PATH_STYLE", ""),
   MAX_AUDIO_BYTES: intOpt("MAX_AUDIO_BYTES", 524_288_000), // 500 Mo
 } as const;
 
@@ -159,4 +172,14 @@ export function isPushConfigured(): boolean {
 /** Surveillance du flux active ? (sinon aucun suivi de santé en arrière-plan) */
 export function isMonitorEnabled(): boolean {
   return env.MONITOR_ENABLED === "true";
+}
+
+/** Replay / catch-up actif ? Exige AzuraCast configuré ET le flag explicite
+ *  AZURACAST_REPLAY_ENABLED=true (désactivé par défaut — l'ingestion des
+ *  enregistrements en brouillons n'est lancée qu'après validation de l'API). */
+export function isReplayEnabled(): boolean {
+  return (
+    env.AZURACAST_REPLAY_ENABLED === "true" &&
+    Boolean(env.AZURACAST_BASE_URL && env.AZURACAST_API_KEY)
+  );
 }
