@@ -198,6 +198,88 @@ ownerRoutes.patch("/radios/:id", requireOwner, async (c) => {
   return c.json(row);
 });
 
+/* ═══════════════════════ DISTRIBUTION (TuneIn / Radio Garden / Alexa / podcasts) ═══════════════════════
+   Outil d'inscription de la radio sur les plateformes externes. GET renvoie un
+   « colis » de métadonnées copiables (nom, flux, now-playing, domaines) + une
+   checklist dont l'état coché est persisté dans radios.distribution (jsonb).
+   PATCH = jsonb merge sur `checklist`. Console owner/it (cross-radio). */
+
+const DISTRIBUTION_CHANNELS: { key: string; label: string }[] = [
+  { key: "tunein", label: "TuneIn" },
+  { key: "radiogarden", label: "Radio Garden" },
+  { key: "alexa", label: "Skill Alexa (manifeste)" },
+  { key: "applePodcasts", label: "Apple Podcasts" },
+  { key: "googlePodcasts", label: "Google Podcasts" },
+];
+
+/* GET /v1/owner/radios/:id/distribution — colis de métadonnées + checklist. */
+ownerRoutes.get("/radios/:id/distribution", requireItOrOwner, async (c) => {
+  const [radio] = await db
+    .select({
+      name: radios.name,
+      slug: radios.slug,
+      streamUrl: radios.streamUrl,
+      nowPlayingUrl: radios.nowPlayingUrl,
+      domains: radios.domains,
+      distribution: radios.distribution,
+    })
+    .from(radios)
+    .where(eq(radios.id, c.req.param("id")));
+  if (!radio) throw notFound("Radio introuvable");
+  const dist = (radio.distribution as Record<string, unknown> | null) ?? {};
+  const checklistState = (dist.checklist ?? {}) as Record<string, boolean>;
+  return c.json({
+    package: {
+      name: radio.name,
+      slug: radio.slug,
+      streamUrl: radio.streamUrl,
+      nowPlayingUrl: radio.nowPlayingUrl,
+      domains: radio.domains,
+    },
+    checklist: DISTRIBUTION_CHANNELS.map((ch) => ({
+      key: ch.key,
+      label: ch.label,
+      done: !!checklistState[ch.key],
+    })),
+  });
+});
+
+const distributionPatch = z.object({
+  checklist: z.record(z.boolean()).optional(),
+});
+
+/* PATCH /v1/owner/radios/:id/distribution — enregistre l'état coché (jsonb merge
+   sur `checklist` : préserve les autres clés de `distribution`). */
+ownerRoutes.patch("/radios/:id/distribution", requireItOrOwner, async (c) => {
+  const id = c.req.param("id");
+  const body = distributionPatch.parse(await c.req.json());
+  const [radio] = await db
+    .select({ distribution: radios.distribution })
+    .from(radios)
+    .where(eq(radios.id, id));
+  if (!radio) throw notFound("Radio introuvable");
+  const dist = (radio.distribution as Record<string, unknown> | null) ?? {};
+  const existingChecklist = (dist.checklist ?? {}) as Record<string, boolean>;
+  const merged: Record<string, unknown> = {
+    ...dist,
+    checklist: { ...existingChecklist, ...(body.checklist ?? {}) },
+  };
+  const [row] = await db
+    .update(radios)
+    .set({ distribution: merged, updatedAt: new Date() })
+    .where(eq(radios.id, id))
+    .returning({ distribution: radios.distribution });
+  const newDist = (row?.distribution as Record<string, unknown> | null) ?? null;
+  const newChecklist = (newDist?.checklist ?? {}) as Record<string, boolean>;
+  return c.json({
+    checklist: DISTRIBUTION_CHANNELS.map((ch) => ({
+      key: ch.key,
+      label: ch.label,
+      done: !!newChecklist[ch.key],
+    })),
+  });
+});
+
 /* GET /v1/owner/health — ping du flux (now-playing/stream) de chaque radio.
    Statut : up | down | none (pas d'URL). Best-effort, timeout 5s, en parallèle. */
 ownerRoutes.get("/health", requireItOrOwner, async (c) => {

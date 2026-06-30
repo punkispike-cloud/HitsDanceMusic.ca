@@ -3,7 +3,7 @@
 
 import { lt, and, isNotNull, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, auditLog, rateBuckets } from "../db/schema.js";
+import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, auditLog, rateBuckets, songRequests } from "../db/schema.js";
 import { env } from "../env.js";
 import { withAdvisoryLock } from "./lock.js";
 
@@ -46,6 +46,13 @@ export async function runCleanup(): Promise<void> {
       .where(lt(analyticsShowListen.lastAt, analyticsCutoff))
       .returning({ id: analyticsShowListen.id });
 
+    // Demandes de titres / dédicaces : dedication + requester_name sont des données
+    // potentiellement personnelles → purge alignée sur la même fenêtre (Loi 25).
+    const delRequests = await db
+      .delete(songRequests)
+      .where(lt(songRequests.createdAt, analyticsCutoff))
+      .returning({ id: songRequests.id });
+
     // Journal d'audit : conservé 1 an.
     const auditCutoff = new Date(now - AUDIT_RETENTION_DAYS * DAY);
     const delAudit = await db
@@ -61,7 +68,7 @@ export async function runCleanup(): Promise<void> {
 
     console.log(
       `[cleanup] refresh_tokens: ${delTokens.length}, upload_intents: ${delIntents.length}, ` +
-        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
+        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, song_requests: ${delRequests.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
     );
   } catch (err) {
     console.error("[cleanup] échec (non bloquant)", err);

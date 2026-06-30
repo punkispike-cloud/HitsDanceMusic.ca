@@ -84,3 +84,96 @@ export async function createStation(name: string, slug: string): Promise<Station
     nowPlayingUrl: `${base()}/api/nowplaying/${shortName}`,
   };
 }
+
+/* ─────────────────────── Recordings / catch-up ────────────────────────────── */
+
+/** Un enregistrement AzuraCast normalisé (catch-up d'un direct). */
+export interface Recording {
+  /** Clé source unique (nom de fichier / path AzuraCast) — pour le dédoublonnage. */
+  sourceKey: string;
+  title: string;
+  /** URL de lecture absolue (download_link relatif → base + rel). */
+  audioUrl: string;
+  durationSec: number | null;
+  sizeBytes: number | null;
+  recordedAt: Date | null;
+}
+
+function asInt(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** Coerce un timestamp AzuraCast (secondes OU ms unix, OU ISO 8601) en Date. */
+function asDate(v: unknown): Date | null {
+  if (typeof v === "number" && Number.isFinite(v)) {
+    // Heuristique magnitude : > 10^10 → millisecondes, sinon secondes.
+    return new Date(v > 10_000_000_000 ? v : v * 1000);
+  }
+  if (typeof v === "string") {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+/* Liste les enregistrements (catch-up) d'une station AzuraCast identifiée par
+   son short_name (= slug de la radio, cf. createStation). Réutilise le client
+   `acFetch`. La forme exacte de la réponse (champs `download_link`/`path`/
+   `duration`/`timestamp`…) varie selon la version d'AzuraCast — la normalisation
+   est défensive. Lance une erreur HTTP (à attraper par l'appelant) si la station
+   n'existe pas / n'a pas d'enregistrement. NB : l'API recordings doit être
+   validée une fois le serveur AzuraCast en place (cf. note en tête de fichier). */
+export async function listRecordings(stationShortName: string): Promise<Recording[]> {
+  const raw = (await acFetch(
+    `/api/station/${encodeURIComponent(stationShortName)}/recordings`,
+  )) as unknown;
+  // La réponse peut être un tableau plat ou un objet `{ recordings: [...] }`.
+  const rows: unknown[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as { recordings?: unknown[] })?.recordings)
+      ? (raw as { recordings: unknown[] }).recordings
+      : [];
+
+  const out: Recording[] = [];
+  for (const row of rows) {
+    const r = row as Record<string, unknown>;
+    const path =
+      typeof r.path === "string"
+        ? r.path
+        : typeof r.unique_id === "string"
+          ? r.unique_id
+          : null;
+    if (!path) continue;
+    const rel = typeof r.download_link === "string" ? r.download_link : null;
+    const abs =
+      typeof r.url === "string" && /^https?:/i.test(r.url) ? (r.url as string) : null;
+    const audioUrl = abs ?? (rel ? `${base()}${rel}` : null);
+    if (!audioUrl) continue; // pas d'URL jouable → on ignore cet enregistrement
+    const recordedAt = asDate(r.timestamp ?? r.record_at ?? r.start ?? r.start_timestamp);
+    const fileBase = path.split("/").pop() ?? path;
+    const title = recordedAt
+      ? `Replay du direct (${dateStamp(recordedAt)})`
+      : `Replay du direct (${fileBase})`;
+    out.push({
+      sourceKey: path,
+      title,
+      audioUrl,
+      durationSec: asInt(r.duration),
+      sizeBytes: asInt(r.length),
+      recordedAt,
+    });
+  }
+  return out;
+}
+
+function dateStamp(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

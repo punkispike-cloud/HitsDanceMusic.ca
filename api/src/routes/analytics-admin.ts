@@ -11,6 +11,10 @@ import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
 
+/* Un « skip » = écoute courte : seuil de 15 s sur analytics_show_listen.
+   Le seuil est volontairement bas (un auditeur qui reste < 15 s a zappé). */
+const SKIP_THRESHOLD_SEC = 15;
+
 export const analyticsAdminRoutes = new Hono<AppBindings>();
 
 /** Échappe une valeur pour une cellule CSV (RFC 4180) + neutralise l'injection
@@ -74,6 +78,79 @@ analyticsAdminRoutes.get("/shows", async (c) => {
       totalListenSec: r.totalListenSec,
       listeners: r.listeners,
       avgListenSec: r.listeners ? Math.round(r.totalListenSec / r.listeners) : 0,
+    })),
+  );
+});
+
+/* GET /v1/admin/analytics/top-tracks?days=30 — feedback de programmation :
+   titres les plus diffusés et aimés sur la fenêtre, + écoute moyenne et taux de
+   skip (écoute courte). Croise track_history (passages) + track_likes (🤘) +
+   analytics_show_listen (écoute/skip). ⚠️ analytics_show_listen est agrégé par
+   émission, pas par titre — il n'existe pas en base de liaison titre↔écoute, donc
+   avgListenSec et skipRate sont des contextes au niveau radio (identiques sur
+   chaque ligne) : ils décrivent le comportement d'écoute global pendant la fenêtre,
+   à lire alongside playCount/likeCount qui, eux, sont par titre. Radio courante,
+   fenêtre `days` (1..365, défaut 30). */
+analyticsAdminRoutes.get("/top-tracks", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const days = Math.min(365, Math.max(1, Number(c.req.query("days")) || 30));
+
+  const [tracksRes, listenRes] = await Promise.all([
+    db.execute(sql`
+      WITH windowed AS (
+        SELECT id, artist, title
+        FROM track_history
+        WHERE radio_id = ${radioId}
+          AND played_at >= now() - (${days} || ' days')::interval
+      )
+      SELECT min(w.id) AS "trackId",
+             w.artist AS "artist",
+             w.title AS "title",
+             count(DISTINCT w.id)::int AS "playCount",
+             count(tl.id)::int AS "likeCount"
+      FROM windowed w
+      LEFT JOIN track_likes tl
+        ON tl.track_id = w.id AND tl.radio_id = ${radioId}
+      GROUP BY w.artist, w.title
+      ORDER BY "playCount" DESC, "likeCount" DESC, w.title
+      LIMIT 100
+    `),
+    db.execute(sql`
+      SELECT coalesce(avg(listen_sec), 0)::float AS "avgListenSec",
+             count(*)::int AS "totalListen",
+             count(*) FILTER (WHERE listen_sec < ${SKIP_THRESHOLD_SEC})::int AS "shortListen"
+      FROM analytics_show_listen
+      WHERE radio_id = ${radioId}
+        AND last_at >= now() - (${days} || ' days')::interval
+    `),
+  ]);
+
+  type TopTrackRow = {
+    trackId: string;
+    artist: string;
+    title: string;
+    playCount: number;
+    likeCount: number;
+  };
+  const rows = tracksRes.rows as TopTrackRow[];
+
+  const listen = listenRes.rows[0] as
+    | { avgListenSec: number; totalListen: number; shortListen: number }
+    | undefined;
+  const total = listen?.totalListen ?? 0;
+  const short = listen?.shortListen ?? 0;
+  const avgListenSec = listen ? Math.round(Number(listen.avgListenSec) || 0) : 0;
+  const skipRate = total ? Math.round((short / total) * 100) : 0; // %
+
+  return c.json(
+    rows.map((r) => ({
+      trackId: r.trackId,
+      artist: r.artist,
+      title: r.title,
+      playCount: r.playCount,
+      likeCount: r.likeCount,
+      avgListenSec,
+      skipRate,
     })),
   );
 });
