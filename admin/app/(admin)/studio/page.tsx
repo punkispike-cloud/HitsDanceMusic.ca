@@ -571,7 +571,8 @@ function DeckPanel({
           <div>
             <div style={{ fontWeight: 600 }}>{state.track.artist} — {state.track.title}</div>
             <div className="muted" style={{ fontSize: "0.8rem" }}>
-              {state.track.bpm ? `${Math.round(state.track.bpm)} BPM` : "BPM ?"} · {state.track.source === "library" ? "bibliothèque" : "disque"}
+              {state.track.bpm ? `${Math.round(state.track.bpm)} BPM` : "BPM ?"}
+              {state.track.key ? ` · ${state.track.key}` : ""} · {state.track.source === "library" ? "bibliothèque" : "disque"}
             </div>
           </div>
         ) : (

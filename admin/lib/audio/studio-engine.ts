@@ -11,6 +11,7 @@
  *  clip se collapsent (dernière lecture du clip = trajectoire retenue). */
 
 import { estimateBpm } from "./bpm";
+import { estimateKey } from "./key";
 import { encodeMp3, encodeWav } from "./encode";
 import { clamp, emptyDeck, type AutomationEvent, type DeckId, type DeckState, type EqBand, type RenderResult, type TrackRef } from "./types";
 
@@ -121,7 +122,8 @@ export class StudioEngine {
   async load(deckId: DeckId, track: TrackRef, data: ArrayBuffer): Promise<{ bpm: number | null }> {
     const buffer = await this.ctx.decodeAudioData(data.slice(0));
     const bpm = track.bpm ?? estimateBpm(buffer);
-    const finalTrack = { ...track, bpm };
+    const key = track.key ?? estimateKey(buffer);
+    const finalTrack = { ...track, bpm, key };
     const clipId = `clip-${++this.clipSeq}`;
     this.clips.set(clipId, { buffer, track: finalTrack });
     this.state[deckId] = {

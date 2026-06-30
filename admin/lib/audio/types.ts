@@ -11,6 +11,7 @@ export interface TrackRef {
   artist: string;
   title: string;
   bpm: number | null;
+  key?: string | null; // tonalité estimée (ex. "A min"), client-only, repli null
   durationSec: number | null;
   audioUrl: string | null;
   source: LoadSource;
