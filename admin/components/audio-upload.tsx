@@ -52,7 +52,7 @@ export function AudioUpload({
   hasAudio,
   onDone,
 }: {
-  kind: "episode" | "mix";
+  kind: "episode" | "mix" | "track";
   targetId: string;
   hasAudio: boolean;
   onDone: () => void | Promise<void>;
@@ -103,7 +103,7 @@ export function AudioUpload({
         {hasAudio ? "Remplacer l'audio" : "Ajouter l'audio"}
       </button>
       {open && (
-        <Modal title={`Téléverser l'audio (${kind === "episode" ? "podcast" : "mix"})`} onClose={() => (busy ? null : setOpen(false))}>
+        <Modal title={`Téléverser l'audio (${kind === "episode" ? "podcast" : kind === "track" ? "piste" : "mix"})`} onClose={() => (busy ? null : setOpen(false))}>
           <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
             Formats : MP3, M4A, AAC, OGG, WAV. L&apos;envoi se fait directement vers S3.
           </p>

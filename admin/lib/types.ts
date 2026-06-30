@@ -91,6 +91,28 @@ export interface RadioHealth {
   ms: number | null;
 }
 
+/** Métadonnées copiables pour inscrire la radio sur les plateformes externes. */
+export interface DistributionMetadata {
+  name: string;
+  slug: string;
+  streamUrl: string | null;
+  nowPlayingUrl: string | null;
+  domains: string[];
+}
+
+/** Une ligne de la checklist d'inscription (TuneIn, Radio Garden, Alexa…). */
+export interface DistributionChannel {
+  key: string;
+  label: string;
+  done: boolean;
+}
+
+/** Colis d'inscription renvoyé par GET /v1/owner/radios/:id/distribution. */
+export interface DistributionPackage {
+  package: DistributionMetadata;
+  checklist: DistributionChannel[];
+}
+
 /** Totaux agrégés sur tout le parc (console opérateur). */
 export interface OwnerOverview {
   radios: number;
@@ -172,6 +194,25 @@ export interface Mix {
   publishedAt: string | null;
 }
 
+/** Piste de la bibliothèque (source material du studio de mix). Miroir de la
+ *  table `tracks` (api/src/db/schema.ts). `artist` est texte libre (pas une FK). */
+export interface Track {
+  id: string;
+  artist: string;
+  title: string;
+  genre: string | null;
+  bpm: number | null;
+  durationSec: number | null;
+  audioUrl: string | null;
+  audioKey: string | null;
+  sizeBytes: number | null;
+  source: string | null;
+  license: string | null;
+  status: ContentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -198,6 +239,18 @@ export interface AnalyticsShow {
   totalListenSec: number;
   listeners: number;
   avgListenSec: number;
+}
+
+/** Titre le plus diffusé (feedback de programmation) — playCount/likeCount par
+ *  titre ; avgListenSec/skipRate sont des contextes radio (écoute courte = skip). */
+export interface TopTrack {
+  trackId: string;
+  artist: string;
+  title: string;
+  playCount: number;
+  likeCount: number;
+  avgListenSec: number;
+  skipRate: number; // %
 }
 
 export interface AnalyticsSession {
@@ -245,6 +298,52 @@ export interface TrackHistoryEntry {
   artist: string;
   title: string;
   playedAt: string;
+}
+
+export type RequestStatus = "new" | "read" | "queued" | "played" | "ignored";
+
+/** Demande de titre / dédicace déposée par un auditeur (file animateur). */
+export interface SongRequest {
+  id: string;
+  clientId: string;
+  artist: string;
+  title: string;
+  dedication: string | null;
+  requesterName: string | null;
+  showId: string | null;
+  slotId: string | null;
+  status: RequestStatus;
+  handledAt: string | null;
+  handledBy: string | null;
+  createdAt: string;
+}
+
+export type PollStatus = "active" | "closed";
+
+/** Sondage en direct posé par l'animateur (vote anonyme par client_id côté site). */
+export interface Poll {
+  id: string;
+  showId: string | null;
+  slotId: string | null;
+  question: string;
+  options: string[];
+  status: PollStatus;
+  createdBy: string | null;
+  closedAt: string | null;
+  createdAt: string;
+}
+
+/** Résultat d'une option (tally en direct). */
+export interface PollResult {
+  optionIndex: number;
+  label: string;
+  count: number;
+}
+
+/** Dépouillement d'un sondage (GET /v1/admin/polls/:id/results). */
+export interface PollResults {
+  results: PollResult[];
+  totalVotes: number;
 }
 
 export interface AuditEntry {

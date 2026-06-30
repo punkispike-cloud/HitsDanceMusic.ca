@@ -9,8 +9,13 @@ import { env, isS3Configured } from "../env.js";
 let _client: S3Client | null = null;
 function client(): S3Client {
   if (!_client) {
+    // R2 (et tout endpoint S3 personnalisé) : on passe endpoint + forcePathStyle
+    // uniquement quand S3_ENDPOINT est posé. Sinon, comportement AWS inchangé.
+    const endpoint = env.S3_ENDPOINT || undefined;
     _client = new S3Client({
-      region: env.S3_REGION,
+      region: env.S3_REGION || "auto",
+      endpoint,
+      forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
       credentials: {
         accessKeyId: env.S3_ACCESS_KEY_ID,
         secretAccessKey: env.S3_SECRET_ACCESS_KEY,

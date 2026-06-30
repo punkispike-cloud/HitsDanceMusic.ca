@@ -8,7 +8,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { uploadIntents, episodes, mixes } from "../db/schema.js";
+import { uploadIntents, episodes, mixes, tracks } from "../db/schema.js";
 import { env } from "../env.js";
 import { badRequest, notFound, forbidden, AppError } from "../lib/errors.js";
 import { presignPut, headObject, publicUrl, isS3Configured } from "../lib/s3.js";
@@ -40,7 +40,7 @@ function ensureS3(): void {
 }
 
 const presignSchema = z.object({
-  kind: z.enum(["episode", "mix", "cover"]),
+  kind: z.enum(["episode", "mix", "cover", "track"]),
   contentType: z.string().min(1).max(100),
   sizeBytes: z.number().int().positive(),
 });
@@ -59,7 +59,7 @@ uploadRoutes.post("/presign", requireRole("animateur", "superadmin", "owner"), a
   const maxBytes = isCover ? 5_000_000 : env.MAX_AUDIO_BYTES;
   if (body.sizeBytes > maxBytes) throw badRequest("Fichier trop volumineux");
 
-  const folder = body.kind === "episode" ? "episodes" : body.kind === "mix" ? "mixes" : "covers";
+  const folder = body.kind === "episode" ? "episodes" : body.kind === "mix" ? "mixes" : body.kind === "track" ? "tracks" : "covers";
   const objectKey = `${folder}/${randomUUID()}.${EXT[body.contentType] ?? "bin"}`;
 
   const [intent] = await db
@@ -110,8 +110,8 @@ uploadRoutes.post("/confirm", requireRole("animateur", "superadmin", "owner"), a
 
   const url = publicUrl(intent.objectKey);
 
-  // Rattachement optionnel à un épisode/mix existant (branchement explicite
-   // par type pour garder un typage Drizzle correct).
+  // Rattachement optionnel à un épisode/mix/piste existant (branchement explicite
+  // par type pour garder un typage Drizzle correct).
   if (body.targetId && intent.kind !== "cover") {
     const audioPatch = {
       audioUrl: url,
@@ -128,6 +128,15 @@ uploadRoutes.post("/confirm", requireRole("animateur", "superadmin", "owner"), a
       if (!target) throw notFound("Cible introuvable");
       assertCanActAs(user, target.artistId);
       await db.update(episodes).set(audioPatch).where(and(eq(episodes.id, body.targetId), eq(episodes.radioId, radioId)));
+    } else if (intent.kind === "track") {
+      // Les pistes de la bibliothèque n'ont pas d'artistId (artiste = texte libre) :
+      // seules le radioId + le rôle éditorial (gate presign) protègent l'écriture.
+      const target = await db.query.tracks.findFirst({
+        where: and(eq(tracks.id, body.targetId), eq(tracks.radioId, radioId)),
+        columns: { id: true },
+      });
+      if (!target) throw notFound("Cible introuvable");
+      await db.update(tracks).set(audioPatch).where(and(eq(tracks.id, body.targetId), eq(tracks.radioId, radioId)));
     } else {
       const target = await db.query.mixes.findFirst({
         where: and(eq(mixes.id, body.targetId), eq(mixes.radioId, radioId)),
