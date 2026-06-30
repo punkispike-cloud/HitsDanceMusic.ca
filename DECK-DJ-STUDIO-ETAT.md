@@ -58,7 +58,7 @@ Rien de bloquant côté code pour un premier test une fois R2 configuré :
    - l'origine **site public** — lecture des mixes sur `podcasts.html`.
 4. **(Optionnel)** domaine custom R2 → l'ajouter aussi dans `nginx.conf` (CSP).
 5. **Déploiement** — les migrations **0017–0019** s'appliquent via le `preDeployCommand` existant (`node dist/db/deploy.js`).  
-   ⚠️ `0018` fait `ALTER TABLE radios ADD COLUMN distribution` sans `IF NOT EXISTS` : si la colonne existe déjà en prod, corriger à la main avant deploy.
+   ✅ `0019` (`ALTER TABLE radios ADD COLUMN distribution`) est désormais **idempotente** (`ADD COLUMN IF NOT EXISTS`) : plus de correction manuelle requise même si la colonne existe déjà en prod.
 
 ---
 
@@ -116,7 +116,24 @@ nginx.conf                    → CSP *.r2.dev
 
 ## État git au moment de cette note
 
-Le code du Deck DJ Studio est **présent dans le working tree** (pas encore forcément tout commité/poussé).  
-Cette note sert de **point de repère** : relire ce fichier + `git status` / `git diff` avant de reprendre.
+> **MàJ 2026-06-29 (reprise)** : le gros WIP est **commité sur `main`** en 3 blocs
+> (typecheck admin ✅ + api ✅ avant commit). **Rien n'est encore poussé** (`git push` à faire).
 
-**Prochaine étape recommandée** : configurer R2 sur Railway → tester le parcours piste → studio → mix publié → lecture sur `podcasts.html`.
+| Commit | Contenu |
+|--------|---------|
+| `94ea480` **feat(studio)** | Deck DJ Studio (Web Audio + R2) : bibliothèque, 2 decks, rendu MP3, upload R2, migration 0017, CSP nginx + fondation data-layer admin partagée (schema/hooks/types/sidebar) |
+| `9d3f146` **feat(requests,polls)** | Demandes de titres (`song_requests`, 0016, /demandes) + Sondages en direct (widget accueil, /sondages, 0018/0019) |
+| `754b6a6` **feat(replay,distribution)** | Replay catch-up AzuraCast (gaté), distribution plateformes externes (owner), analytics/parc/statistiques/maintenance |
+
+Note : les fichiers partagés multi-chantiers (`schema.ts`, `admin.ts`, `sidebar.tsx`,
+`hooks.ts`, `types.ts`, `_journal.json`) sont allés **entiers dans le commit `94ea480`**.
+
+## Reprise — par où recommencer
+
+1. **(optionnel)** `git push` les 3 commits ci-dessus.
+2. **Ops R2** : bucket Cloudflare + variables Railway + CORS (cf. section « Ce qu'il reste (ops) »).
+3. ✅ **Migration `0019`** (`ADD COLUMN distribution`) : rendue **idempotente**
+   (`ADD COLUMN IF NOT EXISTS`) — plus rien à corriger à la main.
+4. **Tester** le parcours piste → studio → mix publié → lecture sur `podcasts.html`.
+
+Relire ce fichier + `git status` / `git log --oneline -5` avant de reprendre.

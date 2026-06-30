@@ -1,1 +1,1 @@
-ALTER TABLE "radios" ADD COLUMN "distribution" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "radios" ADD COLUMN IF NOT EXISTS "distribution" jsonb DEFAULT '{}'::jsonb NOT NULL;
