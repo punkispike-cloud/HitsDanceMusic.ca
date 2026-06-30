@@ -182,6 +182,10 @@ export default function StudioPage() {
     engineRef.current?.setVolume(deck, v);
     sync();
   };
+  const onReverb = (deck: DeckId, v: number) => {
+    engineRef.current?.setReverb(deck, v);
+    sync();
+  };
   const onCross = (x: number) => {
     engineRef.current?.setCrossfader(x);
     sync();
@@ -324,6 +328,7 @@ export default function StudioPage() {
             onRate={(pct) => onRate("A", pct)}
             onEq={(band, db) => onEq("A", band, db)}
             onVol={(v) => onVol("A", v)}
+            onReverb={(v) => onReverb("A", v)}
             onPickLibrary={() => setPickerFor("A")}
             onPickDisk={() => fileInputRef.current.A?.click()}
             fileInputRef={(el) => {
@@ -345,6 +350,7 @@ export default function StudioPage() {
             onRate={(pct) => onRate("B", pct)}
             onEq={(band, db) => onEq("B", band, db)}
             onVol={(v) => onVol("B", v)}
+            onReverb={(v) => onReverb("B", v)}
             onPickLibrary={() => setPickerFor("B")}
             onPickDisk={() => fileInputRef.current.B?.click()}
             fileInputRef={(el) => {
@@ -529,6 +535,7 @@ function DeckPanel({
   onRate,
   onEq,
   onVol,
+  onReverb,
   onPickLibrary,
   onPickDisk,
   fileInputRef,
@@ -544,6 +551,7 @@ function DeckPanel({
   onRate: (pct: number) => void;
   onEq: (band: EqBand, db: number) => void;
   onVol: (v: number) => void;
+  onReverb: (v: number) => void;
   onPickLibrary: () => void;
   onPickDisk: () => void;
   fileInputRef: (el: HTMLInputElement | null) => void;
@@ -626,6 +634,8 @@ function DeckPanel({
       </div>
 
       <LabeledRange label="Volume" valueLabel={`${Math.round(state.volume * 100)}%`} min={0} max={1.2} step={0.01} value={state.volume} onChange={onVol} />
+
+      <LabeledRange label="Reverb" valueLabel={`${Math.round(state.reverb * 100)}%`} min={0} max={0.9} step={0.01} value={state.reverb} onChange={onReverb} />
     </div>
   );
 }

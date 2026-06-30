@@ -23,10 +23,29 @@ interface DeckNodes {
   eqMid: BiquadFilterNode;
   eqHigh: BiquadFilterNode;
   volume: GainNode;
+  dry: GainNode;
+  convolver: ConvolverNode;
+  wet: GainNode;
+  mix: GainNode;
   cross: GainNode;
 }
 
-function makeDeckNodes(ctx: BaseAudioContext, master: GainNode): DeckNodes {
+/** Réverbe synthétique : bruit blanc à décroissance exponentielle (aucun asset
+ *  externe). Généré au sample-rate du contexte pour un temps de chute correct. */
+function makeImpulseResponse(ctx: BaseAudioContext, seconds: number, decay: number): AudioBuffer {
+  const rate = ctx.sampleRate;
+  const len = Math.max(1, Math.floor(seconds * rate));
+  const ir = ctx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return ir;
+}
+
+function makeDeckNodes(ctx: BaseAudioContext, master: GainNode, ir: AudioBuffer): DeckNodes {
   const eqLow = ctx.createBiquadFilter();
   eqLow.type = "lowshelf";
   eqLow.frequency.value = EQ_FREQ.low;
@@ -38,13 +57,28 @@ function makeDeckNodes(ctx: BaseAudioContext, master: GainNode): DeckNodes {
   eqHigh.type = "highshelf";
   eqHigh.frequency.value = EQ_FREQ.high;
   const volume = ctx.createGain();
+  // Bus humide/sec parallèle : volume → [dry → mix] + [convolver → wet → mix] → cross.
+  // wet = 0 par défaut → mix == dry → identique au signal sans réverbe (zéro régression).
+  const dry = ctx.createGain();
+  dry.gain.value = 1;
+  const convolver = ctx.createConvolver();
+  convolver.normalize = true;
+  convolver.buffer = ir;
+  const wet = ctx.createGain();
+  wet.gain.value = 0;
+  const mix = ctx.createGain();
   const cross = ctx.createGain();
   eqLow.connect(eqMid);
   eqMid.connect(eqHigh);
   eqHigh.connect(volume);
-  volume.connect(cross);
+  volume.connect(dry);
+  dry.connect(mix);
+  volume.connect(convolver);
+  convolver.connect(wet);
+  wet.connect(mix);
+  mix.connect(cross);
   cross.connect(master);
-  return { source: null, eqLow, eqMid, eqHigh, volume, cross };
+  return { source: null, eqLow, eqMid, eqHigh, volume, dry, convolver, wet, mix, cross };
 }
 
 function crossGainA(x: number): number {
@@ -57,6 +91,7 @@ function crossGainB(x: number): number {
 export class StudioEngine {
   ctx: AudioContext;
   private master: GainNode;
+  private ir!: AudioBuffer; // impulse de réverbe (live), partagée par les 2 decks
   private decks: Record<DeckId, DeckNodes>;
   state: Record<DeckId, DeckState>;
   automation: AutomationEvent[] = [];
@@ -75,7 +110,8 @@ export class StudioEngine {
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
     this.master.connect(this.ctx.destination);
-    this.decks = { A: makeDeckNodes(this.ctx, this.master), B: makeDeckNodes(this.ctx, this.master) };
+    this.ir = makeImpulseResponse(this.ctx, 1.6, 3);
+    this.decks = { A: makeDeckNodes(this.ctx, this.master, this.ir), B: makeDeckNodes(this.ctx, this.master, this.ir) };
     this.state = { A: emptyDeck(), B: emptyDeck() };
     this.applyCrossfader(0.5);
   }
@@ -98,6 +134,7 @@ export class StudioEngine {
     };
     this.applyEq(deckId);
     this.applyVolume(deckId);
+    this.applyReverb(deckId);
     return { bpm };
   }
 
@@ -118,6 +155,7 @@ export class StudioEngine {
         this.automation.push({ t: 0, type: "eq", deck: id, band: "mid", gainDb: d.eq.mid });
         this.automation.push({ t: 0, type: "eq", deck: id, band: "high", gainDb: d.eq.high });
         this.automation.push({ t: 0, type: "volume", deck: id, volume: d.volume });
+        this.automation.push({ t: 0, type: "reverb", deck: id, wet: d.reverb });
       }
     }
   }
@@ -231,6 +269,17 @@ export class StudioEngine {
     this.decks[deckId].volume.gain.value = this.state[deckId].volume;
   }
 
+  setReverb(deckId: DeckId, wet: number): void {
+    const w = clamp(wet, 0, 0.9);
+    this.state[deckId].reverb = w;
+    this.applyReverb(deckId);
+    this.automation.push({ t: this.tNow(), type: "reverb", deck: deckId, wet: w });
+  }
+
+  private applyReverb(deckId: DeckId): void {
+    this.decks[deckId].wet.gain.value = this.state[deckId].reverb;
+  }
+
   setCrossfader(x: number): void {
     this.crossfader = clamp(x, 0, 1);
     this.applyCrossfader(this.crossfader);
@@ -339,7 +388,11 @@ export class StudioEngine {
     const off = new OfflineAudioContext(2, Math.ceil(total * RENDER_SR), RENDER_SR);
     const offMaster = off.createGain();
     offMaster.connect(off.destination);
-    const offDecks: Record<DeckId, DeckNodes> = { A: makeDeckNodes(off, offMaster), B: makeDeckNodes(off, offMaster) };
+    const offIr = makeImpulseResponse(off, 1.6, 3);
+    const offDecks: Record<DeckId, DeckNodes> = {
+      A: makeDeckNodes(off, offMaster, offIr),
+      B: makeDeckNodes(off, offMaster, offIr),
+    };
 
     this.scheduleParam(offDecks.A.cross.gain, this.automation, "crossfade", (x) => crossGainA(x ?? 0.5));
     this.scheduleParam(offDecks.B.cross.gain, this.automation, "crossfade", (x) => crossGainB(x ?? 0.5));
@@ -354,6 +407,7 @@ export class StudioEngine {
       this.scheduleEq(n.eqMid.gain, this.automation, id, "mid");
       this.scheduleEq(n.eqHigh.gain, this.automation, id, "high");
       this.scheduleVolume(n.volume.gain, this.automation, id);
+      this.scheduleReverb(n.wet.gain, this.automation, id);
     }
 
     // Une source par segment (un même deck peut en enchaîner plusieurs).
@@ -457,6 +511,20 @@ export class StudioEngine {
     param.setValueAtTime(pts[0]!.volume, pts[0]!.t);
     for (let i = 1; i < pts.length; i++) {
       param.linearRampToValueAtTime(pts[i]!.volume, pts[i]!.t);
+    }
+  }
+
+  private scheduleReverb(param: AudioParam, events: AutomationEvent[], deck: DeckId): void {
+    const pts = events
+      .filter((e) => e.type === "reverb" && e.deck === deck && e.wet != null)
+      .sort((a, b) => a.t - b.t) as { t: number; wet: number }[];
+    if (pts.length === 0) {
+      param.setValueAtTime(0, 0);
+      return;
+    }
+    param.setValueAtTime(pts[0]!.wet, pts[0]!.t);
+    for (let i = 1; i < pts.length; i++) {
+      param.linearRampToValueAtTime(pts[i]!.wet, pts[i]!.t);
     }
   }
 
