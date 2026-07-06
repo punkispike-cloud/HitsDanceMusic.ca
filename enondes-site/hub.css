@@ -97,6 +97,14 @@ header.top {
 }
 .pro-link:hover { border-color: rgba(var(--glow), 0.6); background: var(--surface-2); transform: translateY(-2px); }
 .pro-link:active { transform: scale(0.98); }
+.nav-music {
+  display: inline-flex; align-items: center; min-height: 44px; touch-action: manipulation;
+  font-size: 0.84rem; font-weight: 600; color: var(--txt);
+  background: rgba(var(--glow), 0.12); border: 1px solid var(--accent); padding: 9px 16px; border-radius: var(--r-pill);
+  white-space: nowrap; transition: border-color 0.25s var(--ease), transform 0.2s var(--ease), background 0.25s var(--ease);
+}
+.nav-music:hover { background: rgba(var(--glow), 0.2); transform: translateY(-2px); }
+.nav-music:active { transform: scale(0.98); }
 
 /* Bannière hors-ligne (sticky sous l'en-tête) */
 #netbar {

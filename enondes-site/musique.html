@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Musique — En Ondes · Catalogue à la demande</title>
+  <meta name="description" content="Le catalogue musical d'En Ondes : écoute des pistes à la demande, cherche par titre, artiste ou genre, et enchaîne avec la file de lecture." />
+  <meta name="theme-color" content="#06080f" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="En Ondes" />
+  <link rel="canonical" href="https://enondes.ca/musique.html" />
+  <meta property="og:title" content="Musique — En Ondes" />
+  <meta property="og:description" content="Catalogue musical à la demande du réseau En Ondes." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://enondes.ca/musique.html" />
+  <meta property="og:site_name" content="En Ondes" />
+  <meta property="og:locale" content="fr_CA" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://itunes.apple.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="hub.css" />
+  <link rel="stylesheet" href="catalog.css" />
+</head>
+<body class="catalog-page">
+  <a class="skip" href="#cat">Aller au catalogue</a>
+
+  <div class="ambient" aria-hidden="true"><span class="o1"></span><span class="o2"></span><span class="o3"></span></div>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="En Ondes — accueil">
+      <span class="spark">✦</span>
+      <span class="wordmark grad">En Ondes</span>
+    </a>
+    <nav class="top-nav" aria-label="Navigation">
+      <a href="./">En direct</a>
+      <a href="musique.html" aria-current="page" class="on">Musique</a>
+    </nav>
+    <div class="acct" id="acct">
+      <button class="acct-btn" id="loginBtn" type="button">Connexion</button>
+    </div>
+    <a class="pro-link" href="pro.html">🎙️ Lancer ta radio&nbsp;→</a>
+  </header>
+
+  <div id="netbar" role="status" hidden>Hors-ligne — lecture indisponible</div>
+
+  <main>
+    <div class="wrap">
+      <section class="cat-hero">
+        <span class="eyebrow">Catalogue En Ondes</span>
+        <h1>La musique, <span class="grad">à la demande</span>.</h1>
+        <p class="sub">Cherche une piste, un artiste ou un genre. Lance-la, et la file enchaîne toute seule.</p>
+        <div class="controls" aria-label="Recherche et filtres">
+          <div class="search">
+            <svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+            <input id="q" type="search" placeholder="Chercher un titre, un artiste, un genre…" aria-label="Chercher une piste" autocomplete="off" />
+          </div>
+          <label class="sort">
+            <span class="sr-only">Trier</span>
+            <select id="sort" aria-label="Trier le catalogue">
+              <option value="recent">Récentes</option>
+              <option value="title">Titre A→Z</option>
+              <option value="artist">Artiste A→Z</option>
+            </select>
+          </label>
+        </div>
+        <div class="genres" id="genres" role="group" aria-label="Filtrer par genre"></div>
+      </section>
+
+      <div class="tabs" id="tabs" role="tablist" aria-label="Vues">
+        <button class="tab on" data-view="catalog" role="tab" aria-selected="true" type="button">Catalogue</button>
+        <button class="tab" data-view="discover" role="tab" aria-selected="false" type="button">✨ Découvrir</button>
+        <button class="tab" data-view="favorites" role="tab" aria-selected="false" type="button">♥ Favoris</button>
+        <button class="tab" data-view="playlists" role="tab" aria-selected="false" type="button">Playlists</button>
+      </div>
+
+      <div class="section-head">
+        <h2 id="viewTitle"><span class="hex" aria-hidden="true"></span>Pistes</h2>
+        <span class="count" id="count"></span>
+      </div>
+
+      <section id="cat" class="cat-list" aria-label="Catalogue" aria-busy="true"></section>
+      <p id="catLive" class="sr-only" role="status" aria-live="polite"></p>
+
+      <footer>
+        <div class="wordmark grad">En Ondes</div>
+        <p>Catalogue à la demande · en français.</p>
+        <p class="fine">© <span id="y"></span> En Ondes · <a href="pro.html">Lancer ta radio</a></p>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Lecteur à la demande (file de lecture) -->
+  <div class="player od-player" id="player" role="region" aria-label="Lecteur à la demande" hidden>
+    <div class="player-inner">
+      <button class="np-area" id="pInfo" type="button" aria-label="Piste en cours">
+        <span class="cover" id="pCover"><span class="mono">♪</span></span>
+        <span class="np" aria-live="polite" aria-atomic="true">
+          <span class="track" id="pTrack">—</span>
+          <span class="sub" id="pArtist"></span>
+        </span>
+      </button>
+
+      <div class="od-center">
+        <div class="player-ctls">
+          <button class="ctl shuffle" id="pShuffle" type="button" aria-label="Lecture aléatoire" aria-pressed="false">
+            <svg viewBox="0 0 24 24"><path d="M17 3l4 4-4 4v-3h-2.5l-2.3 3-1.8-2.4L12.9 8H14V8H15V6h2V3zM3 6h4.5l2.3 3 1.2-1.6L9.4 6H3zm0 12h6.4l7.1-9H21v-2h-5.5l-7.1 9H3z"/></svg>
+          </button>
+          <button class="ctl prev" id="pPrev" type="button" aria-label="Piste précédente">
+            <svg viewBox="0 0 24 24"><path d="M7 6h2v12H7zM20 6l-9 6 9 6z"/></svg>
+          </button>
+          <button class="ctl play" id="pPlay" type="button" aria-label="Lecture">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="ctl next" id="pNext" type="button" aria-label="Piste suivante">
+            <svg viewBox="0 0 24 24"><path d="M15 6h2v12h-2zM4 6l9 6-9 6z"/></svg>
+          </button>
+          <button class="ctl repeat" id="pRepeat" type="button" aria-label="Répéter" aria-pressed="false">
+            <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+          </button>
+        </div>
+        <div class="od-seek">
+          <span class="t" id="pCur">0:00</span>
+          <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Progression" />
+          <span class="t" id="pDur">0:00</span>
+        </div>
+      </div>
+
+      <div class="vol">
+        <svg class="vicon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+        <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale d'authentification (connexion / création de compte) -->
+  <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel">
+      <button class="modal-close" type="button" aria-label="Fermer" data-close>✕</button>
+      <div class="modal-tabs">
+        <button class="mtab on" id="tabLogin" type="button">Connexion</button>
+        <button class="mtab" id="tabRegister" type="button">Créer un compte</button>
+      </div>
+      <h2 id="authTitle" class="sr-only">Compte auditeur</h2>
+      <form id="authForm" novalidate>
+        <label class="field" id="nameField" hidden>
+          <span>Nom affiché</span>
+          <input type="text" id="afName" autocomplete="nickname" maxlength="80" />
+        </label>
+        <label class="field">
+          <span>Courriel</span>
+          <input type="email" id="afEmail" autocomplete="email" required />
+        </label>
+        <label class="field">
+          <span>Mot de passe</span>
+          <input type="password" id="afPass" autocomplete="current-password" required minlength="8" />
+        </label>
+        <p class="form-err" id="authErr" role="alert" hidden></p>
+        <button class="primary-btn" id="authSubmit" type="submit">Se connecter</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale : ajouter à une playlist -->
+  <div class="modal" id="plModal" role="dialog" aria-modal="true" aria-labelledby="plTitle" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel">
+      <button class="modal-close" type="button" aria-label="Fermer" data-close>✕</button>
+      <h2 id="plTitle">Ajouter à une playlist</h2>
+      <div class="pl-picker" id="plPicker"></div>
+      <form id="plCreateForm" class="pl-create">
+        <input type="text" id="plNewName" placeholder="Nouvelle playlist…" maxlength="120" />
+        <button class="primary-btn" type="submit">Créer</button>
+      </form>
+      <p class="form-err" id="plErr" role="alert" hidden></p>
+    </div>
+  </div>
+
+  <script type="module" src="musique.js"></script>
+  <script src="sw-register.js" defer></script>
+</body>
+</html>

@@ -52,3 +52,39 @@ export function generateRefreshToken(): string {
 export function hashRefreshToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
+
+/* ───────────────── Auditeurs (comptes grand public) ─────────────────
+   Émetteur distinct → un token auditeur ne peut PAS servir sur les routes
+   staff (et inversement), même clé HMAC partagée. Claims minimaux. */
+
+const LISTENER_ISSUER = "enondes-listener";
+
+export interface ListenerClaims {
+  sub: string;
+  email: string;
+  name: string;
+}
+
+export async function signListenerToken(claims: ListenerClaims): Promise<string> {
+  return new SignJWT({ email: claims.email, name: claims.name })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(claims.sub)
+    .setIssuer(LISTENER_ISSUER)
+    .setIssuedAt()
+    .setExpirationTime(`${env.ACCESS_TOKEN_TTL}s`)
+    .sign(secret);
+}
+
+export async function verifyListenerToken(token: string): Promise<ListenerClaims | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret, { issuer: LISTENER_ISSUER });
+    if (typeof payload.sub !== "string") return null;
+    return {
+      sub: payload.sub,
+      email: (payload.email as string) ?? "",
+      name: (payload.name as string) ?? "",
+    };
+  } catch {
+    return null;
+  }
+}

@@ -7,13 +7,17 @@
  *   - JAMAIS de cache pour /np/* (now-playing, temps réel), les flux audio
  *     (cross-origin, donc non interceptés) ni les requêtes Range.
  */
-const VERSION = "eo-hub-v7";
+const VERSION = "eo-hub-v8";
 const SHELL = [
   "./",
   "./index.html",
+  "./musique.html",
   "./pro.html",
   "./hub.css",
   "./hub.js",
+  "./catalog.css",
+  "./musique.js",
+  "./account.js",
   "./sw-register.js",
   "./pro.js",
   "./stations.json",
@@ -49,6 +53,9 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;
   // Now-playing : toujours réseau (temps réel), jamais en cache.
   if (url.pathname.startsWith("/np/") || url.pathname === "/np") return;
+  // API (catalogue, compte, favoris, playlists) : toujours réseau, jamais en
+  // cache (données dynamiques + authentifiées).
+  if (url.pathname.startsWith("/api/")) return;
   // Requêtes Range (audio/seek) : ne pas intercepter.
   if (req.headers.has("range")) return;
 

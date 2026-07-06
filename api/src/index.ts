@@ -14,6 +14,8 @@ import { publicTenant, adminTenant } from "./middleware/tenant.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { publicRoutes } from "./routes/public.js";
+import { catalogRoutes } from "./routes/catalog.js";
+import { accountRoutes } from "./routes/account.js";
 import { adminRoutes } from "./routes/admin.js";
 import { uploadRoutes } from "./routes/uploads.js";
 import { trackRoutes } from "./routes/track.js";
@@ -61,7 +63,15 @@ app.route("/auth", authRoutes);
 // Résout la radio depuis l'hôte HTTP (mono-radio → l'unique radio).
 app.use("/v1/*", publicTenant);
 app.route("/v1", publicRoutes);
+app.route("/v1", catalogRoutes); // catalogue à la demande (cross-radio, hub En Ondes)
 app.route("/v1", trackRoutes);
+
+// Comptes AUDITEURS (grand public) — auth séparée du staff. Rate-limit strict
+// sur les endpoints d'authentification (anti brute-force).
+app.use("/v1/account/login", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
+app.use("/v1/account/register", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
+app.use("/v1/account/refresh", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
+app.route("/v1/account", accountRoutes);
 app.route("/v1", rssRoutes); // GET /v1/rss/:showSlug
 app.route("/v1", shareRoutes); // GET /v1/share/...
 app.route("/v1", pushRoutes); // abonnement Web Push (public)
