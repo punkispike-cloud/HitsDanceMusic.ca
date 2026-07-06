@@ -17,6 +17,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -632,6 +633,122 @@ export const rateBuckets = pgTable(
   }),
 );
 
+/* ═══════════════════ Auditeurs (comptes grand public — catalogue à la demande) ═══════════════════
+   Séparés de `users` (staff RBAC) : un auditeur du hub En Ondes n'a AUCUN accès
+   admin/éditorial. Cross-radio (le catalogue est commun au réseau En Ondes).
+   Auth propre (JWT « listener » + refresh dédié), miroir de l'auth staff. */
+
+export const listeners = pgTable(
+  "listeners",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => ({
+    emailIdx: uniqueIndex("listeners_email_idx").on(t.email),
+  }),
+);
+
+export const listenerRefreshTokens = pgTable(
+  "listener_refresh_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listenerId: uuid("listener_id")
+      .notNull()
+      .references(() => listeners.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    replacedBy: uuid("replaced_by"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    listenerIdx: index("listener_refresh_listener_idx").on(t.listenerId),
+    tokenIdx: index("listener_refresh_token_idx").on(t.tokenHash),
+  }),
+);
+
+/* Playlists possédées par un auditeur (privées par défaut). */
+export const playlists = pgTable(
+  "playlists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listenerId: uuid("listener_id")
+      .notNull()
+      .references(() => listeners.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    isPublic: boolean("is_public").notNull().default(false),
+    ...timestamps,
+  },
+  (t) => ({
+    listenerIdx: index("playlists_listener_idx").on(t.listenerId),
+  }),
+);
+
+/* Pistes d'une playlist (ordonnées). Une piste au plus une fois par playlist. */
+export const playlistTracks = pgTable(
+  "playlist_tracks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playlistId: uuid("playlist_id")
+      .notNull()
+      .references(() => playlists.id, { onDelete: "cascade" }),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqIdx: uniqueIndex("playlist_tracks_uniq_idx").on(t.playlistId, t.trackId),
+    posIdx: index("playlist_tracks_pos_idx").on(t.playlistId, t.position),
+  }),
+);
+
+/* Favoris (« j'aime ») d'un auditeur sur une piste du catalogue. */
+export const listenerFavorites = pgTable(
+  "listener_favorites",
+  {
+    listenerId: uuid("listener_id")
+      .notNull()
+      .references(() => listeners.id, { onDelete: "cascade" }),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.listenerId, t.trackId] }),
+    trackIdx: index("listener_favorites_track_idx").on(t.trackId),
+  }),
+);
+
+/* Écoutes à la demande (beacon de lecture). Alimente l'historique auditeur,
+   les tendances (plus écoutées sur N jours) et les recommandations. listenerId
+   NULL = écoute anonyme (visiteur non connecté). Purgeable (Loi 25). */
+export const trackPlays = pgTable(
+  "track_plays",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    listenerId: uuid("listener_id").references(() => listeners.id, { onDelete: "set null" }),
+    playedAt: timestamp("played_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    trackIdx: index("track_plays_track_idx").on(t.trackId),
+    playedIdx: index("track_plays_played_idx").on(t.playedAt),
+    listenerIdx: index("track_plays_listener_idx").on(t.listenerId),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({
@@ -698,6 +815,11 @@ export type RadioStatus = (typeof radioStatus.enumValues)[number];
 export type TrackLike = typeof trackLikes.$inferSelect;
 export type ReportLog = typeof reportLog.$inferSelect;
 export type SongRequest = typeof songRequests.$inferSelect;
+export type Listener = typeof listeners.$inferSelect;
+export type NewListener = typeof listeners.$inferInsert;
+export type Playlist = typeof playlists.$inferSelect;
+export type PlaylistTrack = typeof playlistTracks.$inferSelect;
+export type TrackPlay = typeof trackPlays.$inferSelect;
 export type RequestStatus = (typeof requestStatus.enumValues)[number];
 export type Poll = typeof polls.$inferSelect;
 export type PollVote = typeof pollVotes.$inferSelect;

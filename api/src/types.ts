@@ -9,9 +9,17 @@ export interface AuthUser {
   radioId: string | null; // null = owner (cross-radio)
 }
 
+export interface AuthListener {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
 export interface AppBindings {
   Variables: {
     user: AuthUser;
+    // Auditeur grand public authentifié (routes /v1/account/*). Distinct du staff.
+    listener: AuthListener;
     // Radio courante résolue (mur multi-tenant). null = contexte cross-radio
     // (owner sans sélection) ou hôte public non résolu.
     radioId: string | null;

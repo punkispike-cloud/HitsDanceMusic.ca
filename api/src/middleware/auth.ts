@@ -2,7 +2,7 @@
    le contexte. 401 si absent/invalide/expiré. */
 
 import type { MiddlewareHandler } from "hono";
-import { verifyAccessToken } from "../lib/jwt.js";
+import { verifyAccessToken, verifyListenerToken } from "../lib/jwt.js";
 import { unauthorized } from "../lib/errors.js";
 import type { AppBindings } from "../types.js";
 
@@ -18,5 +18,17 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
     artistId: claims.artistId,
     radioId: claims.radioId,
   });
+  await next();
+};
+
+/* requireListener : auth des comptes AUDITEURS (grand public). Pose `listener`
+   sur le contexte. Émetteur JWT distinct → un token staff est rejeté ici. */
+export const requireListener: MiddlewareHandler<AppBindings> = async (c, next) => {
+  const header = c.req.header("Authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  if (!match) throw unauthorized("Connexion requise");
+  const claims = await verifyListenerToken(match[1]!);
+  if (!claims) throw unauthorized("Session invalide ou expirée", "invalid_token");
+  c.set("listener", { id: claims.sub, email: claims.email, displayName: claims.name });
   await next();
 };
