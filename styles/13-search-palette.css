@@ -63,7 +63,7 @@
   transition: background 0.12s;
 }
 .search-results li.is-active,
-.search-results li:hover { background: rgba(220,20,48,0.18); }
+.search-results li:hover { background: rgba(var(--accent-glow-rgb),0.18); }
 .search-type {
   font-size: 0.65rem; font-weight: 800;
   padding: 3px 7px;

@@ -9,6 +9,7 @@ import { getCurrentSlot, SLOT_TAGS, highlightCurrentSlot } from "./schedule.js";
 import { getMontrealParts } from "./time.js";
 import { STREAM_URL, fetchNowPlaying, fetchCover, fallbackCoverDataUri, pushHistory } from "./now-playing.js";
 import { toast } from "./toast.js";
+import { announce } from "./a11y.js";
 
 let audio = null;
 export const playerUIs = new Set();
@@ -25,6 +26,10 @@ export function setWatchSyncHook(fn) { watchSyncHook = fn; }
 // Hook optionnel pour annoncer un nouveau morceau (a11y), câblé par a11y/track.
 let announceTrackHook = null;
 export function setAnnounceTrackHook(fn) { announceTrackHook = fn; }
+
+// Mémorise le dernier état player annoncé (a11y) pour ne réannoncer que les
+// transitions vers un état problème (tampon / hors ligne) et la reprise direct.
+let lastAnnouncedPlayerState = null;
 
 export function getAudio() { return audio; }
 
@@ -89,6 +94,22 @@ export function setPlayingUI(isPlaying, label) {
   else if (l.includes("indisponible") || l.includes("bloquée") || l.includes("bloquee")) s = "offline";
   else if (l.includes("pause")) s = "paused";
   document.body.dataset.playerState = s;
+  // a11y : annonce les transitions vers un état problème + la reprise du direct.
+  // Ne réannonce pas tant que l'état computed ne change pas (evite le spam
+  // "Reconnexion… (n)" à chaque tentative).
+  if (s !== lastAnnouncedPlayerState) {
+    const wasProblem = lastAnnouncedPlayerState === "buffering" || lastAnnouncedPlayerState === "offline";
+    if (s === "buffering" || s === "offline") announce(label || "");
+    else if (s === "live" && wasProblem) announce("En direct");
+    lastAnnouncedPlayerState = s;
+  }
+  // Bandeau d'état sous le panneau (reconnexion / hors ligne). #playerBanner
+  // n'existe que sur l'accueil (#player) → no-op sur les autres pages.
+  const banner = document.getElementById("playerBanner");
+  if (banner) {
+    if (s === "buffering" || s === "offline") { banner.hidden = false; banner.textContent = label || ""; }
+    else { banner.hidden = true; banner.textContent = ""; }
+  }
   const vinyl = $("#vinylDisc");
   if (vinyl) vinyl.classList.toggle("is-spinning", isPlaying);
   if (watchSyncHook) watchSyncHook();
@@ -145,12 +166,17 @@ function pauseSessionClock() {
 }
 
 /* ----- Playback ----- */
-export async function startPlayback() {
+export async function startPlayback({ silent = false } = {}) {
   ensureAudio();
   if (!audio) return;
   if (!audio.paused) return;
   try {
-    setPlayingUI(false, "Connexion au direct…");
+    // En mode silencieux (autoplay au chargement), on garde l'UI idle pendant
+    // la tentative : pas de libellé « Connexion au direct… » ni de bandeau, pour
+    // ne pas braquer l'auditeur à l'arrivée ni fluctuer si le navigateur bloque
+    // l'autoplay. Le feedback « Connexion au direct… » ne s'affiche que sur un
+    // démarrage explicite (clic, raccourci clavier, MediaSession).
+    if (!silent) setPlayingUI(false, "Connexion au direct…");
     audio.src = `${STREAM_URL}?_=${Date.now()}`;
     audio.load();
     await audio.play();
@@ -161,8 +187,16 @@ export async function startPlayback() {
     startSessionClock();
   } catch (err) {
     console.warn("[HitRadio] play error", err);
-    setPlayingUI(false, "Lecture bloquée — clique à nouveau");
-    toast("Lecture bloquée par le navigateur. Clique sur ▶ pour démarrer.", "warn");
+    if (silent) {
+      // Autoplay au chargement bloqué par le navigateur (pas d'interaction
+      // préalable) : on reste discret (état idle, libellé d'origine) — le
+      // listener "premier geste" armé par autoplayOnLoad démarre le flux au
+      // premier clic. Pas de toast ici pour ne pas braquer l'auditeur à l'arrivée.
+      setPlayingUI(false, "Prêt à écouter");
+    } else {
+      setPlayingUI(false, "Lecture bloquée — clique à nouveau");
+      toast("Lecture bloquée par le navigateur — clique n'importe où pour lancer le direct.", "warn");
+    }
   }
 }
 
@@ -179,8 +213,53 @@ export async function togglePlayback() {
   ensureAudio();
   if (!audio) return;
   haptic(12);
-  if (!audio.paused) pausePlayback();
-  else await startPlayback();
+  if (!audio.paused) {
+    // Garde anti-rebond autoplay : si le flux vient d'être démarré par le
+    // listener "premier geste" (voir autoplayOnLoad), ce clic est la suite du
+    // même geste → on ignore le toggle pour éviter un start→pause immédiat.
+    if (Date.now() - _autoplayJustStartedAt < 600) return;
+    pausePlayback();
+  } else {
+    await startPlayback();
+  }
+}
+
+/* ----- Autoplay à l'accès du site -----
+   Les navigateurs interdisent l'autoplay sonore sans interaction préalable
+   (Chrome MEI, Safari, Firefox). Stratégie :
+   1. On tente startPlayback() au chargement de la page.
+   2. Si le flux reste en pause (blocage navigateur), on arme un listener
+      "premier geste" (pointerdown / keydown) qui démarre le flux au premier
+      clic ou touche clavier, n'importe où sur la page, puis se retire.
+   Préférence hr.autoplay (défaut "1") : l'utilisateur peut désactiver. */
+let _autoplayJustStartedAt = 0;
+let _firstGestureArmed = false;
+
+function armFirstGesture() {
+  if (_firstGestureArmed) return;
+  _firstGestureArmed = true;
+  const opts = { capture: true };
+  const fire = () => {
+    _autoplayJustStartedAt = Date.now();
+    void startPlayback();
+  };
+  const onPointer = () => {
+    document.removeEventListener("keydown", onKey, opts);
+    fire();
+  };
+  const onKey = () => {
+    document.removeEventListener("pointerdown", onPointer, opts);
+    fire();
+  };
+  document.addEventListener("pointerdown", onPointer, opts);
+  document.addEventListener("keydown", onKey, opts);
+}
+
+export async function autoplayOnLoad() {
+  if (store.get(STORAGE.autoplay, "1") !== "1") return;
+  ensureAudio();
+  await startPlayback({ silent: true });
+  if (getAudio()?.paused) armFirstGesture();
 }
 
 /* ----- Audio events : reconnect intelligent + watchdog ----- */
@@ -240,6 +319,10 @@ export function bindAudioEvents() {
   }
 
   audio.addEventListener("waiting", () => {
+    // Ne signer « tampon » que si une lecture était active : pendant une
+    // tentative de démarrage (autoplay bloqué / flux coupé), l'événement
+    // waiting ne doit pas afficher le bandeau « connexion perdue/tampon ».
+    if (!wantPlay()) return;
     setPlayingUI(false, "Mise en mémoire tampon…");
     // Buffering/reconnexion = pas de son réel → on gèle le compteur d'écoute
     // pour ne pas surcompter le temps pendant les coupures.
@@ -259,6 +342,10 @@ export function bindAudioEvents() {
   audio.addEventListener("stalled", () => scheduleReconnect("stalled"));
   audio.addEventListener("ended", () => scheduleReconnect("ended"));
   audio.addEventListener("error", () => {
+    // « Connexion perdue » n'a de sens que si une lecture était en cours.
+    // Une erreur sur une tentative de démarrage (autoplay bloqué, flux
+    // injoignable au load) est déjà gérée par le catch de startPlayback.
+    if (!wantPlay()) return;
     setPlayingUI(false, "Connexion perdue — reconnexion…");
     scheduleReconnect("error");
   });

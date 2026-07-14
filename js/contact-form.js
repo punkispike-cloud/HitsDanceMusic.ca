@@ -14,7 +14,36 @@ export function bindContactForm() {
   if (!form) return;
   const trackInput = $("#trackQuery", form);
   const suggestList = $("#trackSuggest", form);
+  const errorsBox = $("#contactErrors", form);
   let timer = 0;
+
+  function fieldLabel(el) {
+    const lbl = el.closest("label");
+    const txt = lbl?.firstChild?.textContent?.trim();
+    return txt || el.name || "Champ";
+  }
+  function clearFormErrors() {
+    if (errorsBox) { errorsBox.hidden = true; errorsBox.textContent = ""; }
+    form.querySelectorAll("[aria-invalid='true']").forEach((el) => el.removeAttribute("aria-invalid"));
+  }
+  function showFormErrors() {
+    const invalid = Array.from(form.querySelectorAll("input,textarea,select")).filter(
+      (el) => !el.checkValidity()
+    );
+    if (!invalid.length) { clearFormErrors(); return false; }
+    invalid.forEach((el) => el.setAttribute("aria-invalid", "true"));
+    const list = invalid.map(fieldLabel).filter(Boolean);
+    if (errorsBox) {
+      errorsBox.hidden = false;
+      errorsBox.textContent = list.length
+        ? `À compléter : ${list.join(", ")}.`
+        : "Certains champs sont incomplets.";
+    }
+    form.reportValidity(); // garde les bulles natives en complément
+    invalid[0].focus();
+    return true;
+  }
+  form.addEventListener("input", () => { if (errorsBox && !errorsBox.hidden) clearFormErrors(); });
 
   trackInput?.addEventListener("input", () => {
     clearTimeout(timer);
@@ -119,7 +148,8 @@ export function bindContactForm() {
       return;
     }
     // Pas de titre → message général → on valide puis on ouvre le courriel.
-    if (!form.checkValidity()) { form.reportValidity(); return; }
+    if (!form.checkValidity()) { showFormErrors(); return; }
+    clearFormErrors();
     const sujet = fd.get("sujet") || "Message Hits Dance Music";
     openMailto(fd, sujet, track);
   });

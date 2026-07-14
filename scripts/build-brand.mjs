@@ -52,16 +52,17 @@ function genBrandCss(b) {
   return `/* GÉNÉRÉ par scripts/build-brand.mjs — NE PAS ÉDITER À LA MAIN.
    Override des variables de couleur de la marque (importé en dernier). */
 :root {
+  --accent-glow-rgb: ${rgb};
   --accent: ${b.colors.accent};
   --accent-bright: ${b.colors.accentBright};
-  --accent-glow: rgba(${rgb}, 0.42);
+  --accent-glow: rgba(var(--accent-glow-rgb), 0.42);
   --amber: ${b.colors.amber};
   --amber-soft: ${b.colors.amberSoft};
-  --amber-glow: rgba(${rgb}, 0.35);
+  --amber-glow: rgba(var(--accent-glow-rgb), 0.35);
   --amber-slot: ${b.colors.amber};
-  --shadow-warm: 0 12px 40px rgba(${rgb}, 0.14);
-  --shadow-glow-play: 0 12px 40px rgba(${rgb}, 0.52);
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(${rgb}, 0.9);
+  --shadow-warm: 0 12px 40px rgba(var(--accent-glow-rgb), 0.14);
+  --shadow-glow-play: 0 12px 40px rgba(var(--accent-glow-rgb), 0.52);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(var(--accent-glow-rgb), 0.9);
 }
 `;
 }

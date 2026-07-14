@@ -42,10 +42,26 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .suggest-list li:last-child { border-bottom: none; }
-.suggest-list li:hover { background: rgba(220,20,48,0.15); }
+.suggest-list li:hover { background: rgba(var(--accent-glow-rgb),0.15); }
 
 .hp-field {
   position: absolute !important;
   left: -9999px !important;
   width: 1px; height: 1px; opacity: 0;
+}
+
+.form-errors {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(var(--accent-glow-rgb), 0.12);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+[aria-invalid="true"] {
+  border-color: var(--accent) !important;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

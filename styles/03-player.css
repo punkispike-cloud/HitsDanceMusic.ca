@@ -6,16 +6,16 @@
   flex-direction: column;
   width: 100%;
   max-width: 44rem;
-  border: 1px solid rgba(220, 20, 48, 0.30);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
   background:
-    linear-gradient(160deg, rgba(220, 20, 48, 0.07) 0%, transparent 50%),
+    linear-gradient(160deg, rgba(var(--accent-glow-rgb), 0.07) 0%, transparent 50%),
     rgba(10, 10, 10, 0.92);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.04),
     0 24px 60px rgba(0, 0, 0, 0.75),
-    0 0 50px rgba(220, 20, 48, 0.07);
+    0 0 50px rgba(var(--accent-glow-rgb), 0.07);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
   backdrop-filter: blur(28px) saturate(1.4);
   font-size: 0.74em;
@@ -28,7 +28,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(220, 20, 48, 0.06);
+  background: rgba(var(--accent-glow-rgb), 0.06);
   flex-wrap: wrap;
 }
 
@@ -38,8 +38,8 @@
   gap: 6px;
   padding: 3px 11px;
   border-radius: 999px;
-  background: rgba(220, 20, 48, 0.18);
-  border: 1px solid rgba(220, 20, 48, 0.42);
+  background: rgba(var(--accent-glow-rgb), 0.18);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.42);
   color: var(--accent-bright);
   font-size: 0.68rem;
   font-weight: 900;
@@ -54,7 +54,7 @@
   height: 7px;
   border-radius: 50%;
   background: var(--accent-bright);
-  box-shadow: 0 0 7px rgba(220, 20, 48, 0.9);
+  box-shadow: 0 0 7px rgba(var(--accent-glow-rgb), 0.9);
   animation: livePulse 2.4s ease-in-out infinite;
 }
 
@@ -97,9 +97,9 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(220, 20, 48, 0.30),
+    0 0 0 1px rgba(var(--accent-glow-rgb), 0.30),
     0 12px 32px rgba(0, 0, 0, 0.65),
-    0 0 24px rgba(220, 20, 48, 0.15);
+    0 0 24px rgba(var(--accent-glow-rgb), 0.15);
   background: #0a0a0a;
 }
 
@@ -129,7 +129,7 @@
   height: 100%;
   border-radius: 2px;
   background: #fff;
-  box-shadow: 0 0 4px rgba(220, 20, 48, 0.8);
+  box-shadow: 0 0 4px rgba(var(--accent-glow-rgb), 0.8);
   transform-origin: bottom;
   transform: scaleY(0.2);
 }
@@ -222,8 +222,8 @@
   gap: 8px;
   max-width: 100%;
   border-radius: 999px;
-  background: rgba(220, 20, 48, 0.10);
-  border: 1px solid rgba(220, 20, 48, 0.22);
+  background: rgba(var(--accent-glow-rgb), 0.10);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.22);
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.78rem;
   font-weight: 600;
@@ -322,9 +322,9 @@
 }
 
 .stream-link:hover {
-  background: rgba(220, 20, 48, 0.12);
+  background: rgba(var(--accent-glow-rgb), 0.12);
   color: #fff;
-  border-color: rgba(220, 20, 48, 0.45);
+  border-color: rgba(var(--accent-glow-rgb), 0.45);
 }
 
 .stream-link:focus-visible {

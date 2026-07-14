@@ -50,7 +50,6 @@
      centrée, image complète visible, plus de bandes ni de coupure */
   .hero {
     aspect-ratio: auto;
-    margin-top: 76px;          /* hauteur du header en mobile */
     min-height: auto;
     padding: 18px 16px 28px;
   }

@@ -110,10 +110,13 @@ export function makeFullPanelUI() {
         trackText.textContent = nextText;
         revealText(trackText); // micro-révélation au changement de morceau
       }
-      if (cover && coverUrl) {
+      if (cover && coverUrl && cover.dataset.lastCover !== coverUrl) {
+        cover.dataset.lastCover = coverUrl;
         cover.dataset.live = "1";
-        cover.src = coverUrl;
         cover.alt = `Pochette — ${track.title}`;
+        // Micro-fondu au changement de pochette (WAAPI, CSS-free).
+        safeAnimate(cover, [{ opacity: 0.25 }, { opacity: 1 }], { duration: 320, easing: EASE_OUT });
+        cover.src = coverUrl;
       }
     },
   };

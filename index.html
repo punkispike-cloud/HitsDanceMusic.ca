@@ -103,8 +103,8 @@
           </button>
           <div id="moreMenu" class="more-menu" role="menu" hidden>
             <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
-            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
-            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
+            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
+            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
             <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
             <button type="button" role="menuitem" id="resetGeoBtn"><span aria-hidden="true">📍</span> Réinitialiser ma localisation</button>
           </div>
@@ -122,8 +122,7 @@
         <div class="hero-content">
           <h1 class="sr-only">Hits Dance Music — La radio</h1>
           <p class="hero-copy">
-            Ambiance lounge, house et hits dance — programmation 2026 avec les matins d’Alain, Hit List, hommage Limelight
-            Montréal, nuits internationales BeatRadioWorld et bien plus. Clique sur lecture pour rejoindre le flux live.
+            La house et les hits dance de Montréal, en direct 24/7.
           </p>
 
           <div id="liveBadge" class="live-badge" role="status" aria-live="polite" hidden></div>
@@ -186,16 +185,36 @@
               </label>
             </div>
 
+            <div class="player-actions" role="toolbar" aria-label="Actions du lecteur">
+              <button type="button" class="act-btn" id="actSleep" aria-label="Minuteur de sommeil" title="Minuteur (P)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              </button>
+              <button type="button" class="act-btn" id="actWatch" aria-label="Lecteur plein écran" title="Plein écran (W)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              </button>
+              <button type="button" class="act-btn" id="actLyrics" aria-label="Paroles du morceau" title="Paroles (L)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </button>
+              <button type="button" class="act-btn" id="actHistory" aria-label="Historique des morceaux" title="Historique (H)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+              </button>
+              <button type="button" class="act-btn" id="actShare" aria-label="Partager" title="Partager">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+            </div>
+
             <audio id="radioPlayer" preload="none">
               <source src="https://cast5.asurahosting.com/proxy/hitsdanc/stream" type="audio/mpeg" />
               Votre navigateur ne prend pas en charge la lecture audio HTML5.
             </audio>
+
+            <p class="player-banner" id="playerBanner" role="status" aria-live="polite" hidden></p>
           </div>
+
+          <!-- Widget sondage en direct (populé par js/polls.js quand un sondage est actif). -->
+          <div id="pollWidget" hidden></div>
         </div>
       </section>
-
-      <!-- Widget sondage en direct (populé par js/polls.js quand un sondage est actif). -->
-      <div id="pollWidget" hidden></div>
 
       <section class="quick-strip" aria-label="En bref">
         <div class="quick-strip-card">
@@ -295,25 +314,25 @@
           <a class="text-link" href="animateurs.html">Voir aussi la page équipe</a>
         </div>
         <div class="talent-grid">
-          <article class="talent-card">
+          <article class="talent-card" data-slug="alain-perron" tabindex="0" role="button" aria-label="Voir le profil de Alain Perron">
             <div class="avatar has-photo"><img src="assets/alain-perron.webp" alt="Alain Perron" loading="lazy" /></div>
             <p>Alain Perron</p>
             <strong>Les matins d’Alain (live)</strong>
             <span>Lun–Ven · 07h00–09h00</span>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" data-slug="dj-pierre-jutras" tabindex="0" role="button" aria-label="Voir le profil de DJ Pierre Jutras">
             <div class="avatar has-photo"><img src="assets/pierre-jutras.webp" alt="DJ Pierre Jutras" loading="lazy" /></div>
             <p>DJ Pierre Jutras</p>
             <strong>Hommage au Limelight Montréal</strong>
             <span>Créneaux mer., ven., sam., dim.</span>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" data-slug="dj-jumpoff" tabindex="0" role="button" aria-label="Voir le profil de DJ JÜMPOFF">
             <div class="avatar has-photo"><img src="assets/jumpoff.webp" alt="DJ JÜMPOFF" loading="lazy" /></div>
             <p>DJ JÜMPOFF</p>
             <strong>JÜMPOFFproject — mix club &amp; soirées</strong>
             <span>Mer., jeu., ven., sam., dim.</span>
           </article>
-          <article class="talent-card">
+          <article class="talent-card" data-slug="dj-oskana" tabindex="0" role="button" aria-label="Voir le profil de DJ OSKANA">
             <div class="avatar has-photo"><img src="assets/dj-red-headphones.webp" alt="DJ OSKANA" loading="lazy" /></div>
             <p>DJ OSKANA</p>
             <strong>Show mix européen</strong>

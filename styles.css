@@ -2,6 +2,7 @@
    Découpée en sections importées dans leur ordre cascade d'origine.
    Ne pas modifier l'ordre des @import sans audit visuel. */
 
+@import url("styles/00-tokens-primitive.css");
 @import url("styles/00-base.css");
 @import url("styles/01-components-lounge.css");
 @import url("styles/02-hero.css");

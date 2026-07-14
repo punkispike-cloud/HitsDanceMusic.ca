@@ -10,6 +10,7 @@ export const STORAGE = {
   notifShow: "hr.notifShow",
   notifLastSlot: "hr.notifLastSlot",
   stats: "hr.stats",
+  autoplay: "hr.autoplay",
 };
 
 export const store = {

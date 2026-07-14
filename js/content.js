@@ -119,6 +119,11 @@ export async function loadContentFromApi() {
     // Rend les cartes cliquables → fiche profil (par data-slug, fetch détaillé).
     wireTalentCards(talentGrid, list);
     touchedTalent = true;
+  } else if (talentGrid) {
+    // Repli API (réseau coupé / liste vide) : câble quand même les cartes
+    // statiques du HTML — clavier (Tab/Entrée) + ouverture de la fiche par
+    // data-slug (fetch détaillé à l'ouverture). Indépendant du succès API.
+    wireTalentCards(talentGrid, Array.isArray(artists) ? artists : []);
   }
 
   if (showGrid && Array.isArray(shows) && shows.length) {

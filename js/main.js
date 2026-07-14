@@ -12,7 +12,7 @@ import { applyTheme, initThemeWatchers } from "./theme.js";
 import {
   ensureAudio, bindAudioEvents, applyVolumeFromStore,
   renderOnAir, renderClock, refreshLiveTrack,
-  startPlayback, bindVisibilityResume, setAnnounceTrackHook,
+  startPlayback, autoplayOnLoad, bindVisibilityResume, setAnnounceTrackHook,
   playerUIs,
 } from "./player.js";
 import {
@@ -55,11 +55,12 @@ import { registerSW } from "./sw-register.js";
 
 import { bindKeyboard, setKeyboardHooks } from "./keyboard.js";
 import { openSearch, setSearchHooks } from "./search-palette.js";
-import { openWatch, injectWatchButton } from "./watch.js";
+import { openWatch } from "./watch.js";
 import { toggleLyrics, tickLyrics } from "./lyrics.js";
 import { togglePip } from "./pip.js";
 import { toggleShortcuts } from "./shortcuts-help.js";
 import { applyDynamicAccent } from "./dynamic-accent.js";
+import { toggleSleepMenu } from "./sleep.js";
 import { state } from "./state.js";
 
 /* requestIdleCallback avec fallback setTimeout pour Safari < 17.4. */
@@ -126,6 +127,13 @@ function initCritical() {
   if (miniUI) playerUIs.add(miniUI);
   setMiniHooks({ openHistory: () => toggleHistory(), share: shareCurrent });
 
+  // Barre d'actions du panneau plein (accueil uniquement — #player).
+  $("#actSleep")?.addEventListener("click", (e) => { e.preventDefault(); toggleSleepMenu(e.currentTarget); });
+  $("#actWatch")?.addEventListener("click", (e) => { e.preventDefault(); void openWatch(); });
+  $("#actLyrics")?.addEventListener("click", (e) => { e.preventDefault(); toggleLyrics(); });
+  $("#actHistory")?.addEventListener("click", (e) => { e.preventDefault(); toggleHistory(true); });
+  $("#actShare")?.addEventListener("click", (e) => { e.preventDefault(); shareCurrent(); });
+
   applyVolumeFromStore();
   renderOnAir();
   renderClock();
@@ -135,21 +143,24 @@ function initCritical() {
   bgInterval(renderOnAir, 30_000, { keepFresh: true });
   bindVisibilityResume();
 
-  // Auto-resume si l'utilisateur écoutait avant nav, ou ?play=1
+  // Autoplay du direct à l'accès du site : démarrage automatique du flux.
+  // Les navigateurs bloquent l'autoplay sonore sans interaction préalable ;
+  // autoplayOnLoad() arme alors un listener "premier geste" qui lance le flux
+  // au premier clic/touche n'importe où sur la page.
+  // ?play=1 force l'autoplay + scroll vers le player (lien "Écouter").
   const autoplayParam = new URLSearchParams(location.search).get("play") === "1";
-  const wasPlaying = store.get(STORAGE.playing, "0") === "1";
-  if (autoplayParam || wasPlaying) {
+  if (autoplayParam) {
     requestAnimationFrame(() => {
       $("#player")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      void startPlayback();
-      if (autoplayParam) {
-        try {
-          const u = new URL(location.href);
-          u.searchParams.delete("play");
-          history.replaceState(null, "", `${u.pathname}${u.search}${u.hash}`);
-        } catch { /* noop */ }
-      }
+      void autoplayOnLoad();
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete("play");
+        history.replaceState(null, "", `${u.pathname}${u.search}${u.hash}`);
+      } catch { /* noop */ }
     });
+  } else {
+    void autoplayOnLoad();
   }
 
   // Liens "Écouter sur la page" / "Écouter le direct"
@@ -255,7 +266,8 @@ function initIdle() {
   loadWeather();
   bgInterval(loadWeather, 10 * 60_000);
   injectBottomNav();
-  injectWatchButton();
+  // Le bouton Watch est désormais dans la barre d'actions du panneau (#actWatch),
+  // câblé dans initCritical — on n'injecte plus un 2e bouton dans le header.
 
   // Tick paroles + couleur dynamique : seulement quand un panneau lyrics
   // est ouvert OU une cover dynamique est posée → throttle via vis check.

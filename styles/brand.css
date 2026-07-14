@@ -1,14 +1,15 @@
 /* GÉNÉRÉ par scripts/build-brand.mjs — NE PAS ÉDITER À LA MAIN.
    Override des variables de couleur de la marque (importé en dernier). */
 :root {
+  --accent-glow-rgb: 220, 20, 48;
   --accent: #c8102e;
   --accent-bright: #e8192e;
-  --accent-glow: rgba(220, 20, 48, 0.42);
+  --accent-glow: rgba(var(--accent-glow-rgb), 0.42);
   --amber: #e8192e;
   --amber-soft: #ff3349;
-  --amber-glow: rgba(220, 20, 48, 0.35);
+  --amber-glow: rgba(var(--accent-glow-rgb), 0.35);
   --amber-slot: #e8192e;
-  --shadow-warm: 0 12px 40px rgba(220, 20, 48, 0.14);
-  --shadow-glow-play: 0 12px 40px rgba(220, 20, 48, 0.52);
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(220, 20, 48, 0.9);
+  --shadow-warm: 0 12px 40px rgba(var(--accent-glow-rgb), 0.14);
+  --shadow-glow-play: 0 12px 40px rgba(var(--accent-glow-rgb), 0.52);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(var(--accent-glow-rgb), 0.9);
 }

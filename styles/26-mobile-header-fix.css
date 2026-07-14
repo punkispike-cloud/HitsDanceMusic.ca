@@ -5,7 +5,7 @@
 @media (max-width: 900px) {
   /* Header plus compact et sans wrap chaotique */
   .site-header {
-    min-height: calc(64px + env(safe-area-inset-top, 0px));
+    min-height: var(--header-h);
     padding:
       calc(8px + env(safe-area-inset-top, 0px))
       calc(10px + env(safe-area-inset-right, 0px))
@@ -75,8 +75,8 @@
 
   /* Le menu déroulant s'aligne pile sous le header compact (64 px + safe-area) */
   .main-nav {
-    top: calc(64px + env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    top: var(--header-h);
+    max-height: calc(100dvh - var(--header-h) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
@@ -89,18 +89,18 @@
   /* More menu (⋯) : ne déborde plus de l'écran */
   .more-menu {
     position: fixed;
-    top: calc(64px + env(safe-area-inset-top, 0px));
+    top: var(--header-h);
     right: calc(8px + env(safe-area-inset-right, 0px));
     left: auto;
     min-width: 0;
     width: min(280px, calc(100vw - 16px));
-    max-height: calc(100dvh - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - var(--header-h) - 8px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
   /* Hero/page : compenser la nouvelle hauteur de header */
-  .hero { margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
-  .page-main { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+  .hero { margin-top: var(--header-h); }
+  .page-main { padding-top: var(--header-h); }
 }
 
 @media (max-width: 560px) {
@@ -111,7 +111,7 @@
       6px
       calc(8px + env(safe-area-inset-left, 0px));
     gap: 4px;
-    min-height: calc(60px + env(safe-area-inset-top, 0px));
+    min-height: var(--header-h);
   }
   .brand-mark,
   .brand-mark--final {
@@ -129,17 +129,17 @@
 
   /* Aligner le dropdown sur la nouvelle hauteur (60 px + safe-area) */
   .main-nav {
-    top: calc(60px + env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    top: var(--header-h);
+    max-height: calc(100dvh - var(--header-h) - env(safe-area-inset-bottom, 0px));
   }
   .more-menu {
-    top: calc(60px + env(safe-area-inset-top, 0px));
+    top: var(--header-h);
     right: calc(6px + env(safe-area-inset-right, 0px));
     width: min(260px, calc(100vw - 12px));
-    max-height: calc(100dvh - 68px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - var(--header-h) - 8px - env(safe-area-inset-bottom, 0px));
   }
-  .hero { margin-top: calc(60px + env(safe-area-inset-top, 0px)); }
-  .page-main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .hero { margin-top: var(--header-h); }
+  .page-main { padding-top: var(--header-h); }
 }
 
 @media (max-width: 380px) {

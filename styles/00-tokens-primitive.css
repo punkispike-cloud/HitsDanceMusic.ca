@@ -1,0 +1,76 @@
+/* ============================================================
+   Tokens PRIMITIFS (Phase 5 — étape 2)
+   Source de vérité brute : palette, espacement, rayons, durées,
+   easings, typo. Non-marque, statique. Importé EN PREMIER dans
+   styles.css. À ce stade on déclare les tokens sans les utiliser
+   ailleurs → rendu inchangé (snap:check vide).
+
+   Les couches supérieures (00-base sémantique, brand.css) mapperont
+   ces primitives 1:1 à l'étape 3. Aucune valeur n'est inventée :
+   ce sont les valeurs EN DUR actuellement éparpillées.
+   ============================================================ */
+:root {
+  /* ---- Palette : rouges (rôle accent de la marque) ---- */
+  --red-600: #c8102e;      /* accent principal */
+  --red-500: #e8192e;      /* accent bright / amber */
+  --red-400: #ff3349;      /* amber soft */
+  --red-glow-rgb: 220, 20, 48;
+
+  /* ---- Palette : neutres sombres (fonds anthracite) ---- */
+  --gray-950: #060606;     /* night */
+  --gray-900: #0a0a0a;     /* bg */
+  --gray-880: #080808;     /* vinyl */
+  --gray-850: #0f0f0f;     /* bg-elevated */
+  --gray-800: #1a1a1a;     /* surface */
+  --gray-700: #242424;     /* surface-warm */
+
+  /* ---- Palette : texte & lignes ---- */
+  --ink-50: #f5f5f5;       /* ink */
+  --ink-400: #888888;      /* muted */
+  --white: #ffffff;
+  --white-rgb: 255, 255, 255;
+  --black-rgb: 0, 0, 0;
+
+  /* ---- Espacement (échelle 4px) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ---- Rayons ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* ---- Cibles tactiles (composant) — overrides contextuels.
+     La base .play-button reste à 62px dans 00-base ; ces tokens servent
+     les déclinaisons mobile/coarse/2026 afin d'éviter les !important. ---- */
+  --touch-min: 44px;
+  --play-btn-size-xs: 56px;
+  --p26-play-btn-size: 64px;
+  --p26-play-btn-size-sm: 56px;
+  --cover-size-xs: 72px;
+  --avatar-photo-xs: 64px;
+  --thumb-coarse: 22px;
+  --thumb-mini-coarse: 18px;
+
+  /* ---- Durées ---- */
+  --duration-fast: 0.15s;
+  --duration-normal: 0.25s;
+  --duration-slow: 0.4s;
+
+  /* ---- Easings ---- */
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Typo ---- */
+  --font-display: "Syne", Inter, system-ui, sans-serif;
+  --font-ui: Inter, ui-sans-serif, system-ui, sans-serif;
+}
