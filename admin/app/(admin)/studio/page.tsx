@@ -3,17 +3,35 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useArtists, useLibrary } from "@/lib/hooks";
+import { useArtists, useLibrary, useRequests } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
-import { Modal, Spinner, ErrorState } from "@/components/ui";
+import { Modal, Spinner, ErrorState, Empty } from "@/components/ui";
 import { Waveform } from "@/components/waveform";
-import { isEditorialAdmin, formatDuration, type Mix, type Track } from "@/lib/types";
+import { isEditorialAdmin, formatDuration, type Mix, type RequestStatus, type SongRequest, type Track } from "@/lib/types";
 import { StudioEngine } from "@/lib/audio/studio-engine";
 import { emptyDeck, type DeckId, type DeckState, type EqBand, type RenderResult, type TrackRef } from "@/lib/audio/types";
 
 const DECKS: DeckId[] = ["A", "B"];
 const PITCH_MIN = -20;
 const PITCH_MAX = 20;
+
+const REQ_LABEL: Partial<Record<RequestStatus, string>> = {
+  new: "Nouvelle",
+  read: "Lue",
+  queued: "En file",
+  played: "Jouée",
+  ignored: "Ignorée",
+};
+
+function reqTimeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} h`;
+  return `${Math.floor(h / 24)} j`;
+}
 
 function fmt(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) sec = 0;
@@ -53,6 +71,10 @@ export default function StudioPage() {
   const { user } = useAuth();
   const { data: library, error: libError, mutate: reloadLib } = useLibrary();
   const { data: artists } = useArtists();
+  const { data: newReq, mutate: mutateNewReq, error: newReqErr } = useRequests("new");
+  const { data: queuedReq, mutate: mutateQueuedReq } = useRequests("queued");
+  const [reqBusy, setReqBusy] = useState<string | null>(null);
+  const canHandleReq = user?.role === "animateur" || isEditorialAdmin(user?.role);
 
   const engineRef = useRef<StudioEngine | null>(null);
   const [decks, setDecks] = useState<Record<DeckId, DeckState>>({ A: emptyDeck(), B: emptyDeck() });
@@ -224,6 +246,22 @@ export default function StudioPage() {
     engineRef.current?.syncBtoA();
     sync();
   };
+
+  // File de demandes temps-réel : marquer une demande lu / en file / jouée /
+  // ignorée (même PATCH que /demandes). Revalide les deux vues (new + queued).
+  const setRequestStatus = async (id: string, status: RequestStatus) => {
+    setReqBusy(id);
+    try {
+      await api.patch(`/v1/admin/requests/${id}`, { status });
+      await Promise.all([mutateNewReq(), mutateQueuedReq()]);
+      toast(`${REQ_LABEL[status] ?? status} ✓`, "ok");
+    } catch (e) {
+      toast((e as ApiError).message, "error");
+    } finally {
+      setReqBusy(null);
+    }
+  };
+
   const onReset = () => {
     engineRef.current?.resetAutomation();
     setRender(null);
@@ -395,6 +433,49 @@ export default function StudioPage() {
             onFileChange={(e) => onFileChange("B", e)}
           />
         </div>
+      )}
+
+      {user?.role !== "it" && (
+        <section style={{ marginTop: 24 }}>
+          <div className="page-head" style={{ marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>Demandes en direct</h2>
+            <span
+              className="muted"
+              style={{ fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <span
+                aria-hidden="true"
+                style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--ok)" }}
+              />
+              temps-réel (5 s)
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <RequestColumn
+              title="Nouvelles"
+              requests={newReq}
+              loading={!newReq && !newReqErr}
+              error={!!newReqErr}
+              canHandle={canHandleReq}
+              busy={reqBusy}
+              onStatus={setRequestStatus}
+              emptyHint="Aucune nouvelle demande."
+            />
+            <RequestColumn
+              title="En file (on-air)"
+              requests={queuedReq}
+              loading={!queuedReq}
+              error={false}
+              canHandle={canHandleReq}
+              busy={reqBusy}
+              onStatus={setRequestStatus}
+              emptyHint="Rien en file pour l'instant."
+            />
+          </div>
+          <p className="muted" style={{ fontSize: "0.8rem", marginTop: 10 }}>
+            File complète et historique dans <a href="/demandes">/demandes</a>.
+          </p>
+        </section>
       )}
 
       {(render || rendering) && (
@@ -835,6 +916,92 @@ function Crossfader({ value, onChange, onSyncB }: { value: number; onChange: (x:
       <button className="btn btn-sm btn-ghost" type="button" onClick={onSyncB} title="Aligner le BPM de B sur A">
         Sync B→A
       </button>
+    </div>
+  );
+}
+
+function RequestColumn({
+  title,
+  requests,
+  loading,
+  error,
+  canHandle,
+  busy,
+  onStatus,
+  emptyHint,
+}: {
+  title: string;
+  requests: SongRequest[] | undefined;
+  loading: boolean;
+  error: boolean;
+  canHandle: boolean;
+  busy: string | null;
+  onStatus: (id: string, status: RequestStatus) => void;
+  emptyHint: string;
+}) {
+  return (
+    <div style={{ padding: 16, border: "1px solid var(--line-2)", borderRadius: 12, background: "var(--panel)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <strong>{title}</strong>
+        <span className="muted" style={{ fontSize: "0.8rem" }}>{requests?.length ?? 0}</span>
+      </div>
+      {error ? (
+        <p className="muted" style={{ fontSize: "0.85rem" }}>File indisponible.</p>
+      ) : loading ? (
+        <p className="muted" style={{ fontSize: "0.85rem" }}>Chargement…</p>
+      ) : !requests || requests.length === 0 ? (
+        <Empty label={emptyHint} />
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, maxHeight: 320, overflow: "auto" }}>
+          {requests.map((r) => (
+            <li key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line-2)" }}>
+              <div style={{ fontWeight: 600 }}>{r.title}</div>
+              <div className="muted" style={{ fontSize: "0.78rem" }}>{r.artist || "—"}</div>
+              {r.dedication && (
+                <div className="muted" style={{ fontSize: "0.78rem", fontStyle: "italic" }}>« {r.dedication} »</div>
+              )}
+              <div
+                className="muted"
+                style={{ fontSize: "0.72rem", display: "flex", justifyContent: "space-between", marginTop: 4 }}
+              >
+                <span>{r.requesterName || "Anonyme"}</span>
+                <span title={new Date(r.createdAt).toLocaleString("fr-CA")}>{reqTimeAgo(r.createdAt)}</span>
+              </div>
+              {canHandle && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                  {r.status !== "queued" && (
+                    <button
+                      className="btn btn-sm"
+                      disabled={busy === r.id}
+                      onClick={() => void onStatus(r.id, "queued")}
+                    >
+                      En file
+                    </button>
+                  )}
+                  {r.status !== "played" && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={busy === r.id}
+                      onClick={() => void onStatus(r.id, "played")}
+                    >
+                      Jouée
+                    </button>
+                  )}
+                  {r.status !== "ignored" && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={busy === r.id}
+                      onClick={() => void onStatus(r.id, "ignored")}
+                    >
+                      Ignorer
+                    </button>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
