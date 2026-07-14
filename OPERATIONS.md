@@ -94,6 +94,54 @@ Pour propager un correctif :
 
 ---
 
+## 7. Stockage audio (Cloudflare R2 / S3) — uploads & CORS
+
+Les podcasts, mixes et pistes de la bibliothèque passent par un stockage objet
+S3-compatible (Cloudflare R2 en pratique). Le code est prêt et **gated** : tant
+que les variables ne sont pas posées, `POST /v1/admin/uploads/{presign,confirm}`
+renvoient **`503 s3_unconfigured`** et l'admin affiche l'erreur côté UI.
+
+> Référence détaillée (vars + CORS bucket) : **`DECK-DJ-STUDIO-ETAT.md`** § « Ce
+> qu'il reste (ops) ». Cette section est le runbook court côté opérateur.
+
+### Variables à poser sur le service `api` (Railway)
+
+```
+S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_BUCKET=<nom-du-bucket>
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_PUBLIC_BASE_URL=https://pub-xxxx.r2.dev   # ou domaine custom
+S3_FORCE_PATH_STYLE=true
+```
+
+Les **4 premières obligatoires** (`S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY`) déterminent le gate `isS3Configured()` (`api/src/env.ts`).
+`S3_PUBLIC_BASE_URL` / `S3_ENDPOINT` ne sont pas dans le gate — une mauvaise URL
+publique « passe » la config mais casse les URL de lecture.
+
+### CORS — deux couches à ne pas confondre
+
+1. **API CORS** (`ALLOWED_ORIGINS` sur `api`) — navigateur → API (presign/confirm).
+   Doit inclure l'origine **admin** (et le site public / hub si besoin).
+2. **CORS du bucket R2** — navigateur → R2 (PUT direct + GET lecture). Autoriser
+   les origines **admin** et **site public**, méthodes `GET` / `PUT` / `HEAD`,
+   headers `*` (exposer `ETag`).
+
+### Smoke test après activation
+
+1. Admin `/pistes` : téléverser une piste → ligne créée + audio attaché.
+2. Admin `/studio` : rendre un mix → « Publier comme mix » → mix en brouillon.
+3. Site public `podcasts.html` : lecture du mix/épisode téléversé (URL publique).
+4. Si domaine R2 custom : l'ajouter aussi au CSP `media-src` (`nginx.conf`).
+
+> Pas de `S3_*` ? Le déploiement se fait quand même ; les uploads restent en
+> `503 s3_unconfigured` jusqu'à configuration. Le studio fonctionne en local
+> (rendu/téléchargement) — seul le persisté (bibliothèque + publication mix) échoue.
+
+---
+
 ## Commandes utiles (mémo)
 
 ```bash

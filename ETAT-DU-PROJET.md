@@ -42,7 +42,7 @@ Les sondages, demandes et distribution n'ajoutent **pas** de clé obligatoire �
 ### Ce qu'il RESTE (priorité suggérée)
 
 1. **Commit + push + deploy** — tout le lot ci-dessus est encore local uniquement.
-2. **Studio ↔ file demandes** — `useRequests("new")` existe dans `hooks.ts` mais **n'est pas branché** sur `/studio` ; c'était le lien prévu pour rendre Studio indispensable à l'antenne (afficher la file `status=new` en direct).
+2. ~~**Studio ↔ file demandes**~~ — ✅ **FAIT le 2026-07-14** : panneau « Demandes en direct » câblé sur `/studio` (`useRequests("new")` + `"queued"`, polling 5 s, actions En file / Jouée / Ignorer via `PATCH /v1/admin/requests/:id`).
 3. **Web Push « ta demande passe ! »** — mentionné dans le plan (notifier l'auditeur quand statut → `played`) ; **non implémenté**.
 4. **Plans non démarrés** (discussions antérieures, hors lot juin 29) :
    - **Studio / En direct** (sessions live, créneau courant enrichi)
@@ -50,7 +50,7 @@ Les sondages, demandes et distribution n'ajoutent **pas** de clé obligatoire �
    - **Extension portail opérateur** (au-delà de parc + distribution déjà là)
 5. **Bibliothèque pistes / Studio DJ** (`0017`, `/pistes`, `/studio`) — code présent mais à **valider en prod** (S3/R2, CORS upload, perf navigateur).
 6. **Replay AzuraCast** — tester l'endpoint recordings sur l'instance réelle avant d'activer `AZURACAST_REPLAY_ENABLED`.
-7. **Révélation site live** — voir §0 historique (2026-06-19) : nav Podcasts, badge live, lien confidentialité toujours en attente de feu vert.
+7. ~~**Révélation site live**~~ — ✅ **FAIT le 2026-07-14** : nav Podcasts ajoutée sur les 9 pages, `#liveBadge` câblé sur `index.html` (près du player, `initLiveBadge` déjà importé par `js/main.js`), lien Confidentialité en footer. Baselines visuelles rafraîchies (`snap:baseline`). Le « frontend public gelé » est volontairement cassé sur le chrome (nav/footer/badge).
 
 ### Checklist reprise rapide
 
