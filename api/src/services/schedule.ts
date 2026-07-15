@@ -44,6 +44,27 @@ export async function getCurrentSlot(radioId: string, now = new Date()): Promise
   return null;
 }
 
+/** Prochain créneau après l'heure courante (aujourd'hui plus tard, puis jours
+ *  suivants sur 7 jours). Sert le « à venir » du badge live. */
+export async function getNextSlot(radioId: string, now = new Date()): Promise<ScheduleSlot | null> {
+  const parts = montrealParts(now);
+  const nowMin = parts.hour * 60 + parts.minute;
+  const rows = await db
+    .select()
+    .from(scheduleSlots)
+    .where(eq(scheduleSlots.radioId, radioId))
+    .orderBy(asc(scheduleSlots.dayOfWeek), asc(scheduleSlots.startMin));
+  for (let off = 0; off < 7; off++) {
+    const d = (parts.day + off) % 7;
+    for (const r of rows) {
+      if (r.dayOfWeek !== d) continue;
+      if (off === 0 && r.startMin <= nowMin) continue;
+      return r;
+    }
+  }
+  return null;
+}
+
 /** Prochains passages d'un animateur (via le VRAI lien artist_id de la grille,
    pas un matching de chaînes). Renvoie les N prochains créneaux de la semaine. */
 export async function getUpcomingSlotsForArtist(artistId: string, radioId: string, limit = 6) {

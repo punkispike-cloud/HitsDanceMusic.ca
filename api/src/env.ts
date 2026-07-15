@@ -133,6 +133,11 @@ export const env = {
   AZURACAST_REPLAY_ENABLED: optional("AZURACAST_REPLAY_ENABLED", "false"),
   REPLAY_INTERVAL_MS: intOpt("REPLAY_INTERVAL_MS", 15 * 60_000), // 15 min
 
+  // Stripe (facturation Phase 5) — inactif tant que les secrets ne sont pas fournis.
+  // Le webhook vérifie la signature Stripe avec STRIPE_WEBHOOK_SECRET (lib `stripe` à ajouter).
+  STRIPE_SECRET: optional("STRIPE_SECRET", ""),
+  STRIPE_WEBHOOK_SECRET: optional("STRIPE_WEBHOOK_SECRET", ""),
+
   // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés.
   // Compatible Cloudflare R2 (S3 API) : poser S3_ENDPOINT + S3_REGION="auto"
   // (+ S3_FORCE_PATH_STYLE="true") pointe le client vers R2 au lieu d'AWS.
@@ -167,6 +172,11 @@ export function isResendConfigured(): boolean {
 /** Web Push (VAPID) actif ? */
 export function isPushConfigured(): boolean {
   return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+}
+
+/** Stripe (facturation) actif ? */
+export function isStripeConfigured(): boolean {
+  return Boolean(env.STRIPE_WEBHOOK_SECRET);
 }
 
 /** Surveillance du flux active ? (sinon aucun suivi de santé en arrière-plan) */

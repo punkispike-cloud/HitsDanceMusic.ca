@@ -11,6 +11,7 @@
    selon la version d'AzuraCast — à valider une fois le serveur en place. */
 
 import { env } from "../env.js";
+import { randomBytes } from "node:crypto";
 
 export function isAzuraCastConfigured(): boolean {
   return Boolean(env.AZURACAST_BASE_URL && env.AZURACAST_API_KEY);
@@ -176,4 +177,47 @@ function dateStamp(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/* ─────────────────────── Live DJ (harbor / streamers) ──────────────────────
+   Crée un compte « streamer » (DJ) sur la station AzuraCast : username + mot de
+   passe que le DJ utilise pour se connecter au harbor (BUTT/Mixxx, ou Webcaster.js
+   côté navigateur). Gated par isAzuraCastConfigured — sans serveur AzuraCast, rien.
+
+   NB : la forme exacte de l'API (POST /api/station/{short}/streamers) et l'URL du
+   harbor varient selon la version d'AzuraCast — À VALIDER une fois le serveur en
+   place. Le front (Webcaster.js + input.harbor.ssl) est le point fragile (cf.
+   DIFFUSION-FAISABILITE.md, ~4-8 sem). Scaffold défensif : ne casse rien tant
+   qu'AzuraCast n'est pas configuré. */
+export interface HarborCredentials {
+  streamerId: number;
+  username: string;
+  password: string;
+  stationShortName: string;
+  harborUrl: string; // à confirmer selon la config AzuraCast (mount du harbor)
+}
+
+function djUsername(djName: string): string {
+  const u = djName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return u || `dj_${Date.now()}`;
+}
+
+export async function createStreamer(stationShortName: string, djName: string): Promise<HarborCredentials> {
+  const password = randomBytes(12).toString("base64url");
+  const r = (await acFetch(`/api/station/${encodeURIComponent(stationShortName)}/streamers`, {
+    method: "POST",
+    body: JSON.stringify({
+      streamer_username: djUsername(djName),
+      streamer_password: password,
+      display_name: djName,
+      is_active: true,
+    }),
+  })) as Record<string, unknown>;
+  return {
+    streamerId: Number(r.id),
+    username: String(r.streamer_username ?? djUsername(djName)),
+    password,
+    stationShortName,
+    harborUrl: `${base()}/listen/${encodeURIComponent(stationShortName)}/streamer`,
+  };
 }

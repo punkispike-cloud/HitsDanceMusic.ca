@@ -50,13 +50,13 @@ const TENANT_TABLES = [
   "artists", "users", "shows", "scheduleSlots", "episodes", "mixes",
   "uploadIntents", "analyticsSessions", "analyticsShowListen", "trackHistory",
   "trackLikes", "pushSubscriptions", "auditLog", "reportLog", "songRequests",
-  "polls", "pollVotes",
+  "polls", "pollVotes", "mediaAssets", "adRotations", "subscriptions",
 ];
 const TENANT_SNAKE = [
   "artists", "users", "shows", "schedule_slots", "episodes", "mixes",
   "upload_intents", "analytics_sessions", "analytics_show_listen", "track_history",
   "track_likes", "push_subscriptions", "audit_log", "report_log", "song_requests",
-  "polls", "poll_votes",
+  "polls", "poll_votes", "media_assets", "ad_rotations", "subscriptions",
 ];
 
 /* Fichiers entièrement cross-radio par conception → ignorés. */

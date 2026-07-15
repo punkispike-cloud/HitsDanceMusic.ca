@@ -749,6 +749,79 @@ export const trackPlays = pgTable(
   }),
 );
 
+/* ═══════════════════ Pubs / jingles (média + rotation) ═══════════════════
+   Bibliothèque de médias (jingles, pubs, intros, outros, beds) + plan de rotation
+   par fenêtre horaire. L'audio vit sur S3/R2 (comme tracks/episodes) ; la rotation
+   est consommée par AzuraCast (playlists/rotate) ou Liquidsoap — la synchro est
+   assurée par services/azuracast.ts (gated par AZURACAST_BASE_URL). */
+
+export const mediaAssetKind = pgEnum("media_asset_kind", ["jingle", "ad", "intro", "outro", "bed"]);
+
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    kind: mediaAssetKind("kind").notNull().default("jingle"),
+    name: text("name").notNull(),
+    audioUrl: text("audio_url"),
+    durationSec: integer("duration_sec"),
+    status: contentStatus("status").notNull().default("draft"),
+    ...timestamps,
+  },
+  (t) => ({
+    radioIdx: index("media_assets_radio_idx").on(t.radioId),
+  }),
+);
+
+export const adRotations = pgTable(
+  "ad_rotations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id").references(() => mediaAssets.id, { onDelete: "cascade" }),
+    weight: integer("weight").notNull().default(1),
+    // -1 = tous les jours ; sinon 0..6 (dimanche..samedi), calé sur schedule_slots.
+    dayOfWeek: smallint("day_of_week").notNull().default(-1),
+    startMin: smallint("start_min").notNull().default(0),
+    endMin: smallint("end_min").notNull().default(1440),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => ({
+    radioIdx: index("ad_rotations_radio_idx").on(t.radioId),
+    assetIdx: index("ad_rotations_asset_idx").on(t.assetId),
+    dayChk: check("ad_rotations_day_chk", sql`${t.dayOfWeek} BETWEEN -1 AND 6`),
+    rangeChk: check("ad_rotations_range_chk", sql`${t.startMin} < ${t.endMin} AND ${t.endMin} <= 1440`),
+  }),
+);
+
+/* ═══════════════════ Facturation (abonnements Stripe) ═══════════════════
+   Miroir minimal de l'abonnement Stripe d'une radio : client + subscription Stripe,
+   palier et statut. Le webhook Stripe (à brancher avec la lib `stripe` + secret de
+   signature) met à jour `status`/`currentPeriodEnd`. Gated par STRIPE_SECRET. */
+
+export const subStatus = pgEnum("subscription_status", ["active", "trialing", "past_due", "canceled", "incomplete"]);
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    planTier: text("plan_tier").notNull(), // ex. "starter", "pro"
+    status: subStatus("status").notNull().default("incomplete"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => ({
+    radioIdx: uniqueIndex("subscriptions_radio_idx").on(t.radioId),
+    stripeCustIdx: index("subscriptions_stripe_customer_idx").on(t.stripeCustomerId),
+    stripeSubIdx: uniqueIndex("subscriptions_stripe_sub_idx").on(t.stripeSubscriptionId),
+  }),
+);
+
 /* ───────────────────────── Relations ───────────────────────── */
 
 export const artistsRelations = relations(artists, ({ many, one }) => ({

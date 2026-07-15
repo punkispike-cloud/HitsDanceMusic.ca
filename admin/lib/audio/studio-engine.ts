@@ -158,6 +158,7 @@ export class StudioEngine {
         this.automation.push({ t: 0, type: "eq", deck: id, band: "high", gainDb: d.eq.high });
         this.automation.push({ t: 0, type: "volume", deck: id, volume: d.volume });
         this.automation.push({ t: 0, type: "reverb", deck: id, wet: d.reverb });
+        this.automation.push({ t: 0, type: "loop", deck: id, loopActive: d.loopActive, loopStart: d.loopStart, loopEnd: d.loopEnd });
       }
     }
   }
@@ -177,6 +178,11 @@ export class StudioEngine {
     const src = this.ctx.createBufferSource();
     src.buffer = d.buffer;
     src.playbackRate.value = d.rate;
+    if (d.loopActive && d.loopEnd > d.loopStart) {
+      src.loop = true;
+      src.loopStart = d.loopStart;
+      src.loopEnd = Math.min(d.loopEnd, d.buffer.duration);
+    }
     src.connect(this.decks[deckId].eqLow);
     const off = clamp(offset ?? d.offset, 0, Math.max(0, d.buffer.duration - 0.01));
     src.start(0, off);
@@ -203,7 +209,12 @@ export class StudioEngine {
     if (!d.buffer) return 0;
     if (d.playing && d.playStartCtx != null) {
       const elapsed = (this.ctx.currentTime - d.playStartCtx) * d.rate;
-      return Math.min(d.buffer.duration, d.playStartOffset! + elapsed);
+      let pos = d.playStartOffset! + elapsed;
+      if (d.loopActive && d.loopEnd > d.loopStart && pos >= d.loopEnd) {
+        const span = d.loopEnd - d.loopStart;
+        pos = d.loopStart + (((pos - d.loopStart) % span) + span) % span;
+      }
+      return Math.min(d.buffer.duration, pos);
     }
     return d.offset;
   }
@@ -280,6 +291,47 @@ export class StudioEngine {
 
   private applyReverb(deckId: DeckId): void {
     this.decks[deckId].wet.gain.value = this.state[deckId].reverb;
+  }
+
+  /** Active une boucle [start..end] sur un deck. Si le deck joue et que la tête
+   *  de lecture est hors région, on recale au début de la boucle. */
+  setLoop(deckId: DeckId, start: number, end: number): void {
+    const d = this.state[deckId];
+    if (!d.buffer) return;
+    const s = clamp(start, 0, d.buffer.duration);
+    const e = clamp(end, s + 0.05, d.buffer.duration);
+    d.loopActive = true;
+    d.loopStart = s;
+    d.loopEnd = e;
+    this.automation.push({ t: this.tNow(), type: "loop", deck: deckId, loopActive: true, loopStart: s, loopEnd: e });
+    if (d.playing) {
+      const pos = this.deckPosition(deckId);
+      void this.play(deckId, pos < s || pos >= e ? s : pos);
+    }
+  }
+
+  /** Désactive la boucle d'un deck (repart de la position courante, sans boucle). */
+  clearLoop(deckId: DeckId): void {
+    const d = this.state[deckId];
+    d.loopActive = false;
+    this.automation.push({ t: this.tNow(), type: "loop", deck: deckId, loopActive: false });
+    if (d.playing) void this.play(deckId, this.deckPosition(deckId));
+  }
+
+  /** État de boucle effectif d'un deck à l'instant t (dernier événement « loop » ≤ t,
+   *  snapshot t=0 inclus). Utilisé par le rendu pour reproduire la boucle. */
+  private loopStateAt(deck: DeckId, t: number): { active: boolean; start: number; end: number } {
+    let active = false;
+    let start = 0;
+    let end = 0;
+    for (const e of this.automation) {
+      if (e.type === "loop" && e.deck === deck && e.t <= t) {
+        active = !!e.loopActive;
+        if (e.loopStart != null) start = e.loopStart;
+        if (e.loopEnd != null) end = e.loopEnd;
+      }
+    }
+    return { active, start, end };
   }
 
   setCrossfader(x: number): void {
@@ -371,6 +423,7 @@ export class StudioEngine {
           track: clip.track,
           cutAt: null as number | null,
           ratesInWindow: [] as { t: number; rate: number }[],
+          loop: this.loopStateAt(e.deck, e.t),
         };
       })
       .sort((a, b) => a.t - b.t);
@@ -394,14 +447,21 @@ export class StudioEngine {
         .sort((a, b) => a.t - b.t) as { t: number; rate: number }[];
     }
 
-    // Durée totale = fin audible la plus tardive (segment fini naturellement ou coupé).
-    let total = 0;
+    // Durée totale = fin audible la plus tardive. Une boucle sans fin de clip est
+    // « ouverte » (infinie) : elle remplit jusqu'à la fin déterminée par les autres
+    // segments. Si TOUT est ouvert (uniquement des boucles non bornées) → rendu impossible.
+    let closedMax = 0;
+    let hasClosed = false;
     for (const seg of segments) {
-      const natural = this.segmentEnd(seg.buffer.duration, seg.offset, seg.t, seg.rate, seg.ratesInWindow);
+      const natural = seg.loop.active ? Infinity : this.segmentEnd(seg.buffer.duration, seg.offset, seg.t, seg.rate, seg.ratesInWindow);
       const end = seg.cutAt != null ? Math.min(natural, seg.cutAt) : natural;
-      total = Math.max(total, end);
+      if (end !== Infinity) {
+        hasClosed = true;
+        closedMax = Math.max(closedMax, end);
+      }
     }
-    total += 0.08; // queue
+    if (!hasClosed) throw new Error("Rien à rendre : une boucle sans fin de clip doit être suivie d'une autre piste ou arrêtée.");
+    const total = closedMax + 0.08; // queue
 
     const off = new OfflineAudioContext(2, Math.ceil(total * RENDER_SR), RENDER_SR);
     const offMaster = off.createGain();
@@ -436,8 +496,14 @@ export class StudioEngine {
       src.connect(n.eqLow);
       src.playbackRate.setValueAtTime(seg.rate, seg.t);
       for (const r of seg.ratesInWindow) src.playbackRate.setValueAtTime(r.rate, r.t); // un pitch = un palier
+      if (seg.loop.active && seg.loop.end > seg.loop.start) {
+        src.loop = true;
+        src.loopStart = seg.loop.start;
+        src.loopEnd = Math.min(seg.loop.end, seg.buffer.duration);
+      }
       src.start(seg.t, seg.offset);
       if (seg.cutAt != null) src.stop(seg.cutAt);
+      else if (seg.loop.active) src.stop(total); // borne la boucle ouverte à la fin du mix
     }
 
     const rendered = await off.startRendering();

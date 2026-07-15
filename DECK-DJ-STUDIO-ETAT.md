@@ -1,7 +1,25 @@
 # Deck DJ Studio — état du développement
 
 > Note de reprise pour l'équipe / le futur soi.  
-> Dernière mise à jour : **2026-06-29** (implémentation du plan « Deck DJ Studio (Web Audio + Cloudflare R2) »).
+> Dernière mise à jour : **2026-07-14** (loops dans le moteur Web Audio — Phase 2b).
+
+---
+
+## Mise à jour 2026-07-14 — Loops (Phase 2b)
+
+Le **moteur Web Audio** supporte désormais les **boucles** (région `[loopStart..loopEnd]`)
+sur chaque deck, en live ET au rendu :
+
+- `admin/lib/audio/types.ts` : `AutomationEvent.type = "loop"`, `DeckState.loopActive/loopStart/loopEnd`, `emptyDeck()` initialisé.
+- `admin/lib/audio/studio-engine.ts` :
+  - `play()` applique `src.loop`/`loopStart`/`loopEnd` au `AudioBufferSourceNode` ;
+  - `deckPosition()` replie la tête de lecture dans la région (wrap modulo) ;
+  - `setLoop(deck, start, end)` / `clearLoop(deck)` poussent un événement d'automation (et recale la lecture si hors région) ;
+  - `render()` interprète les événements `loop` (boucles « ouvertes » bornées par la fin du mix ; erreur si tout est ouvert).
+
+**Reste à câbler** : les **boutons UI** du studio (définir la région via la waveform,
+appeler `engine.setLoop("A", start, end)` / `engine.clearLoop("A")`). Le moteur est prêt ;
+aucune logique audio à re-coder.
 
 ---
 

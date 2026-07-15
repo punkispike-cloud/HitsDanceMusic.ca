@@ -8,7 +8,8 @@ import { eq, asc, desc, and, sql, gt } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { artists, shows, episodes, mixes, trackHistory, trackLikes, songRequests, polls, pollVotes } from "../db/schema.js";
 import { notFound, badRequest, tooMany } from "../lib/errors.js";
-import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist } from "../services/schedule.js";
+import { isStripeConfigured } from "../env.js";
+import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist, getNextSlot } from "../services/schedule.js";
 import { requireRadioId } from "../services/tenant.js";
 import { fromMinutes } from "../lib/validation.js";
 import type { AppBindings } from "../types.js";
@@ -24,10 +25,31 @@ publicRoutes.get("/schedule", async (c) => {
   return c.json(shape);
 });
 
-/* GET /v1/schedule/now — créneau courant (heure Montréal). */
+/* GET /v1/schedule/now — créneau courant (heure Montréal) + enrichissements
+   (animateur, émission, prochain créneau) rétro-compatibles : les champs
+   existants sont préservés, on ajoute `artist`, `show`, `next`. */
 publicRoutes.get("/schedule/now", async (c) => {
-  const slot = await getCurrentSlot(requireRadioId(c.get("radioId")));
+  const radioId = requireRadioId(c.get("radioId"));
+  const slot = await getCurrentSlot(radioId);
+  c.header("Cache-Control", "public, max-age=30");
   if (!slot) return c.json(null);
+  const [artist, show, nextSlot] = await Promise.all([
+    slot.artistId
+      ? db
+          .select({ slug: artists.slug, name: artists.name, photoUrl: artists.photoUrl })
+          .from(artists)
+          .where(and(eq(artists.id, slot.artistId), eq(artists.radioId, radioId)))
+          .limit(1)
+      : Promise.resolve([]),
+    slot.showId
+      ? db
+          .select({ slug: shows.slug, title: shows.title })
+          .from(shows)
+          .where(and(eq(shows.id, slot.showId), eq(shows.radioId, radioId)))
+          .limit(1)
+      : Promise.resolve([]),
+    getNextSlot(radioId),
+  ]);
   return c.json({
     from: fromMinutes(slot.startMin),
     to: slot.endMin === 1440 ? "00:00" : fromMinutes(slot.endMin),
@@ -35,6 +57,18 @@ publicRoutes.get("/schedule/now", async (c) => {
     host: slot.hostLabel,
     tag: slot.tag,
     isLive: slot.isLive,
+    artist: artist[0] ?? null,
+    show: show[0] ?? null,
+    next: nextSlot
+      ? {
+          day: nextSlot.dayOfWeek,
+          from: fromMinutes(nextSlot.startMin),
+          to: nextSlot.endMin === 1440 ? "00:00" : fromMinutes(nextSlot.endMin),
+          title: nextSlot.title,
+          host: nextSlot.hostLabel,
+          tag: nextSlot.tag,
+        }
+      : null,
   });
 });
 
@@ -379,4 +413,23 @@ publicRoutes.post("/polls/:id/vote", async (c) => {
       ),
     );
   return c.json({ voted: true, optionIndex: vote?.optionIndex ?? body.optionIndex }, 201);
+});
+
+/* ═══════════════════════ WEBHOOK STRIPE (facturation) ═══════════════════════
+   Réception des événements Stripe (abonnements). SÉCURITAIRE : tant que la lib
+   `stripe` + STRIPE_WEBHOOK_SECRET ne sont pas branchés, on n'accepte NI ne traite
+   aucun événement (ne jamais traiter un payload non vérifié). Quand le secret est
+   posé mais la lib absente, on répond 501 (scaffold) pour ne pas faire croire à
+   Stripe que c'est livré. Branchement complet = ROADMAP Phase 5. */
+publicRoutes.post("/webhooks/stripe", async (c) => {
+  if (!isStripeConfigured()) {
+    return c.json(
+      { error: { code: "stripe_disabled", message: "Webhook Stripe non configuré (STRIPE_WEBHOOK_SECRET absent)" } },
+      503,
+    );
+  }
+  // TODO(Phase 5) : vérifier la signature avec stripe.webhooks.constructEvent(
+  //   rawBody, sig, STRIPE_WEBHOOK_SECRET), puis mettre à jour subscriptions
+  //   (status / current_period_end) selon l'event (invoice.paid, customer.subscription.*).
+  return c.json({ error: { code: "not_implemented", message: "Webhook Stripe scaffoldé, lib stripe à brancher" } }, 501);
 });

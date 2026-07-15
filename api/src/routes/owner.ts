@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql, eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { radios, artists, shows, analyticsSessions } from "../db/schema.js";
+import { radios, artists, shows, analyticsSessions, subscriptions } from "../db/schema.js";
 import { requireOwner, requireItOrOwner } from "../middleware/rbac.js";
 import { conflict, notFound } from "../lib/errors.js";
 import { slugify } from "../lib/validation.js";
@@ -359,4 +359,17 @@ ownerRoutes.get("/timeseries", requireItOrOwner, async (c) => {
     ORDER BY d
   `);
   return c.json(result.rows);
+});
+
+/* GET /v1/owner/radios/:id/billing — abonnement (miroir Stripe) d'une radio.
+   Lecture seule (owner + it). La création/mise à jour vient du webhook Stripe
+   (POST /v1/webhooks/stripe, à brancher avec la lib stripe + STRIPE_WEBHOOK_SECRET). */
+ownerRoutes.get("/radios/:id/billing", requireItOrOwner, async (c) => {
+  const [row] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.radioId, c.req.param("id")))
+    .limit(1);
+  if (!row) throw notFound("Aucun abonnement pour cette radio");
+  return c.json(row);
 });

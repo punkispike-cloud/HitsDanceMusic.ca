@@ -7,7 +7,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, and, ilike, or, desc, sql, type SQL } from "drizzle-orm";
+import { eq, and, ilike, or, desc, asc, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import {
   artists,
@@ -20,6 +20,8 @@ import {
   songRequests,
   polls,
   pollVotes,
+  mediaAssets,
+  adRotations,
 } from "../db/schema.js";
 import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
@@ -38,6 +40,7 @@ import {
 import { requireRadioId } from "../services/tenant.js";
 import { createAuthToken } from "../services/auth-tokens.js";
 import { sendEmail, inviteEmailHtml } from "../services/email.js";
+import { notifyRequestPlayed } from "../services/push.js";
 import { env, isResendConfigured } from "../env.js";
 import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
@@ -501,6 +504,126 @@ adminRoutes.delete("/library/:id", requireRole("animateur", "superadmin", "owner
   return c.json({ ok: true });
 });
 
+/* ═══════════════════════ PUBS / JINGLES (média + rotation) ═══════════════════════
+   Bibliothèque de médias (jingles/pubs/intros/outros/beds) + plan de rotation par
+   fenêtre horaire. Écriture = animateur+/superadmin/owner, cloisonnée par radio.
+   L'audio est téléversé via les uploads existants (kind à étendre si besoin) ;
+   la synchro vers AzuraCast/Liquidsoap est gated par AZURACAST_BASE_URL. */
+
+const mediaAssetInput = z.object({
+  kind: z.enum(["jingle", "ad", "intro", "outro", "bed"]).optional(),
+  name: z.string().trim().min(1).max(200),
+  audioUrl: z.string().trim().max(500).nullish(),
+  durationSec: z.number().int().positive().nullish(),
+  status: z.enum(["draft", "published", "archived"]).optional(),
+});
+
+adminRoutes.get("/media", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const q = c.req.query("q")?.trim();
+  const kind = c.req.query("kind")?.trim();
+  const where = and(
+    eq(mediaAssets.radioId, radioId),
+    q ? ilike(mediaAssets.name, `%${q}%`) : undefined,
+    kind ? eq(mediaAssets.kind, kind as "jingle" | "ad" | "intro" | "outro" | "bed") : undefined,
+  );
+  return c.json(
+    await db
+      .select()
+      .from(mediaAssets)
+      .where(where)
+      .orderBy(desc(mediaAssets.createdAt))
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
+});
+
+adminRoutes.post("/media", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = mediaAssetInput.parse(await c.req.json());
+  const [row] = await db
+    .insert(mediaAssets)
+    .values({ ...body, radioId, status: body.status ?? "draft" })
+    .returning();
+  return c.json(row, 201);
+});
+
+adminRoutes.patch("/media/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = mediaAssetInput.partial().parse(await c.req.json());
+  const [row] = await db
+    .update(mediaAssets)
+    .set({ ...body, updatedAt: new Date() })
+    .where(and(eq(mediaAssets.id, c.req.param("id")), eq(mediaAssets.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Média introuvable");
+  return c.json(row);
+});
+
+adminRoutes.delete("/media/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const [row] = await db
+    .delete(mediaAssets)
+    .where(and(eq(mediaAssets.id, c.req.param("id")), eq(mediaAssets.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Média introuvable");
+  return c.json({ ok: true });
+});
+
+const rotationInput = z.object({
+  assetId: z.string().uuid(),
+  weight: z.number().int().min(1).max(100).optional(),
+  dayOfWeek: z.number().int().min(-1).max(6).optional(),
+  startMin: z.number().int().min(0).max(1440).optional(),
+  endMin: z.number().int().min(1).max(1440).optional(),
+  isActive: z.boolean().optional(),
+});
+
+adminRoutes.get("/rotations", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  return c.json(
+    await db
+      .select()
+      .from(adRotations)
+      .where(eq(adRotations.radioId, radioId))
+      .orderBy(asc(adRotations.dayOfWeek), asc(adRotations.startMin))
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
+});
+
+adminRoutes.post("/rotations", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = rotationInput.parse(await c.req.json());
+  const [row] = await db
+    .insert(adRotations)
+    .values({ ...body, radioId, weight: body.weight ?? 1, dayOfWeek: body.dayOfWeek ?? -1 })
+    .returning();
+  return c.json(row, 201);
+});
+
+adminRoutes.patch("/rotations/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = rotationInput.partial().parse(await c.req.json());
+  const [row] = await db
+    .update(adRotations)
+    .set({ ...body, updatedAt: new Date() })
+    .where(and(eq(adRotations.id, c.req.param("id")), eq(adRotations.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Rotation introuvable");
+  return c.json(row);
+});
+
+adminRoutes.delete("/rotations/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const [row] = await db
+    .delete(adRotations)
+    .where(and(eq(adRotations.id, c.req.param("id")), eq(adRotations.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Rotation introuvable");
+  return c.json({ ok: true });
+});
+
 /* ═══════════════════════ USERS (admin de la radio) ═══════════════════════ */
 
 const userPatch = z.object({
@@ -704,12 +827,38 @@ adminRoutes.patch("/requests/:id", requireRole("animateur", "superadmin", "owner
   const id = c.req.param("id");
   const body = requestPatch.parse(await c.req.json());
   const user = c.get("user");
+
+  // Statut précédent : pour ne pas re-notifier « ta demande passe ! » si elle
+  // était déjà jouée, et pour récupérer le clientId + le titre de la demande.
+  const [prev] = await db
+    .select({
+      status: songRequests.status,
+      clientId: songRequests.clientId,
+      artist: songRequests.artist,
+      title: songRequests.title,
+    })
+    .from(songRequests)
+    .where(and(eq(songRequests.id, id), eq(songRequests.radioId, radioId)));
+  if (!prev) throw notFound("Demande introuvable");
+
   const [row] = await db
     .update(songRequests)
     .set({ status: body.status, handledAt: new Date(), handledBy: user.userId })
     .where(and(eq(songRequests.id, id), eq(songRequests.radioId, radioId)))
     .returning();
   if (!row) throw notFound("Demande introuvable");
+
+  // Notification push à l'auditeur, une seule fois (transition vers "played").
+  if (body.status === "played" && prev.status !== "played") {
+    const track = prev.artist ? `${prev.artist} — ${prev.title}` : prev.title;
+    void notifyRequestPlayed(radioId, prev.clientId, {
+      title: "Ta demande passe à l'antenne !",
+      body: track,
+      tag: `req-${id}`,
+      url: env.PUBLIC_SITE_URL,
+    }).catch(() => {});
+  }
+
   return c.json(row);
 });
 
