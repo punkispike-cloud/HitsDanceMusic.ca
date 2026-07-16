@@ -78,7 +78,14 @@ Pour propager un correctif :
 
 - **Activer les backups Postgres** de chaque projet Railway.
 - 🔑 **Tester une restauration au moins une fois** (un backup jamais restauré n'est
-  pas un backup). Documenter le temps de restauration.
+  pas un backup) — désormais automatisé et répétable :
+  ```bash
+  SOURCE_DATABASE_URL="$DATABASE_PUBLIC_URL" \
+  DRILL_ADMIN_URL="postgres://.../postgres" \
+  npm run restore-drill
+  ```
+  Dump source → base jetable `restore_drill` → `pg_restore` → vérif de parité
+  (comptes + empreintes + migrations) → nettoyage. Restitue le **RTO**, exit 1 si écart.
 - Rétention analytics (Loi 25) : purge auto à `ANALYTICS_RETENTION_DAYS` (défaut 180 j).
 - 📓 Procédure pas-à-pas : **`SECURITE-ROTATION.md` §4**.
 
@@ -151,4 +158,42 @@ node scripts/verify-deploy.mjs <api-url>      # vérifier un déploiement
 node scripts/status.mjs                       # statut du parc (CLI)
 node scripts/console.mjs                      # centre de contrôle (cockpit web local)
 node scripts/update-clients.mjs               # propager une mise à jour
+npm run restore-drill                         # drill de restauration Postgres (RTO + parité)
+npm run sync-registry                         # merge brand/clients.json depuis la table radios (DB = source)
+npm run provision -- --slug <slug>            # orchestrateur provisioning : build + railway + dns + activation
+npm run add-to-registry -- --slug <slug> …    # consigner un client au registre ops (champs commerciaux/ops)
+npm run gen-paperwork -- --slug <slug> …      # remplir contrat + attestation licences depuis les gabarits _private
+npm run pre-go-live -- --slug <slug>          # checklist de mise en ondes (registre/marque/paperasse/DB/API/DNS)
 ```
+
+## Provisioning d'un client (Phase 5/A3)
+
+1. **Créer le tenant** via la console admin (`/parc` → nouveau client) ou `POST /v1/owner/radios`
+   avec `superadminEmail` + `plan` + `createSubscription: true`. La radio naît en
+   `provisioning` ; un superadmin est créé (mot de passe temporaire renvoyé une fois)
+   et une ligne `subscriptions` (statut `trialing`) est posée.
+2. **Mettre en ondes** : `DATABASE_URL=… npm run provision -- --slug <slug>
+   --site-target <web>.up.railway.app --api-target <api>.up.railway.app
+   --admin-target <admin>.up.railway.app`. Le script : `npm run build` → Railway
+   (CLI si `RAILWAY_TOKEN`) → DNS Cloudflare (si `CLOUDFLARE_API_TOKEN` +
+   `CLOUDFLARE_ZONE_ID` + `CLOUDFLARE_APEX`) → bascule `status = active`. Chaque
+   étape non configurée est imprimée comme étape manuelle (rien ne casse).
+3. **Synchroniser le registre ops** : `npm run sync-registry` met à jour
+   `brand/clients.json` depuis la table `radios` (status/tier/licences/billing),
+   en préservant les champs ops-only (branch, railwayProject, domains, listing).
+
+## Onboarding commercial (Phase 6/C)
+
+1. `npm run add-to-registry -- --slug <slug> --name "Nom" --tier starter
+   --contact-email … --branch client/<slug> --site-domain … --api-domain …
+   --admin-domain …` — consigne le client au registre ops privé (`brand/clients.json`).
+2. `node scripts/new-client.mjs <slug> "Nom"` — scaffold la marque (`brand/<slug>.json`
+   + `brand/<slug>/assets/`), à compléter (flux, couleurs, visuels).
+3. `npm run gen-paperwork -- --slug <slug> --legal-name "Société inc." --radio "Nom"
+   --domain <site>` — remplit `_private/CONTRAT-CLIENT.md` + `ATTESTATION-LICENCES.md`
+   → `_private/clients/<slug>/` (signatures + validation avocat·e à part).
+4. Créer le tenant + mettre en ondes (cf. « Provisioning » ci-dessus).
+5. `DATABASE_URL=… npm run pre-go-live -- --slug <slug>` — checklist finale
+   (registre, marque, paperasse, DB radio/superadmin/abonnement, API santé, DNS).
+   Exit 0 = prête à go live.
+

@@ -3,6 +3,13 @@
  * uniquement : aucune surface cloud, aucune auth, aucune écriture, aucun secret
  * (le registre ne contient que des domaines publics).
  *
+ * ⚠️  DÉPRÉCIÉ (Phase 5/A6) : la console opérateur authentifiée est désormais
+ *   l'admin /parc (owner + it), qui couvre le parc, la santé, les alertes, le
+ *   provisioning (superadmin + abonnement) et le billing — derrière auth JWT.
+ *   Cette console locale reste utile en secours (lecture seule, sans DB), mais
+ *   les nouvelles fonctions opérateur vivent dans l'admin. Ne pas y ajouter de
+ *   nouvelles capacités d'écriture.
+ *
  * Usage :
  *   node scripts/console.mjs            # http://127.0.0.1:4477
  *   node scripts/console.mjs --port 5000

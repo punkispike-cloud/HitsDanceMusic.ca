@@ -22,3 +22,6 @@ brand/clients.json
 test-results/
 playwright-report/
 blob-report/
+
+# Artefacts de build TypeScript (incrémental)
+*.tsbuildinfo
