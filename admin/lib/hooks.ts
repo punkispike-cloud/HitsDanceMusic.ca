@@ -13,8 +13,9 @@
    clé SANS selectedRadioId (la flotte et le compte opérateur ne dépendent pas
    de la radio administrée). */
 
+import { useEffect, useRef, useState } from "react";
 import useSWR, { type SWRConfiguration } from "swr";
-import { api } from "./api";
+import { api, getAccessToken, getSelectedRadioId, API_BASE } from "./api";
 import { useRadio } from "./radio";
 import { rkey } from "./keys";
 import type {
@@ -205,6 +206,151 @@ export function useAnalyticsTimeseries(days: number, opts: SWRConfiguration<Anal
 export function useAnalyticsBreakdown(opts: SWRConfiguration<AnalyticsBreakdown> = {}) {
   const { selectedId } = useRadio();
   return useSWR<AnalyticsBreakdown>(rkey("/v1/admin/analytics/breakdown", selectedId), { ...LIST, ...opts });
+}
+
+/* ──────────────────── Flux temps réel (SSE) — statistiques ────────────────────
+   Remplace le polling 4 s pour overview / geo / sessions : un flux SSE poussé par
+   le serveur (fetch streaming, car EventSource ne peut pas envoyer l'en-tête
+   Authorization). Reconnexion automatique avec backoff. `enabled` false (pause) →
+   ferme le flux ; le reconnect suit `selectedId` (changement de radio). L'état
+   initial est poussé dès l'ouverture (pas d'attente). Les données « lourdes »
+   (shows/timeseries/breakdown/top-tracks) restent en SWR 60 s — elles n'ont pas
+   besoin d'être instantanées. */
+export interface AnalyticsStreamState {
+  overview: AnalyticsOverview | null;
+  geo: GeoPoint[] | null;
+  sessions: AnalyticsSession[] | null;
+  updatedAt: number | null;
+  connected: boolean;
+  error: string | null;
+}
+
+export function useAnalyticsStream(enabled: boolean): AnalyticsStreamState & { reconnect: () => void } {
+  const { selectedId } = useRadio();
+  const [reconnectSeq, setReconnectSeq] = useState(0);
+  const [state, setState] = useState<AnalyticsStreamState>({
+    overview: null,
+    geo: null,
+    sessions: null,
+    updatedAt: null,
+    connected: false,
+    error: null,
+  });
+
+  // Exactitude au changement de radio : on NE conserve PAS les données de la radio
+  // précédente (sinon la page afficherait brièvement les stats d'une autre radio).
+  // On vide → skeleton court → le nouveau flux pousse l'instantané initial. Le
+  // reset ne se déclenche QUE sur `selectedId` (pas sur pause/reconnect → on garde
+  // les données dans ces cas).
+  const prevRadioRef = useRef<string | null>(selectedId);
+  useEffect(() => {
+    if (prevRadioRef.current !== selectedId) {
+      prevRadioRef.current = selectedId;
+      setState({ overview: null, geo: null, sessions: null, updatedAt: null, connected: false, error: null });
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setState((s) => ({ ...s, connected: false }));
+      return;
+    }
+    const token = getAccessToken();
+    if (!token) return; // non authentifié → pas de flux
+
+    const ctrl = new AbortController();
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempt = 0;
+    let disposed = false;
+
+    const connect = async () => {
+      // En-têtes reconstruits à chaque tentative : le token peut avoir été
+      // rafraîchi entre-temps (les hooks SWR « lourds » à 60 s déclenchent la
+      // rotation au 401 et maintiennent getAccessToken() frais).
+      const headers: Record<string, string> = { Accept: "text/event-stream" };
+      const t = getAccessToken();
+      if (t) headers.Authorization = `Bearer ${t}`;
+      const rid = getSelectedRadioId();
+      if (rid) headers["X-Radio-Id"] = rid;
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/admin/analytics/stream`, {
+          headers,
+          credentials: "include",
+          signal: ctrl.signal,
+        });
+        if (!res.ok || !res.body) {
+          if (!disposed) {
+            setState((s) => ({ ...s, connected: false, error: "Impossible de charger les statistiques." }));
+            scheduleReconnect();
+          }
+          return;
+        }
+        attempt = 0;
+        setState((s) => ({ ...s, connected: true, error: null }));
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          // Les trames SSE sont séparées par une ligne vide (\n\n).
+          let idx: number;
+          while ((idx = buf.indexOf("\n\n")) >= 0) {
+            const frame = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+            if (!dataLine) continue; // commentaire (: ping) ou invalide
+            try {
+              const msg = JSON.parse(dataLine.slice(5).trim()) as {
+                overview?: AnalyticsOverview;
+                geo?: GeoPoint[];
+                sessions?: AnalyticsSession[] | null;
+                ts?: number;
+              };
+              setState((s) => ({
+                overview: msg.overview ?? s.overview,
+                geo: msg.geo ?? s.geo,
+                sessions: msg.sessions !== undefined ? msg.sessions : s.sessions,
+                updatedAt: msg.ts ?? Date.now(),
+                connected: true,
+                error: null,
+              }));
+            } catch {
+              /* trame malformée → ignorée */
+            }
+          }
+        }
+        // Flux terminé par le serveur → reconnecter.
+        if (!disposed) {
+          setState((s) => ({ ...s, connected: false }));
+          scheduleReconnect();
+        }
+      } catch (err) {
+        if (ctrl.signal.aborted || disposed) return;
+        setState((s) => ({ ...s, connected: false, error: "Impossible de charger les statistiques." }));
+        scheduleReconnect();
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (disposed) return;
+      attempt++;
+      if (attempt > 8) return; // abandon après 8 essais (évite le spam)
+      const delay = Math.min(30_000, 1000 * Math.pow(1.6, attempt - 1));
+      reconnectTimer = setTimeout(() => void connect(), delay);
+    };
+
+    void connect();
+    return () => {
+      disposed = true;
+      ctrl.abort();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [enabled, selectedId, reconnectSeq]);
+
+  return { ...state, reconnect: () => setReconnectSeq((n) => n + 1) };
 }
 
 /* ──────────────────── Hooks radio-scopés (journal / push) ────────────────── */

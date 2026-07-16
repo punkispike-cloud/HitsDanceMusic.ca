@@ -4,6 +4,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ingestTrack } from "../services/analytics.js";
+import { emitAnalyticsBeacon } from "../services/analytics-bus.js";
 import type { AppBindings } from "../types.js";
 
 export const trackRoutes = new Hono<AppBindings>();
@@ -43,6 +44,9 @@ trackRoutes.post("/track", async (c) => {
       ip: clientIp(c.req.raw.headers),
       userAgent: c.req.header("User-Agent") || "",
     });
+    // Notifie les clients SSE admin connectés à cette radio → pousse un instantané
+    // immédiat (temps réel) plutôt que d'attendre le tick périodique de 2 s.
+    emitAnalyticsBeacon(radioId);
   } catch {
     /* on n'échoue jamais bruyamment côté visiteur */
   }

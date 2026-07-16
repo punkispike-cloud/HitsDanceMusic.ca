@@ -5,9 +5,7 @@ import { mutate } from "swr";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
-  useAnalyticsOverview,
-  useAnalyticsGeo,
-  useAnalyticsSessions,
+  useAnalyticsStream,
   useAnalyticsShows,
   useAnalyticsTimeseries,
   useAnalyticsBreakdown,
@@ -238,7 +236,6 @@ function relTime(ts: number, now: number): string {
   return `il y a ${Math.floor(s / 60)} min`;
 }
 
-const LIVE_MS = 4_000; // rafraîchissement « live » (sessions + compteur en direct)
 const HEAVY_MS = 60_000; // rafraîchissement « lourd » (graphe + émissions)
 const LIVE_WINDOW_MS = 60_000; // une session vue il y a moins de 60 s = « en direct »
 
@@ -249,41 +246,33 @@ export default function StatistiquesPage() {
 
   const [days, setDays] = useState(30);
   const [auto, setAuto] = useState(true);
-  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [alertThreshold, setAlertThreshold] = useState(0);
   const [notifOn, setNotifOn] = useState(false);
   const prevLiveRef = useRef(0);
   const seenCountriesRef = useRef<Set<string> | null>(null);
 
-  // Data-layer SWR : clés radio-scopées (incluant selectedRadioId via rkey) →
-  // changer de radio change la clé → re-fetch auto, sans remont du sous-arbre.
-  // Le polling est porté par `refreshInterval` (4 s « live », 60 s « lourd ») ;
-  // `refreshWhenHidden` false par défaut → pause auto onglet masqué ; interval
-  // 0 quand `auto` est coupé. `keepPreviousData` (posé dans les hooks) garde la
-  // radio / la période précédente pendant le fetch (pas de flash).
-  const liveInterval = auto ? LIVE_MS : 0;
+  // Data-layer : flux SSE temps réel pour overview / geo / sessions (poussé par le
+  // serveur — quasi-instantané à chaque beacon + tick 2 s) ; SWR 60 s pour les
+  // données « lourdes » (graphe, émissions, répartitions, top titres). `auto`
+  // false → le flux se ferme (pause). `keepPreviousData` (posé dans les hooks)
+  // garde la radio / la période précédente pendant le fetch (pas de flash).
   const heavyInterval = auto ? HEAVY_MS : 0;
-  const overviewRes = useAnalyticsOverview({
-    refreshInterval: liveInterval,
-    onSuccess: () => setUpdatedAt(Date.now()),
-  });
-  const geoRes = useAnalyticsGeo({ refreshInterval: liveInterval });
-  const sessionsRes = useAnalyticsSessions(isAdmin, { refreshInterval: liveInterval });
+  const stream = useAnalyticsStream(auto);
+  const overview = stream.overview;
+  const geo = stream.geo;
+  const sessions = stream.sessions;
   const showsRes = useAnalyticsShows({ refreshInterval: heavyInterval });
   const seriesRes = useAnalyticsTimeseries(days, { refreshInterval: heavyInterval });
   const breakdownRes = useAnalyticsBreakdown({ refreshInterval: heavyInterval });
   const topTracksRes = useTopTracks(days, { refreshInterval: heavyInterval });
-  const overview = overviewRes.data;
-  const geo = geoRes.data;
-  const sessions = sessionsRes.data;
   const shows = showsRes.data;
   const series = seriesRes.data;
   const breakdown = breakdownRes.data;
   const topTracks = topTracksRes.data;
   // Erreur : seul le 1er échec (aucune donnée encore) bascule en état erreur —
   // les hoquets réseau ultérieurs gardent l'affichage précédent (best-effort).
-  const error = !overview && overviewRes.error ? "Impossible de charger les statistiques." : null;
+  const error = !overview && stream.error ? "Impossible de charger les statistiques." : null;
 
   // Émet une alerte : toast in-app + notification navigateur (si autorisée).
   const fireAlert = useCallback(
@@ -388,11 +377,11 @@ export default function StatistiquesPage() {
           )}
           <span
             className="stats-live"
-            title={updatedAt ? `Dernière mise à jour : ${new Date(updatedAt).toLocaleTimeString("fr-CA")}` : ""}
+            title={stream.updatedAt ? `Dernière mise à jour : ${new Date(stream.updatedAt).toLocaleTimeString("fr-CA")}` : ""}
           >
-            <span className={auto ? "stats-dot stats-dot--on" : "stats-dot"} />
-            {auto ? "En direct" : "En pause"}
-            {updatedAt && <span className="muted" style={{ marginLeft: 6 }}>· maj {relTime(updatedAt, nowTick)}</span>}
+            <span className={auto && stream.connected ? "stats-dot stats-dot--on" : "stats-dot"} />
+            {!auto ? "En pause" : stream.connected ? "En direct" : "Connexion…"}
+            {stream.updatedAt && <span className="muted" style={{ marginLeft: 6 }}>· maj {relTime(stream.updatedAt, nowTick)}</span>}
           </span>
           <button
             className="btn btn-ghost btn-sm"
@@ -403,7 +392,7 @@ export default function StatistiquesPage() {
           </button>
           <button
             className="btn btn-ghost btn-sm"
-            onClick={refreshAll}
+            onClick={() => { stream.reconnect(); refreshAll(); }}
             title="Rafraîchir maintenant"
             aria-label="Rafraîchir maintenant"
           >
@@ -422,7 +411,7 @@ export default function StatistiquesPage() {
       `}</style>
 
       {!overview && error ? (
-        <ErrorState message={error} onRetry={refreshAll} />
+        <ErrorState message={error} onRetry={() => { stream.reconnect(); refreshAll(); }} />
       ) : !overview ? (
         <TableSkeleton cols={4} rows={6} />
       ) : (

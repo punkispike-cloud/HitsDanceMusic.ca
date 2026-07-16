@@ -281,6 +281,10 @@ export interface GeoPoint {
   lon: number;
   label: string | null;
   sessions: number;
+  /** Sessions en direct (last_seen < 60 s) dans ce bucket — compte EXACT côté
+   *  serveur, cohérent avec `AnalyticsOverview.live`. La légende de la carte
+   *  somme ce champ (et non `sessions`, qui totalise l'historique du bucket). */
+  live_sessions: number;
   live: boolean;
   last_seen: string;
 }
