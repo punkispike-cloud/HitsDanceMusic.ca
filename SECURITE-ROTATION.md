@@ -110,11 +110,23 @@ une page à recharger. **Aucune reconnexion forcée.**
 Un backup jamais restauré n'est pas un backup.
 
 1. Railway → Postgres → **Backups** → activer les **snapshots automatiques** (quotidiens).
-2. **Teste une restauration au moins une fois** :
-   - soit restaurer un snapshot dans un **projet jetable**,
-   - soit `pg_restore` du `.dump` (étape 0) vers une base locale,
-   - puis lancer `node scripts/verify-deploy.mjs <url>` ou ouvrir l'admin.
-3. **Note le temps de restauration** (RTO) — utile pour un SLA client.
+2. **Teste une restauration au moins une fois** — désormais automatisé et répétable via
+   `npm run restore-drill` (script `scripts/restore-drill.mjs`). Pré-requis : binaires
+   `pg_dump` / `pg_restore` / `psql` sur le PATH. Lancer depuis un poste opérateur :
+   ```bash
+   SOURCE_DATABASE_URL="$DATABASE_PUBLIC_URL" \
+   DRILL_ADMIN_URL="postgres://.../postgres" \
+   npm run restore-drill
+   ```
+   Le script : dump de la source (read-only) → `DROP`+`CREATE` d'une base jetable
+   `restore_drill` → `pg_restore --no-owner --no-acl` → **vérif de parité** (comptes +
+   empreintes md5 des ids sur `users`, `artists`, `shows`, `schedule_slots`, `tracks`,
+   `analytics_sessions`, `radios` + parité des migrations Drizzle) → `DROP` de la base
+   jetable → rapport. Exit 0 si tout vert, 1 sinon. Pour conserver la base restaurée à
+   des fins d'inspection : `KEEP_DRILL_DB=1`. Pour un rapport JSON : `DRILL_REPORT=...`.
+3. **Note le RTO** restitué par le script (durée du `pg_restore`) — utile pour un SLA client.
+4. En complément (ops, hors script) : tester une fois un **PITR restore** Railway vers un
+   projet jetable, puis `node scripts/verify-deploy.mjs <url>` sur l'API pointant dessus.
 
 ---
 
