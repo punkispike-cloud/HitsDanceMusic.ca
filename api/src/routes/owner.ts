@@ -9,13 +9,17 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql, eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { radios, artists, shows, analyticsSessions } from "../db/schema.js";
+import { radios, artists, shows, analyticsSessions, subscriptions, users } from "../db/schema.js";
 import { requireOwner, requireItOrOwner } from "../middleware/rbac.js";
-import { conflict, notFound } from "../lib/errors.js";
+import { conflict, notFound, badRequest } from "../lib/errors.js";
 import { slugify } from "../lib/validation.js";
 import { invalidateRadioCache } from "../services/tenant.js";
 import { isAzuraCastConfigured, createStation } from "../services/azuracast.js";
 import { buildMonthlyReport } from "../services/reports.js";
+import { isStripeBillingConfigured } from "../env.js";
+import { createCheckoutSession, createPortalSession, BILLABLE_TIERS, tierToPriceId } from "../services/stripe.js";
+import { hashPassword } from "../lib/password.js";
+import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
 
 export const ownerRoutes = new Hono<AppBindings>();
@@ -33,7 +37,9 @@ ownerRoutes.get("/overview", requireItOrOwner, async (c) => {
     .select({
       sessions: sql<number>`count(*)::int`,
       live: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} > now() - interval '60 seconds')::int`,
-      today: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} >= date_trunc('day', now()))::int`,
+      // « aujourd'hui » au fuseau America/Toronto (cohérent avec /timeseries et
+      // /admin/analytics/overview) plutôt que minuit du fuseau de session (UTC).
+      today: sql<number>`count(*) filter (where (last_seen AT TIME ZONE 'America/Toronto')::date = (now() AT TIME ZONE 'America/Toronto')::date)::int`,
       listenSec: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
     })
     .from(analyticsSessions);
@@ -56,7 +62,7 @@ ownerRoutes.get("/radios", requireItOrOwner, async (c) => {
     .select({
       radioId: analyticsSessions.radioId,
       live: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} > now() - interval '60 seconds')::int`,
-      today: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} >= date_trunc('day', now()))::int`,
+      today: sql<number>`count(*) filter (where (last_seen AT TIME ZONE 'America/Toronto')::date = (now() AT TIME ZONE 'America/Toronto')::date)::int`,
       sessions: sql<number>`count(*)::int`,
       listenSec: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
     })
@@ -120,11 +126,24 @@ const radioCreate = z.object({
   contactEmail: z.string().trim().max(254).nullish(),
   contactPhone: z.string().trim().max(40).nullish(),
   licenseConfirmed: z.boolean().optional(),
+  // Provisioning enrichi (A3) : superadmin du nouveau tenant + abonnement trial.
+  superadminEmail: z.string().trim().max(254).nullish(),
+  superadminName: z.string().trim().max(120).nullish(),
+  superadminPassword: z.string().trim().min(8).max(200).nullish(),
+  createSubscription: z.boolean().optional(), // crée une ligne subscriptions (trialing)
 });
 
+function randomTempPassword(): string {
+  // 16 octets url-safe — retourné UNE fois à l'opérateur (à transmettre au client).
+  return randomBytes(16).toString("base64url").slice(0, 22);
+}
+
 /* POST /v1/owner/radios — crée une radio (tenant). Démarre en "provisioning".
-   Commercial : owner seul (le provisioning AzuraCast + le forfait relèvent du
-   billing). Le branchement du flux AzuraCast viendra en Phase 9. */
+   Commercial : owner seul. Provisioning enrichi (A3) : crée optionnellement le
+   superadmin du tenant (compte + mot de passe temporaire) et une ligne
+   d'abonnement « trialing » (intention de facturation ; le vrai paiement Stripe
+   se fait via /billing/checkout par le client). Le branchement du flux AzuraCast
+   + l'envoi d'un e-mail d'invitation viendront en Phase 9 / service mail. */
 ownerRoutes.post("/radios", requireOwner, async (c) => {
   const body = radioCreate.parse(await c.req.json());
   const slug = slugify(body.slug || body.name);
@@ -165,8 +184,57 @@ ownerRoutes.post("/radios", requireOwner, async (c) => {
       status: "provisioning",
     })
     .returning();
+  if (!row) throw new Error("Échec création radio");
+
+  // Superadmin du nouveau tenant (idempotent sur l'e-mail : re-rattache au tenant).
+  let superadmin: { id: string; email: string; tempPassword?: string } | null = null;
+  if (body.superadminEmail) {
+    const tempPassword = body.superadminPassword ? null : randomTempPassword();
+    const passwordHash = await hashPassword(body.superadminPassword || tempPassword || randomTempPassword());
+    const [u] = await db
+      .insert(users)
+      .values({
+        email: body.superadminEmail.toLowerCase(),
+        passwordHash,
+        displayName: body.superadminName || body.name,
+        role: "superadmin",
+        radioId: row.id,
+        isActive: true,
+      })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: {
+          passwordHash,
+          displayName: body.superadminName || body.name,
+          role: "superadmin",
+          radioId: row.id,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: users.id, email: users.email });
+    if (!u) throw new Error("Échec création superadmin");
+    superadmin = { id: u.id, email: u.email, ...(tempPassword ? { tempPassword } : {}) };
+  }
+
+  // Abonnement « trialing » (intention de facturation — pas un paiement Stripe).
+  // Sert de miroir local tant que le client ne passe pas par /billing/checkout.
+  let subscription: { planTier: string; status: string } | null = null;
+  if (body.createSubscription && body.plan) {
+    const [s] = await db
+      .insert(subscriptions)
+      .values({ radioId: row.id, planTier: body.plan, status: "trialing" })
+      .onConflictDoUpdate({
+        target: subscriptions.radioId,
+        set: { planTier: body.plan, status: "trialing", updatedAt: new Date() },
+      })
+      .returning({ planTier: subscriptions.planTier, status: subscriptions.status });
+    if (!s) throw new Error("Échec création abonnement");
+    subscription = { planTier: s.planTier, status: s.status };
+  }
+
   invalidateRadioCache();
-  return c.json({ ...row, station }, 201);
+  return c.json({ ...row, station, superadmin, subscription }, 201);
 });
 
 const radioPatch = z.object({
@@ -359,4 +427,106 @@ ownerRoutes.get("/timeseries", requireItOrOwner, async (c) => {
     ORDER BY d
   `);
   return c.json(result.rows);
+});
+
+/* GET /v1/owner/radios/:id/billing — abonnement (miroir Stripe) d'une radio.
+   Lecture seule (owner + it). La création/mise à jour vient du webhook Stripe
+   (POST /v1/webhooks/stripe, à brancher avec la lib stripe + STRIPE_WEBHOOK_SECRET). */
+ownerRoutes.get("/radios/:id/billing", requireItOrOwner, async (c) => {
+  const [row] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.radioId, c.req.param("id")))
+    .limit(1);
+  if (!row) throw notFound("Aucun abonnement pour cette radio");
+  return c.json(row);
+});
+
+const billingCheckout = z.object({
+  tier: z.enum(["starter", "growth", "pro"]),
+  returnUrl: z.string().trim().min(1).max(500),
+});
+
+/* POST /v1/owner/radios/:id/billing/checkout — démarre un abonnement Stripe
+   (Checkout Session) pour un palier. Commercial : owner seul. Gated : 503 si
+   STRIPE_SECRET absent ; 400 si le Price ID du palier n'est pas configuré. */
+ownerRoutes.post("/radios/:id/billing/checkout", requireOwner, async (c) => {
+  if (!isStripeBillingConfigured()) {
+    return c.json({ error: { code: "stripe_disabled", message: "Stripe non configuré (STRIPE_SECRET absent)" } }, 503);
+  }
+  const body = billingCheckout.parse(await c.req.json());
+  const [radio] = await db.select().from(radios).where(eq(radios.id, c.req.param("id"))).limit(1);
+  if (!radio) throw notFound("Radio introuvable");
+  if (!BILLABLE_TIERS.includes(body.tier) || !tierToPriceId(body.tier)) {
+    throw badRequest(`Palier « ${body.tier} » non facturable ou Price ID Stripe manquant`, "invalid_tier");
+  }
+  try {
+    const { url } = await createCheckoutSession(radio, body.tier, body.returnUrl);
+    return c.json({ url });
+  } catch (err) {
+    throw badRequest(err instanceof Error ? err.message : "Échec Checkout Stripe", "stripe_checkout_error");
+  }
+});
+
+const billingPortal = z.object({
+  returnUrl: z.string().trim().min(1).max(500),
+});
+
+/* POST /v1/owner/radios/:id/billing/portal — Customer Portal (gérer CB/factures,
+   annulation). Commercial : owner seul. Gated : 503 si STRIPE_SECRET absent. */
+ownerRoutes.post("/radios/:id/billing/portal", requireOwner, async (c) => {
+  if (!isStripeBillingConfigured()) {
+    return c.json({ error: { code: "stripe_disabled", message: "Stripe non configuré (STRIPE_SECRET absent)" } }, 503);
+  }
+  const body = billingPortal.parse(await c.req.json());
+  const [radio] = await db.select().from(radios).where(eq(radios.id, c.req.param("id"))).limit(1);
+  if (!radio) throw notFound("Radio introuvable");
+  try {
+    const { url } = await createPortalSession(radio, body.returnUrl);
+    return c.json({ url });
+  } catch (err) {
+    throw badRequest(err instanceof Error ? err.message : "Échec Portail Stripe", "stripe_portal_error");
+  }
+});
+
+/* GET /v1/owner/registry — le parc sérialisé depuis la DB (source de vérité),
+   avec l'abonnement joint. Sert de base au sync vers brand/clients.json
+   (scripts/sync-registry.mjs) afin d'unifier les deux registres. Lecture : owner + it. */
+ownerRoutes.get("/registry", requireItOrOwner, async (c) => {
+  const rows = await db
+    .select({
+      id: radios.id,
+      slug: radios.slug,
+      name: radios.name,
+      status: radios.status,
+      plan: radios.plan,
+      monthlyPrice: radios.monthlyPrice,
+      licenseConfirmed: radios.licenseConfirmed,
+      contactEmail: radios.contactEmail,
+      domains: radios.domains,
+      streamUrl: radios.streamUrl,
+      subTier: subscriptions.planTier,
+      subStatus: subscriptions.status,
+      subPeriodEnd: subscriptions.currentPeriodEnd,
+    })
+    .from(radios)
+    .leftJoin(subscriptions, eq(subscriptions.radioId, radios.id))
+    .orderBy(radios.createdAt);
+  const clients = rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    status: r.status,
+    tier: r.plan,
+    monthlyPrice: r.monthlyPrice,
+    licenseConfirmed: r.licenseConfirmed,
+    contactEmail: r.contactEmail,
+    domains: r.domains,
+    streamUrl: r.streamUrl,
+    subscription:
+      r.subTier != null
+        ? { planTier: r.subTier, status: r.subStatus, currentPeriodEnd: r.subPeriodEnd }
+        : null,
+  }));
+  return c.json({ generatedAt: new Date().toISOString(), clients });
 });

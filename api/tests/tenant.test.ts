@@ -27,7 +27,13 @@ const dj: AuthUser = { userId: "d", role: "animateur", artistId: "artist-1", rad
 const reader: AuthUser = { userId: "r", role: "lecteur", artistId: null, radioId: "radio-a" };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function fakeCtx(user: AuthUser | undefined, headers: Record<string, string> = {}, query: Record<string, string> = {}): any {
+function fakeCtx(
+  user: AuthUser | undefined,
+  headers: Record<string, string> = {},
+  query: Record<string, string> = {},
+  path = "/v1/schedule",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
   const vars: Record<string, unknown> = {};
   const h: Record<string, string> = {};
   for (const k of Object.keys(headers)) h[k.toLowerCase()] = headers[k];
@@ -37,7 +43,11 @@ function fakeCtx(user: AuthUser | undefined, headers: Record<string, string> = {
     set: (k: string, v: unknown) => {
       vars[k] = v;
     },
-    req: { header: (name: string) => h[name.toLowerCase()], query: (q: string) => query[q] },
+    req: { header: (name: string) => h[name.toLowerCase()], query: (q: string) => query[q], path },
+    json: (body: unknown, status = 200) => {
+      vars.__resp = { status, body };
+      return { status, body };
+    },
   };
 }
 
@@ -53,7 +63,12 @@ async function run(mw: any, ctx: any) {
   } catch (e) {
     error = e;
   }
-  return { radioId: ctx.vars.radioId as string | null | undefined, nextCalled, error };
+  return {
+    radioId: ctx.vars.radioId as string | null | undefined,
+    nextCalled,
+    error,
+    response: ctx.vars.__resp as { status: number; body: { error?: { code?: string; status?: string } } } | undefined,
+  };
 }
 
 beforeEach(() => setRadioCacheForTests(RADIOS));
@@ -170,5 +185,55 @@ test("adminTenant : it sans sélection en multi → null", async () => {
 test("adminTenant : owner en mono avec X-Radio-Id de la seule radio → cette radio", async () => {
   setRadioCacheForTests([RADIOS[0]!]);
   const r = await run(adminTenant, fakeCtx(owner, { "X-Radio-Id": "radio-a" }));
+  assert.equal(r.radioId, "radio-a");
+});
+
+/* ───────────────────────── Enforcement lifecycle (status != active) ───────────────────────── */
+
+const PAUSED_A = [
+  { id: "radio-a", slug: "alpha", domains: ["alpha.test", "www.alpha.test"], status: "paused" },
+  { id: "radio-b", slug: "beta", domains: ["beta.test"], status: "active" },
+];
+
+test("publicTenant : radio paused → 503 radio_inactive (site public bloqué)", async () => {
+  setRadioCacheForTests(PAUSED_A);
+  const r = await run(publicTenant, fakeCtx(undefined, { host: "alpha.test" }));
+  assert.equal(r.nextCalled, false);
+  assert.equal(r.response?.status, 503);
+  assert.equal(r.response?.body.error?.code, "radio_inactive");
+  assert.equal(r.response?.body.error?.status, "paused");
+});
+
+test("publicTenant : radio active → laisse passer", async () => {
+  const r = await run(publicTenant, fakeCtx(undefined, { host: "beta.test" }));
+  assert.equal(r.nextCalled, true);
+  assert.equal(r.radioId, "radio-b");
+});
+
+test("publicTenant : webhook Stripe exempté (jamais bloqué par status)", async () => {
+  setRadioCacheForTests(PAUSED_A);
+  const r = await run(publicTenant, fakeCtx(undefined, { host: "alpha.test" }, {}, "/v1/webhooks/stripe"));
+  assert.equal(r.nextCalled, true);
+  assert.equal(r.radioId, "radio-a");
+});
+
+test("publicTenant : catalogue cross-radio exempté", async () => {
+  setRadioCacheForTests(PAUSED_A);
+  const r = await run(publicTenant, fakeCtx(undefined, { host: "alpha.test" }, {}, "/v1/catalog/tracks"));
+  assert.equal(r.nextCalled, true);
+});
+
+test("adminTenant : superadmin d'une radio paused → 423 (admin bloqué)", async () => {
+  setRadioCacheForTests(PAUSED_A);
+  const r = await run(adminTenant, fakeCtx(suA));
+  assert.equal(r.nextCalled, false);
+  assert.equal(r.response?.status, 423);
+  assert.equal(r.response?.body.error?.code, "radio_inactive");
+});
+
+test("adminTenant : owner (cross-radio) non bloqué sur une radio paused", async () => {
+  setRadioCacheForTests(PAUSED_A);
+  const r = await run(adminTenant, fakeCtx(owner, { "X-Radio-Id": "radio-a" }));
+  assert.equal(r.nextCalled, true);
   assert.equal(r.radioId, "radio-a");
 });

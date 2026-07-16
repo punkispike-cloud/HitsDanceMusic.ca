@@ -89,13 +89,41 @@ Deux scénarios :
 
 ---
 
-## 5. Durcissement RLS (Phase 6) — optionnel, à tester sur Rockfort
+## 5. Durcissement RLS (Phase 5/6) — migration posée, activation progressive
 
-Le « mur dans le code » est **déjà** l'isolation effective. Le **RLS Postgres** est une **deuxième barrière** (la base refuse une fuite même si un futur code oublie un filtre). À activer **seulement après test sur Rockfort** (radio non-critique), car il exige :
-1. Un **rôle base dédié non-superuser** (les superusers contournent le RLS) avec `FORCE ROW LEVEL SECURITY` sur les tables tenant.
-2. Une **GUC par requête** (`app.radio_id`) posée dans une transaction par requête, + un chemin « bypass » pour les services de fond et l'owner.
+Le « mur dans le code » est **déjà** l'isolation effective. Le **RLS Postgres** est une **deuxième barrière** (la base refuse une fuite même si un futur code oublie un filtre). État :
 
-Ce branchement (transaction par requête + policies) sera ajouté **pendant** la phase de test Rockfort, pour le valider sur une vraie base avant tout. Tant qu'il n'est pas en place, l'isolation reste assurée par le code (Phase 5).
+- **Migrations 0022 → 0024** : `ENABLE ROW LEVEL SECURITY` + policy `tenant_isolation` sur 21 tables tenant (policy = tout visible tant que `app.radio_id` est vide).
+- **Migration `0025_force_rls`** : `FORCE ROW LEVEL SECURITY` sur les 21 tables + création du rôle applicatif `enondes_app` (LOGIN, NOBYPASSRLS) + `GRANT` CRUD sur toutes les tables + `ALTER DEFAULT PRIVILEGES`. SÉCURITAIRE : zéro rupture (GUC vide = tout visible, migrate/seed/jobs inchangés).
+- **Primitives runtime** : `api/src/db/tenant-guc.ts` — `withTenantGuc(radioId, tx => …)` (isolation tenant), `withCrossRadio(tx => …)` (owner/jobs, GUC vide), `acquireRequestDb/releaseRequestDb` (chemin middleware par requête). Posent `set_config('app.radio_id', …, true|false)`.
+- **Garde statique strict** : `RLS_STRICT=1 npm run tenant:guard` signale les handlers tenant pas encore migrés vers les wrappers (66 blocs à ce jour = TODO d'activation). Mode par défaut inchangé (CI verte).
+- **Test d'intégration** : `npm run test:rls` (env-driven) valide sur vraie base que le tenant A ne voit pas le tenant B (se connecter via `RLS_TEST_URL` = rôle `enondes_app` pour que RLS s'applique réellement).
+
+**Activation (ops + code)** :
+1. `ALTER ROLE enondes_app WITH PASSWORD '<fort>'` puis pointer `DATABASE_URL` du service `api` sur ce rôle.
+2. Migrer les handlers tenant (`admin.ts`, `public.ts`, etc.) vers `withTenantGuc(radioId, tx => …)` — pister via `RLS_STRICT=1 npm run tenant:guard`.
+3. `npm run test:rls` sur une base de test (Rockfort) → isolation confirmée.
+
+Tant que la GUC n'est pas posée par requête, l'isolation reste assurée par le code (mur applicatif). Le RLS s'active **sans rupture** une fois les wrappers en place.
+
+---
+
+## 5bis. Lifecycle d'une radio (enforcement + auto-pause)
+
+- **Enforcement `radios.status`** (middleware `tenant.ts`) : le site public
+  (`publicTenant`) renvoie **503 `radio_inactive`** si la radio résolue n'est pas
+  `active` (provisioning/paused). L'admin non-cross-radio (`adminTenant`) renvoie
+  **423** (superadmin/animateur/lecteur bloqué sur une radio suspendue). Sont
+  exemptés : webhooks Stripe, catalogue cross-radio, console owner, admin cross-radio
+  (owner/it gèrent les radios provisioning/paused et la réactivation via
+  `PATCH /v1/owner/radios/:id`).
+- **Auto-pause Stripe** (`services/stripe.ts`) : un abonnement `canceled`/`past_due`
+  cascade `radios.status = paused` (et `active`/`trialing` réactive une radio
+  `paused`, sans forcer un provisioning en active). Le cache radio est invalidé à
+  chaque cascade → l'enforcement s'applique aussitôt. Tests : `tests/tenant.test.ts`
+  (blocage 503/423 + exemptions).
+- **Cycle** : `POST /v1/owner/radios` (status=provisioning) → `npm run provision`
+  (flip → active) → Stripe `canceled` → auto-pause → owner réactive via `/parc`.
 
 ---
 

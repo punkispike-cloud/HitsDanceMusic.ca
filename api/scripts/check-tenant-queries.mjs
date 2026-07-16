@@ -50,13 +50,13 @@ const TENANT_TABLES = [
   "artists", "users", "shows", "scheduleSlots", "episodes", "mixes",
   "uploadIntents", "analyticsSessions", "analyticsShowListen", "trackHistory",
   "trackLikes", "pushSubscriptions", "auditLog", "reportLog", "songRequests",
-  "polls", "pollVotes",
+  "polls", "pollVotes", "mediaAssets", "adRotations", "subscriptions",
 ];
 const TENANT_SNAKE = [
   "artists", "users", "shows", "schedule_slots", "episodes", "mixes",
   "upload_intents", "analytics_sessions", "analytics_show_listen", "track_history",
   "track_likes", "push_subscriptions", "audit_log", "report_log", "song_requests",
-  "polls", "poll_votes",
+  "polls", "poll_votes", "media_assets", "ad_rotations", "subscriptions",
 ];
 
 /* Fichiers entièrement cross-radio par conception → ignorés. */
@@ -80,6 +80,13 @@ const ALLOWED_BLOCKS = new Set([
 
 const CAMEL_ALT = TENANT_TABLES.join("|");
 const SNAKE_ALT = TENANT_SNAKE.join("|");
+
+/* Mode strict (opt-in via RLS_STRICT=1) : une fois RLS activé au runtime, tout
+   accès à une table tenant doit passer par un wrapper transactionnel posant la GUC
+   (withTenantGuc / withCrossRadio de src/db/tenant-guc.ts). Ce mode signale les
+   handlers pas encore migrés. Par défaut (sans RLS_STRICT), le garde conserve son
+   check existant (présence de radioId/radio_id) — CI verte, activation progressive. */
+const STRICT = /^(1|true)$/i.test(process.env.RLS_STRICT || "");
 
 /* Détecte un accès Drizzle à une table tenant sur une ligne. */
 const DRIZZLE_RE = new RegExp(
@@ -145,8 +152,6 @@ function scanFile(absPath) {
     for (const b of blocks) {
       if (ALLOWED_BLOCKS.has(b.name)) continue;
       const body = b.lines.map((l) => l.text).join("\n");
-      const hasRadioId = /\bradioId\b|\bradio_id\b/i.test(body);
-      if (hasRadioId) continue;
 
       /* Cherche les requêtes tenant dans le bloc :
          - accès Drizzle (db.select/delete/update/insert, db.query.X, .from/.join) ;
@@ -187,6 +192,17 @@ function scanFile(absPath) {
       }
       if (hits.length === 0) continue;
 
+      /* Validité du bloc :
+         - mode strict (RLS_STRICT=1) : exige un wrapper transactionnel
+           (withTenantGuc / withCrossRadio) — l'isolation RLS ne tient que si la GUC
+           est posée par requête. Signale les handlers à migrer.
+         - mode par défaut : accepte la présence de radioId/radio_id (filtre applicatif). */
+      if (STRICT) {
+        if (/\bwithTenantGuc\b|\bwithCrossRadio\b/.test(body)) continue;
+      } else {
+        if (/\bradioId\b|\bradio_id\b/i.test(body)) continue;
+      }
+
       violations.push({
         file: rel,
         block: b.name,
@@ -210,20 +226,35 @@ function main() {
   }
 
   if (total === 0) {
-    console.log(`[tenant-guard] ✓ aucun accès tenant sans radioId sur ${files.length} fichiers.`);
+    console.log(
+      `[tenant-guard] ✓ aucun accès tenant sans radioId sur ${files.length} fichiers.` +
+        (STRICT ? " (mode strict RLS_STRICT : tous wrappés withTenantGuc/withCrossRadio)" : ""),
+    );
     return 0;
   }
 
-  console.error(`[tenant-guard] ✗ ${total} bloc(s) avec accès tenant sans radioId :\n`);
+  console.error(
+    `[tenant-guard] ✗ ${total} bloc(s) avec accès tenant ${STRICT ? "non wrappé(s) (withTenantGuc/withCrossRadio)" : "sans radioId"} :\n`,
+  );
   for (const v of all) {
     console.error(`  ${v.file} — bloc « ${v.block} » (ligne ${v.startLine}) :`);
     for (const h of v.hits) console.error(`    L${h.line}: ${h.text.slice(0, 160)}`);
     console.error("");
   }
-  console.error(
-    "[tenant-guard] Si c'est un faux positif légitime (cross-radio par conception, lookup par PK), " +
-      "documenter le cas dans ALLOWED_FILES / ALLOWED_BLOCKS de api/scripts/check-tenant-queries.mjs.",
-  );
+  if (STRICT) {
+    console.error(
+      "[tenant-guard] Mode strict (RLS_STRICT=1) : migrer ces handlers vers " +
+        "withTenantGuc(radioId, tx => ...) / withCrossRadio(tx => ...) (src/db/tenant-guc.ts) " +
+        "pour poser la GUC app.radio_id par requête. Les fichiers cross-radio (owner.ts, " +
+        "auth.ts, jobs) restent allowlistés.",
+    );
+  } else {
+    console.error(
+      "[tenant-guard] Si c'est un faux positif légitime (cross-radio par conception, lookup par PK), " +
+        "documenter le cas dans ALLOWED_FILES / ALLOWED_BLOCKS de api/scripts/check-tenant-queries.mjs. " +
+        "Pour vérifier le câblage RLS runtime : RLS_STRICT=1 npm run tenant:guard.",
+    );
+  }
   return 1;
 }
 

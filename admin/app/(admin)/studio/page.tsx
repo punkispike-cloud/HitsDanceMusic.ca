@@ -72,7 +72,7 @@ export default function StudioPage() {
   const { data: library, error: libError, mutate: reloadLib } = useLibrary();
   const { data: artists } = useArtists();
   const { data: newReq, mutate: mutateNewReq, error: newReqErr } = useRequests("new");
-  const { data: queuedReq, mutate: mutateQueuedReq } = useRequests("queued");
+  const { data: queuedReq, mutate: mutateQueuedReq, error: queuedReqErr } = useRequests("queued");
   const [reqBusy, setReqBusy] = useState<string | null>(null);
   const canHandleReq = user?.role === "animateur" || isEditorialAdmin(user?.role);
 
@@ -464,8 +464,8 @@ export default function StudioPage() {
             <RequestColumn
               title="En file (on-air)"
               requests={queuedReq}
-              loading={!queuedReq}
-              error={false}
+              loading={!queuedReq && !queuedReqErr}
+              error={!!queuedReqErr}
               canHandle={canHandleReq}
               busy={reqBusy}
               onStatus={setRequestStatus}
@@ -969,6 +969,15 @@ function RequestColumn({
               </div>
               {canHandle && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                  {r.status !== "read" && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={busy === r.id}
+                      onClick={() => void onStatus(r.id, "read")}
+                    >
+                      Lu
+                    </button>
+                  )}
                   {r.status !== "queued" && (
                     <button
                       className="btn btn-sm"

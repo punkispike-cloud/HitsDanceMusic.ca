@@ -55,6 +55,46 @@ const checks = [
       return r.status === 200 && typeof r.json?.enabled === "boolean";
     },
   },
+  {
+    name: "Créneau courant /v1/schedule/now (enrichi)",
+    run: async () => {
+      const r = await get("/v1/schedule/now");
+      // null (aucun créneau) ou objet avec isLive + next (enrichi 2c).
+      if (r.status !== 200) return false;
+      if (r.json === null) return true;
+      return typeof r.json?.isLive === "boolean" && "next" in r.json;
+    },
+  },
+  {
+    name: "Route pubs/jingles /v1/admin/media (présente, auth requise)",
+    run: async () => {
+      const r = await get("/v1/admin/media");
+      // 401/403 = la route existe et exige l'auth ; 404 = route absente.
+      return r.status === 401 || r.status === 403;
+    },
+  },
+  {
+    name: "Webhook Stripe /v1/webhooks/stripe (gated safe)",
+    run: async () => {
+      // POST attendu : 503 = stripe_disabled (scaffold safe tant que
+      // STRIPE_WEBHOOK_SECRET absent). On ne vérifie jamais un payload non signé.
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), TIMEOUT);
+      try {
+        const p = await fetch(`${base}/v1/webhooks/stripe`, {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        });
+        return p.status === 503;
+      } catch {
+        return false;
+      } finally {
+        clearTimeout(t);
+      }
+    },
+  },
 ];
 
 console.log(`\n🔍 Vérification de ${base}\n`);

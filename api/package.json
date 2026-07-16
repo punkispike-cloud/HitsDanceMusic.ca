@@ -16,8 +16,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
     "vapid": "node -e \"const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)\"",
-    "test": "node --test --import tsx --import ./tests/_setup.ts tests/schedule.test.ts tests/jwt.test.ts tests/rbac.test.ts tests/validation.test.ts tests/tenant.test.ts tests/http-rbac.test.ts",
-    "tenant:guard": "node scripts/check-tenant-queries.mjs"
+    "test": "node --test --import tsx --import ./tests/_setup.ts tests/schedule.test.ts tests/jwt.test.ts tests/rbac.test.ts tests/validation.test.ts tests/tenant.test.ts tests/http-rbac.test.ts tests/stripe.test.ts tests/analytics-bus.test.ts",
+    "tenant:guard": "node scripts/check-tenant-queries.mjs",
+    "test:rls": "node scripts/test-rls.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.658.0",
@@ -29,6 +30,7 @@
     "hono": "^4.6.3",
     "jose": "^5.9.3",
     "pg": "^8.13.0",
+    "stripe": "^17.7.0",
     "web-push": "^3.6.7",
     "zod": "^3.23.8"
   },

@@ -97,11 +97,17 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
     (p) => typeof p.lat === "number" && typeof p.lon === "number",
   );
   const maxS = Math.max(1, ...pts.map((p) => p.sessions));
-  // Liveness calculée côté client à partir de last_seen + `now` (horloge 1 s du
-  // parent) → un point s'« éteint » tout seul après 60 s sans nouveau fetch.
+  // Liveness visuelle calculée côté client à partir de last_seen + `now` (horloge
+  // 1 s du parent) → un point s'« éteint » tout seul après 60 s sans nouveau fetch
+  // (effet « live » réactif entre deux polls de 4 s).
   const isLive = (p: GeoPoint) => now - new Date(p.last_seen).getTime() < LIVE_WINDOW_MS;
-  const liveSessions = pts.filter(isLive).reduce((a, p) => a + p.sessions, 0);
-  const liveCities = pts.filter(isLive).length;
+  // Compteur EXACT du direct : somme de `live_sessions` (calculé côté serveur avec
+  // le même prédicat que /overview) → cohérent avec la carte KPI « En direct ».
+  // On ne somme PLUS `sessions` (historique total du bucket) — c'était la cause de
+  // l'écart « carte = 4, KPI = 1 » : une ville avec 4 sessions historiques dont 1
+  // active gonflait la légende à 4.
+  const liveSessions = pts.reduce((a, p) => a + (p.live_sessions ?? 0), 0);
+  const liveCities = pts.filter((p) => p.live_sessions > 0).length;
 
   // Résumé synthétique de la carte pour les lecteurs d'écran (role=img).
   const mapSummary = pts.length
@@ -141,7 +147,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
                 <circle cx={x} cy={y} r={r + 3} fill="#19c37d" opacity={0.22} />
               )}
               <circle cx={x} cy={y} r={r} fill={color} stroke="#ffffff" strokeWidth={0.5} opacity={0.92}>
-                <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${live ? " · en direct" : ""}`}</title>
+                <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${live ? ` · ${p.live_sessions} en direct` : ""}`}</title>
               </circle>
             </g>
           );
@@ -162,7 +168,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
             <tr key={`${p.label ?? "?"}-${p.lat}-${p.lon}`}>
               <th scope="row">{p.label ?? "?"}</th>
               <td>{p.sessions}</td>
-              <td>{isLive(p) ? "en direct" : "récent"}</td>
+              <td>{p.live_sessions > 0 ? `${p.live_sessions} en direct` : "récent"}</td>
             </tr>
           ))}
         </tbody>

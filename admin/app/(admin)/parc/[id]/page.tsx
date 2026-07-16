@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
-import { useRadioDetail, useDistribution } from "@/lib/hooks";
+import { useRadioDetail, useDistribution, useBilling } from "@/lib/hooks";
 import { Empty, Spinner, ErrorState } from "@/components/ui";
 import { TrendChart } from "@/components/trend-chart";
 import { formatDuration, isCrossRadio, type RadioStatus } from "@/lib/types";
@@ -143,6 +143,8 @@ export default function RadioDetailPage() {
 
       <DistributionCard id={id} />
 
+      <BillingCard id={id} isOwner={isOwner} />
+
       {editing && radio && (
         <RadioEditPanel
           radio={radio}
@@ -153,6 +155,107 @@ export default function RadioDetailPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+const SUB_STATUS_LABEL: Record<string, string> = {
+  active: "Actif",
+  trialing: "Essai",
+  past_due: "En retard de paiement",
+  canceled: "Annulé",
+  incomplete: "En cours d'activation",
+};
+
+/* Carte « Abonnement & facturation » : reflète la ligne subscriptions (miroir Stripe)
+   + actions Checkout (démarrer/changer un palier) et Customer Portal (gérer CB /
+   factures). Console owner (le hook pointe vers /v1/owner/... ; les boutons sont
+   réservés à l'owner). Un 404 = aucun abonnement encore (état initial, pas une
+   erreur). */
+function BillingCard({ id, isOwner }: { id: string; isOwner: boolean }) {
+  const { subscription, error, isLoading, checkout, portal } = useBilling(id);
+  const [busy, setBusy] = useState<string | null>(null);
+  const returnUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  const goTo = async (fn: () => Promise<string>, tag: string) => {
+    setBusy(tag);
+    try {
+      const url = await fn();
+      if (url) window.location.href = url;
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Échec de l'action Stripe.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const noSub = !!error && (error as ApiError).status === 404;
+
+  return (
+    <div style={{ ...cardStyle, marginTop: 16 }}>
+      <strong>Abonnement &amp; facturation</strong>
+      {isLoading ? (
+        <div style={{ marginTop: 10 }}>
+          <Spinner />
+        </div>
+      ) : noSub ? (
+        <>
+          <p style={{ color: "var(--txt-dim)", fontSize: 13, marginTop: 8 }}>
+            Aucun abonnement Stripe pour cette radio.
+          </p>
+          {isOwner && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              {(["starter", "growth", "pro"] as const).map((t) => (
+                <button
+                  key={t}
+                  className="btn btn-sm"
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => void goTo(() => checkout(t, returnUrl), `co-${t}`)}
+                >
+                  {busy === `co-${t}` ? "…" : `Démarrer ${t}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      ) : error ? (
+        <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 8 }}>
+          {(error as ApiError).message || "Impossible de charger l'abonnement."}
+        </p>
+      ) : subscription ? (
+        <>
+          <Row label="Palier" value={subscription.planTier} />
+          <Row label="Statut" value={SUB_STATUS_LABEL[subscription.status] ?? subscription.status} />
+          <Row
+            label="Période fin"
+            value={subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : null}
+          />
+          {isOwner && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button
+                className="btn btn-sm"
+                type="button"
+                disabled={!!busy}
+                onClick={() => void goTo(() => portal(returnUrl), "portal")}
+              >
+                {busy === "portal" ? "…" : "Portail client (CB / factures)"}
+              </button>
+              {(["starter", "growth", "pro"] as const).map((t) => (
+                <button
+                  key={t}
+                  className="btn btn-sm btn-ghost"
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => void goTo(() => checkout(t, returnUrl), `co-${t}`)}
+                >
+                  {busy === `co-${t}` ? "…" : `Changer vers ${t}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

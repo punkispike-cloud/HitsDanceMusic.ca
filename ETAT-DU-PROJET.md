@@ -1,7 +1,33 @@
 # État du projet — Hits Dance Music (reprise sur Mac)
 
 > Document de reprise : tout ce qu'il faut pour continuer le travail.
-> Dernière mise à jour : **2026-06-29**. Branche : `main` (déploiement auto Railway).
+> Dernière mise à jour : **2026-07-14**. Branche : `main` (déploiement auto Railway).
+
+---
+
+## Mise à jour 2026-07-14 — Plan « 100 % fonctionnel » (Phases 2a–2g + 4)
+
+> Suite au plan d'activation + roadmap. Code en place, typechecké (api ✓ 73 tests ✓,
+> admin ✓). Les migrations **0022 → 0024** s'appliquent au prochain deploy (soft,
+> sans rupture). Les features gated restent inactives jusqu'à configuration externe.
+
+| Phase | Livrable | Statut | Reste (action externe / câblage) |
+|---|---|---|---|
+| 2a | Notif push « demande jouée » | ✅ code | Activation VAPID (clés générées) |
+| 2b | **Loops Studio DJ** (moteur) | ✅ moteur | UI studio à câler (boutons setLoop/clearLoop) |
+| 2c | Créneau courant enrichi (`/v1/schedule/now` + artist/show/next) | ✅ code | — |
+| 2g | **RLS multi-tenant** (policies Postgres, soft rollout) | ✅ migration | Rôle DB non-propriétaire + `SET LOCAL app.radio_id`/req (à valider sur vraie base) |
+| 2d | **Pubs/jingles** (`media_assets` + `ad_rotations` + CRUD `/v1/admin/media` + `/rotations`) | ✅ backend | Page admin + synchro AzuraCast (gated) |
+| 2f | **Facturation Stripe** (`subscriptions` + lecture `/v1/owner/.../billing` + webhook gated) | ✅ scaffold | Lib `stripe` + compte Stripe + portail (Phase 5) |
+| 2e | **Live DJ → AzuraCast** (`createStreamer` harbor) | ✅ scaffold | Serveur AzuraCast + Webcaster.js front (Phase 3/5) |
+| 4 | `verify-deploy.mjs` étendu (schedule/now, media, webhook Stripe) | ✅ code | — |
+
+**Migrations à appliquer au prochain deploy** : `0022_tenant_rls` → `0023_media_ads` → `0024_subscriptions`.
+**Nouvelles vars d'env** (optionnelles, gated) : `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`.
+
+> ⚠️ Les migrations 0022–0024 sont **hand-authored** (pas de snapshot drizzle-kit).
+> Au prochain `npm run db:generate`, vérifier qu'aucun diff ne re-crée ces tables
+> (les snapshots 0022–0024 ne sont pas générés — à produire si on régénère).
 
 ---
 

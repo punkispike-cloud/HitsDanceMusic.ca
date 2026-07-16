@@ -21,7 +21,7 @@ export interface TrackRef {
  *  Rejoué tel quel par le moteur de rendu OfflineAudioContext. */
 export interface AutomationEvent {
   t: number;
-  type: "play" | "crossfade" | "pitch" | "eq" | "volume" | "reverb";
+  type: "play" | "crossfade" | "pitch" | "eq" | "volume" | "reverb" | "loop";
   deck?: DeckId;
   offset?: number; // play : position de départ dans le buffer (s)
   rate?: number; // pitch / play : playbackRate
@@ -31,6 +31,9 @@ export interface AutomationEvent {
   volume?: number; // volume (0..1)
   wet?: number; // reverb : niveau d'envoi humide (0..1)
   clip?: string; // play : id du clip (buffer + piste) actif → rendu multi-segments
+  loopActive?: boolean; // loop : boucle active sur le deck
+  loopStart?: number; // loop : début de la région (s)
+  loopEnd?: number; // loop : fin de la région (s)
 }
 
 export interface DeckState {
@@ -44,6 +47,9 @@ export interface DeckState {
   eq: { low: number; mid: number; high: number }; // dB
   volume: number; // 0..1
   reverb: number; // envoi réverbe humide (0..1), 0 = sec
+  loopActive: boolean; // boucle [loopStart..loopEnd] active
+  loopStart: number; // début de région (s)
+  loopEnd: number; // fin de région (s)
   // Runtime (non persisté) : repère de lecture pour le playhead.
   playStartCtx?: number;
   playStartOffset?: number;
@@ -75,6 +81,9 @@ export function emptyDeck(): DeckState {
     eq: { low: 0, mid: 0, high: 0 },
     volume: 1,
     reverb: 0,
+    loopActive: false,
+    loopStart: 0,
+    loopEnd: 0,
   };
 }
 

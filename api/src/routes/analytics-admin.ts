@@ -9,6 +9,7 @@ import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
+import { onAnalyticsBeacon } from "../services/analytics-bus.js";
 import type { AppBindings } from "../types.js";
 
 /* Un « skip » = écoute courte : seuil de 15 s sur analytics_show_listen.
@@ -33,11 +34,21 @@ function toCsv(headers: string[], rows: unknown[][]): string {
 /* GET /v1/admin/analytics/overview — chiffres clés (radio courante). */
 analyticsAdminRoutes.get("/overview", async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
+  return c.json(await fetchOverview(radioId));
+});
+
+/** Construit l'instantané « overview » (chiffres clés) d'une radio. Partagé entre
+ *  GET /overview et le stream SSE → une seule source de vérité pour les chiffres. */
+async function fetchOverview(radioId: string) {
   const [agg] = await db
     .select({
       totalSessions: sql<number>`count(*)::int`,
       live: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} > now() - interval '60 seconds')::int`,
-      today: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} >= date_trunc('day', now()))::int`,
+      // « aujourd'hui » au fuseau de la radio (America/Toronto), cohérent avec
+      // /timeseries qui génère ses jours dans ce même fuseau. `date_trunc('day',
+      // now())` utiliserait le fuseau de session (UTC) → minuit UTC = 19 h/20 h
+      // la veille à Toronto, faussant le compteur en début/fin de journée.
+      today: sql<number>`count(*) filter (where (last_seen AT TIME ZONE 'America/Toronto')::date = (now() AT TIME ZONE 'America/Toronto')::date)::int`,
       sumActive: sql<number>`coalesce(sum(${analyticsSessions.activeSec}),0)::int`,
       sumListen: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
       pageViews: sql<number>`coalesce(sum(${analyticsSessions.pageViews}),0)::int`,
@@ -46,7 +57,7 @@ analyticsAdminRoutes.get("/overview", async (c) => {
     .where(eq(analyticsSessions.radioId, radioId));
 
   const total = agg?.totalSessions ?? 0;
-  return c.json({
+  return {
     totalSessions: total,
     live: agg?.live ?? 0,
     today: agg?.today ?? 0,
@@ -55,6 +66,94 @@ analyticsAdminRoutes.get("/overview", async (c) => {
     totalListenSec: agg?.sumListen ?? 0,
     avgActiveSec: total ? Math.round((agg!.sumActive ?? 0) / total) : 0,
     avgListenSec: total ? Math.round((agg!.sumListen ?? 0) / total) : 0,
+  };
+}
+
+/* GET /v1/admin/analytics/stream — flux SSE temps réel (radio courante). Pousse
+   un instantané {overview, geo, sessions?} :
+   - immédiatement à l'ouverture,
+   - à chaque beacon reçu pour cette radio (même instance API → quasi-instantané),
+   - toutes les 2 s en repli (gère le vieillissement des sessions hors fenêtre 60 s
+     + la fraîcheur multi-instance où l'événement beacon ne traverse pas les replicas).
+   `sessions` (IP) n'est inclus QUE pour superadmin + owner (même garde que
+   /sessions). Auth réutilisée : requireAuth + adminTenant déjà appliqués sur
+   /v1/admin/*. Le client lit ce flux via fetch streaming (EventSource ne peut pas
+   envoyer l'en-tête Authorization). */
+analyticsAdminRoutes.get("/stream", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const user = c.get("user");
+  const includeSessions = user?.role === "superadmin" || user?.role === "owner";
+
+  const enc = new TextEncoder();
+  let closed = false;
+  const timers: ReturnType<typeof setInterval>[] = [];
+  let offBeacon: (() => void) | null = null;
+
+  const snapshot = async (): Promise<string> => {
+    const [overview, geo, sessions] = await Promise.all([
+      fetchOverview(radioId),
+      fetchGeo(radioId),
+      includeSessions ? fetchSessions(radioId, 200) : Promise.resolve(null),
+    ]);
+    return JSON.stringify({ overview, geo, sessions, ts: Date.now() });
+  };
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const push = async () => {
+        if (closed) return;
+        try {
+          const payload = await snapshot();
+          if (closed) return;
+          controller.enqueue(enc.encode(`data: ${payload}\n\n`));
+        } catch {
+          /* best-effort : le prochain tick réessaiera */
+        }
+      };
+      // État initial dès l'ouverture (pas d'attente du 1er tick).
+      await push();
+      // Tick périodique : repli universel + vieillissement des sessions.
+      const tick = setInterval(push, 2000);
+      // Heartbeat proxy (Railway/nginx) : maintient la connexion ouverte.
+      const hb = setInterval(() => {
+        if (!closed) {
+          try { controller.enqueue(enc.encode(`: ping\n\n`)); } catch { /* noop */ }
+        }
+      }, 15000);
+      timers.push(tick, hb);
+      // Push quasi-instantané à la réception d'un beacon (même instance).
+      offBeacon = onAnalyticsBeacon(radioId, () => { void push(); });
+
+      // Nettoyage sur déconnexion client (socket close). `c.req.raw` est typé
+      // `Request` (web standard) mais, sur @hono/node-server, c'est un IncomingMessage
+      // node qui émet "close" → cast sûr + feature-detect. `cancel()` (plus bas) est
+      // le repli canonique si l'événement n'est pas disponible.
+      const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        for (const t of timers) clearInterval(t);
+        timers.length = 0;
+        offBeacon?.();
+        offBeacon = null;
+        try { controller.close(); } catch { /* déjà fermé */ }
+      };
+      const rawReq = c.req.raw as unknown as { on?: (e: "close", fn: () => void) => void };
+      rawReq.on?.("close", cleanup);
+    },
+    cancel() {
+      closed = true;
+      for (const t of timers) clearInterval(t);
+      timers.length = 0;
+      offBeacon?.();
+      offBeacon = null;
+    },
+  });
+
+  return c.body(stream, 200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
   });
 });
 
@@ -183,11 +282,21 @@ analyticsAdminRoutes.get("/timeseries", async (c) => {
    N'expose PAS l'IP → accessible à tout admin authentifié. */
 analyticsAdminRoutes.get("/geo", async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
+  return c.json(await fetchGeo(radioId));
+});
+
+/** Construit les points géo agrégés par ville d'une radio. Partagé entre GET /geo
+ *  et le stream SSE. `live_sessions` = nombre EXACT de sessions en direct
+ *  (last_seen < 60 s) dans le bucket, calculé côté serveur → cohérent avec le
+ *  compteur « En direct » de /overview (même prédicat SQL). La légende de la carte
+ *  somme ce champ, pas `sessions` (qui totalise toutes les sessions historiques). */
+async function fetchGeo(radioId: string) {
   const result = await db.execute(sql`
     SELECT ip_lat AS lat,
            ip_lon AS lon,
            ip_country AS label,
            count(*)::int AS sessions,
+           count(*) filter (where last_seen > now() - interval '60 seconds')::int AS live_sessions,
            bool_or(last_seen > now() - interval '60 seconds') AS live,
            max(last_seen) AS last_seen
     FROM analytics_sessions
@@ -196,8 +305,8 @@ analyticsAdminRoutes.get("/geo", async (c) => {
     ORDER BY sessions DESC
     LIMIT 500
   `);
-  return c.json(result.rows);
-});
+  return result.rows;
+}
 
 /* GET /v1/admin/analytics/breakdown — répartitions (radio courante). */
 analyticsAdminRoutes.get("/breakdown", async (c) => {
@@ -232,14 +341,20 @@ analyticsAdminRoutes.get("/breakdown", async (c) => {
 analyticsAdminRoutes.get("/sessions", requireRole("superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const limit = Math.min(500, Math.max(1, Number(c.req.query("limit")) || 200));
+  return c.json(await fetchSessions(radioId, limit));
+});
+
+/** Détail des sessions visiteurs (IP…). Réservé superadmin + owner : le stream
+ *  SSE n'inclut ce champ QUE pour ces rôles (même garde que GET /sessions). */
+async function fetchSessions(radioId: string, limit = 200) {
   const rows = await db
     .select()
     .from(analyticsSessions)
     .where(eq(analyticsSessions.radioId, radioId))
     .orderBy(desc(analyticsSessions.lastSeen))
     .limit(limit);
-  return c.json(rows);
-});
+  return rows;
+}
 
 /* GET /v1/admin/analytics/export?type=sessions|shows — CSV. Éditorial :
    superadmin + owner. `it` EXCLU (le CSV sessions expose les IP). */

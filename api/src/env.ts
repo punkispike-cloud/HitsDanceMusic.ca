@@ -133,6 +133,17 @@ export const env = {
   AZURACAST_REPLAY_ENABLED: optional("AZURACAST_REPLAY_ENABLED", "false"),
   REPLAY_INTERVAL_MS: intOpt("REPLAY_INTERVAL_MS", 15 * 60_000), // 15 min
 
+  // Stripe (facturation Phase 5) — inactif tant que les secrets ne sont pas fournis.
+  // Le webhook vérifie la signature Stripe avec STRIPE_WEBHOOK_SECRET (lib `stripe` à ajouter).
+  STRIPE_SECRET: optional("STRIPE_SECRET", ""),
+  STRIPE_WEBHOOK_SECRET: optional("STRIPE_WEBHOOK_SECRET", ""),
+  // Mapping palier -> Stripe Price ID (un Price récurrent par palier, créé dans le
+  // dashboard Stripe). Le webhook en déduit le palier depuis l'abonnement reçu.
+  // Laisser vide tant que les produits/prix ne sont pas créés côté Stripe.
+  STRIPE_PRICE_STARTER_ID: optional("STRIPE_PRICE_STARTER_ID", ""),
+  STRIPE_PRICE_GROWTH_ID: optional("STRIPE_PRICE_GROWTH_ID", ""),
+  STRIPE_PRICE_PRO_ID: optional("STRIPE_PRICE_PRO_ID", ""),
+
   // S3 (Phase 4) — optionnel tant que les uploads ne sont pas activés.
   // Compatible Cloudflare R2 (S3 API) : poser S3_ENDPOINT + S3_REGION="auto"
   // (+ S3_FORCE_PATH_STYLE="true") pointe le client vers R2 au lieu d'AWS.
@@ -167,6 +178,16 @@ export function isResendConfigured(): boolean {
 /** Web Push (VAPID) actif ? */
 export function isPushConfigured(): boolean {
   return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+}
+
+/** Stripe (facturation) actif ? Le webhook exige le secret de signature. */
+export function isStripeConfigured(): boolean {
+  return Boolean(env.STRIPE_WEBHOOK_SECRET);
+}
+
+/** Stripe « billing » (checkout + portail client) : exige la clé secrète API. */
+export function isStripeBillingConfigured(): boolean {
+  return Boolean(env.STRIPE_SECRET);
 }
 
 /** Surveillance du flux active ? (sinon aucun suivi de santé en arrière-plan) */

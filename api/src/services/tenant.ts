@@ -74,6 +74,13 @@ export async function radioExists(id: string): Promise<boolean> {
   return rows.some((r) => r.id === id);
 }
 
+/** Statut d'une radio (cache, 30 s). null si introuvable. Sert à l'enforcement
+ *  lifecycle (bloquer public/admin si != active). */
+export async function radioStatusFor(id: string): Promise<string | null> {
+  const rows = await allRadios();
+  return rows.find((r) => r.id === id)?.status ?? null;
+}
+
 /** Garantit une radio résolue : lève 404 si null (hôte inconnu en multi-radio).
     En mono-radio, jamais null ⇒ zéro impact. */
 export function requireRadioId(radioId: string | null): string {

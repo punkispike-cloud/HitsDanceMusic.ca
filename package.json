@@ -2,7 +2,7 @@
   "name": "hitsdance-tooling",
   "version": "1.0.0",
   "private": true,
-  "description": "Outillage de build & tests visuels du site public Hits Dance Music / En Ondes.",
+  "description": "Outillage de build, tests visuels et scripts opérateur (sync-registry, provision, pre-go-live) du site public Hits Dance Music / En Ondes.",
   "scripts": {
     "build": "node scripts/build-all.mjs",
     "build:css": "node scripts/build-css.mjs",
@@ -12,7 +12,16 @@
     "test:unit": "node --test tests/",
     "test:visual": "playwright test --config=tests/visual/playwright.config.mjs",
     "snap:baseline": "playwright test --config=tests/visual/playwright.config.mjs --update-snapshots",
-    "snap:check": "playwright test --config=tests/visual/playwright.config.mjs"
+    "snap:check": "playwright test --config=tests/visual/playwright.config.mjs",
+    "restore-drill": "node scripts/restore-drill.mjs",
+    "sync-registry": "node scripts/sync-registry.mjs",
+    "provision": "node scripts/provision.mjs",
+    "add-to-registry": "node scripts/add-to-registry.mjs",
+    "gen-paperwork": "node scripts/gen-paperwork.mjs",
+    "pre-go-live": "node scripts/pre-go-live.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
