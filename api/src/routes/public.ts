@@ -9,6 +9,7 @@ import { db } from "../db/client.js";
 import { artists, shows, episodes, mixes, trackHistory, trackLikes, songRequests, polls, pollVotes } from "../db/schema.js";
 import { notFound, badRequest, tooMany } from "../lib/errors.js";
 import { isStripeConfigured } from "../env.js";
+import { constructWebhookEvent, handleStripeEvent } from "../services/stripe.js";
 import { getScheduleShape, getCurrentSlot, getUpcomingSlotsForArtist, getNextSlot } from "../services/schedule.js";
 import { requireRadioId } from "../services/tenant.js";
 import { fromMinutes } from "../lib/validation.js";
@@ -416,11 +417,10 @@ publicRoutes.post("/polls/:id/vote", async (c) => {
 });
 
 /* ═══════════════════════ WEBHOOK STRIPE (facturation) ═══════════════════════
-   Réception des événements Stripe (abonnements). SÉCURITAIRE : tant que la lib
-   `stripe` + STRIPE_WEBHOOK_SECRET ne sont pas branchés, on n'accepte NI ne traite
-   aucun événement (ne jamais traiter un payload non vérifié). Quand le secret est
-   posé mais la lib absente, on répond 501 (scaffold) pour ne pas faire croire à
-   Stripe que c'est livré. Branchement complet = ROADMAP Phase 5. */
+   Réception des événements Stripe (abonnements). SÉCURITAIRE : tant que
+   STRIPE_WEBHOOK_SECRET n'est pas posé, on n'accepte NI ne traite aucun événement
+   (503 stripe_disabled). Quand le secret est posé, on vérifie la signature avec la
+   lib `stripe` (constructEvent) avant toute action ; signature invalide -> 400. */
 publicRoutes.post("/webhooks/stripe", async (c) => {
   if (!isStripeConfigured()) {
     return c.json(
@@ -428,8 +428,20 @@ publicRoutes.post("/webhooks/stripe", async (c) => {
       503,
     );
   }
-  // TODO(Phase 5) : vérifier la signature avec stripe.webhooks.constructEvent(
-  //   rawBody, sig, STRIPE_WEBHOOK_SECRET), puis mettre à jour subscriptions
-  //   (status / current_period_end) selon l'event (invoice.paid, customer.subscription.*).
-  return c.json({ error: { code: "not_implemented", message: "Webhook Stripe scaffoldé, lib stripe à brancher" } }, 501);
+  const signature = c.req.header("stripe-signature") || "";
+  const rawBody = await c.req.text();
+  let event;
+  try {
+    event = await constructWebhookEvent(rawBody, signature);
+  } catch (err) {
+    console.error("[stripe] signature webhook invalide :", err instanceof Error ? err.message : err);
+    return c.json({ error: { code: "invalid_signature", message: "Signature Stripe invalide." } }, 400);
+  }
+  try {
+    await handleStripeEvent(event);
+  } catch (err) {
+    console.error("[stripe] traitement webhook échoué :", event.type, err instanceof Error ? err.message : err);
+    return c.json({ error: { code: "webhook_handler_error", message: "Échec du traitement." } }, 500);
+  }
+  return c.json({ received: true });
 });

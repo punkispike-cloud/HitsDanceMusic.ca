@@ -41,7 +41,26 @@ export default function ParcPage() {
   const [editing, setEditing] = useState<RadioSummary | null>(null);
   // Confirmation de changement de statut (couper / relancer le direct).
   const [confirmStatus, setConfirmStatus] = useState<{ radio: RadioSummary; status: RadioStatus } | null>(null);
-  const [form, setForm] = useState({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
+  // Résultat de la création (superadmin + abonnement) — affiché une fois pour
+  // transmettre le mot de passe temporaire au client.
+  const [created, setCreated] = useState<{
+    slug?: string;
+    superadmin?: { email: string; tempPassword?: string };
+    subscription?: { planTier: string; status: string };
+  } | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    plan: "",
+    monthlyPrice: "",
+    streamUrl: "",
+    nowPlayingUrl: "",
+    domains: "",
+    superadminEmail: "",
+    superadminName: "",
+    superadminPassword: "",
+    createSubscription: false,
+  });
 
   // Accès cross-radio (owner + it). Les actions commerciales (provisioning,
   // édition, statut, export CSV) restent réservées à l'owner.
@@ -141,7 +160,7 @@ export default function ParcPage() {
     setCreating(true);
     try {
       const domains = form.domains.split(",").map((s) => s.trim()).filter(Boolean);
-      await api.post("/v1/owner/radios", {
+      const payload: Record<string, unknown> = {
         name: form.name,
         slug: form.slug || undefined,
         plan: form.plan || null,
@@ -149,10 +168,35 @@ export default function ParcPage() {
         streamUrl: form.streamUrl || null,
         nowPlayingUrl: form.nowPlayingUrl || null,
         domains,
-      });
+      };
+      // Provisioning enrichi (A3) : superadmin du tenant + abonnement trialing.
+      if (form.superadminEmail.trim()) {
+        payload.superadminEmail = form.superadminEmail.trim();
+        payload.superadminName = form.superadminName.trim() || undefined;
+        if (form.superadminPassword) payload.superadminPassword = form.superadminPassword;
+      }
+      if (form.createSubscription && form.plan) payload.createSubscription = true;
+      const res = await api.post<{
+        slug?: string;
+        superadmin?: { email: string; tempPassword?: string };
+        subscription?: { planTier: string; status: string };
+      }>("/v1/owner/radios", payload);
       toast("Radio créée ✓ (statut : en montage)", "ok");
-      setForm({ name: "", slug: "", plan: "", monthlyPrice: "", streamUrl: "", nowPlayingUrl: "", domains: "" });
+      setForm({
+        name: "",
+        slug: "",
+        plan: "",
+        monthlyPrice: "",
+        streamUrl: "",
+        nowPlayingUrl: "",
+        domains: "",
+        superadminEmail: "",
+        superadminName: "",
+        superadminPassword: "",
+        createSubscription: false,
+      });
       setFormErrors({});
+      if (res?.superadmin || res?.subscription) setCreated(res);
       void reload();
       refresh();
     } catch (err) {
@@ -286,7 +330,9 @@ export default function ParcPage() {
         <>
           <h2 style={{ marginTop: 28 }}>Provisionner une nouvelle radio</h2>
           <p style={{ color: "var(--txt-dim)", fontSize: 13, marginTop: -6 }}>
-            Crée le tenant (statut « en montage »). Le branchement du flux AzuraCast viendra automatiser le reste.
+            Crée le tenant (statut « en montage ») + optionnellement le superadmin du client et un
+            abonnement d'essai. La mise en ondes (build + Railway + DNS + activation) se fait via
+            <code> npm run provision -- --slug &lt;slug&gt;</code>.
           </p>
           <form
             ref={formRef}
@@ -296,11 +342,23 @@ export default function ParcPage() {
           >
             <Field name="name" label="Nom *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} />
             <Field name="slug" label="Slug (auto si vide)" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} />
-            <Field name="plan" label="Forfait" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
+            <Field name="plan" label="Forfait (starter/growth/pro)" value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
             <Field name="monthlyPrice" label="Prix ($/mois)" value={form.monthlyPrice} onChange={(v) => setForm({ ...form, monthlyPrice: v })} type="number" min="0" step="1" error={formErrors.monthlyPrice} />
             <Field name="domains" label="Domaines (séparés par ,)" value={form.domains} onChange={(v) => setForm({ ...form, domains: v })} />
             <Field name="streamUrl" label="Flux audio (stream URL)" value={form.streamUrl} onChange={(v) => setForm({ ...form, streamUrl: v })} type="url" error={formErrors.streamUrl} />
             <Field name="nowPlayingUrl" label="Now-playing URL" value={form.nowPlayingUrl} onChange={(v) => setForm({ ...form, nowPlayingUrl: v })} type="url" error={formErrors.nowPlayingUrl} />
+            <Field name="superadminEmail" label="Superadmin — courriel" value={form.superadminEmail} onChange={(v) => setForm({ ...form, superadminEmail: v })} type="email" />
+            <Field name="superadminName" label="Superadmin — nom" value={form.superadminName} onChange={(v) => setForm({ ...form, superadminName: v })} />
+            <Field name="superadminPassword" label="Superadmin — mot de passe (auto si vide)" value={form.superadminPassword} onChange={(v) => setForm({ ...form, superadminPassword: v })} type="password" />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--txt)", gridColumn: "1 / -1" }}>
+              <input
+                type="checkbox"
+                checked={form.createSubscription}
+                onChange={(e) => setForm({ ...form, createSubscription: e.target.checked })}
+                disabled={!form.plan}
+              />
+              Créer un abonnement d'essai (statut « trialing ») — nécessite un forfait
+            </label>
             <div style={{ gridColumn: "1 / -1" }}>
               <button className="btn" type="submit" disabled={creating || !form.name.trim()}>
                 {creating ? "Création…" : "Créer la radio"}
@@ -353,6 +411,44 @@ export default function ParcPage() {
               }}
             >
               {confirmStatus.status === "paused" ? "Suspendre" : "Activer"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {created && (
+        <Modal title="Radio provisionnée" onClose={() => setCreated(null)}>
+          <p className="muted">
+            Le tenant <strong>{created.slug}</strong> est créé (statut « en montage »).
+          </p>
+          {created.superadmin && (
+            <div style={{ marginTop: 10, padding: 12, borderRadius: 8, background: "var(--bg)", border: "1px solid var(--line-2)" }}>
+              <div style={{ fontSize: 12, color: "var(--txt-dim)" }}>Superadmin</div>
+              <div style={{ fontWeight: 700 }}>{created.superadmin.email}</div>
+              {created.superadmin.tempPassword && (
+                <>
+                  <div style={{ fontSize: 12, color: "var(--txt-dim)", marginTop: 8 }}>Mot de passe temporaire (affiché une fois) :</div>
+                  <code style={{ display: "block", marginTop: 4, padding: 8, background: "var(--panel)", borderRadius: 6, wordBreak: "break-all" }}>
+                    {created.superadmin.tempPassword}
+                  </code>
+                  <div style={{ fontSize: 12, color: "var(--warn)", marginTop: 6 }}>
+                    À transmettre au client maintenant — il ne sera plus affiché.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {created.subscription && (
+            <p style={{ marginTop: 10, fontSize: 13 }}>
+              Abonnement d'essai : <strong>{created.subscription.planTier}</strong> ({created.subscription.status}).
+            </p>
+          )}
+          <p style={{ marginTop: 10, fontSize: 12, color: "var(--txt-dim)" }}>
+            Prochaine étape : <code>npm run provision -- --slug {created.slug}</code> pour la mise en ondes + l'activation.
+          </p>
+          <div className="modal-actions">
+            <button className="btn" type="button" onClick={() => setCreated(null)}>
+              Fermer
             </button>
           </div>
         </Modal>

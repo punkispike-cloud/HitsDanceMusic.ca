@@ -113,6 +113,19 @@ export interface DistributionPackage {
   checklist: DistributionChannel[];
 }
 
+/** Abonnement (miroir Stripe) renvoyé par GET /v1/owner/radios/:id/billing. */
+export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "incomplete";
+
+export interface Subscription {
+  id: string;
+  radioId: string;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  planTier: string;
+  status: SubscriptionStatus;
+  currentPeriodEnd: string | null;
+}
+
 /** Totaux agrégés sur tout le parc (console opérateur). */
 export interface OwnerOverview {
   radios: number;

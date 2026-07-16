@@ -47,6 +47,7 @@ import type {
   PollStatus,
   DistributionPackage,
   DistributionChannel,
+  Subscription,
 } from "./types";
 
 export { rkey } from "./keys";
@@ -469,4 +470,26 @@ export function useDistribution(id: string | null | undefined) {
     return updated;
   };
   return { data, error, save, mutate, isValidating };
+}
+
+/* ─────────────────────── Billing / Stripe (parc/[id]) ────────────────────── */
+
+/** Abonnement (miroir Stripe) d'une radio + actions Checkout/Portail.
+ *  Hook NON radio-scopé : la clé pointe vers la console owner. `checkout` démarre
+ *  un abonnement pour un palier (redirige vers Stripe), `portal` ouvre la gestion
+ *  CB/factures. Les deux renvoient une URL Stripe à ouvrir. */
+export function useBilling(id: string | null | undefined) {
+  const key = id ? `/v1/owner/radios/${id}/billing` : null;
+  const { data, error, mutate, isLoading } = useSWR<Subscription>(key);
+
+  const checkout = async (tier: "starter" | "growth" | "pro", returnUrl: string): Promise<string> => {
+    const res = await api.post(`/v1/owner/radios/${id}/billing/checkout`, { tier, returnUrl });
+    return (res as { url: string }).url;
+  };
+  const portal = async (returnUrl: string): Promise<string> => {
+    const res = await api.post(`/v1/owner/radios/${id}/billing/portal`, { returnUrl });
+    return (res as { url: string }).url;
+  };
+
+  return { subscription: data, error, mutate, isLoading, checkout, portal };
 }
