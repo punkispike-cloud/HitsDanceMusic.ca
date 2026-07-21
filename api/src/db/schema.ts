@@ -813,12 +813,43 @@ export const subscriptions = pgTable(
     planTier: text("plan_tier").notNull(), // ex. "starter", "pro"
     status: subStatus("status").notNull().default("incomplete"),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    // Horodatage du dernier événement Stripe APPLIQUÉ : garde anti-désordre
+    // (un événement plus ancien reçu après un plus récent est ignoré).
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => ({
     radioIdx: uniqueIndex("subscriptions_radio_idx").on(t.radioId),
     stripeCustIdx: index("subscriptions_stripe_customer_idx").on(t.stripeCustomerId),
     stripeSubIdx: uniqueIndex("subscriptions_stripe_sub_idx").on(t.stripeSubscriptionId),
+  }),
+);
+
+/* ═══════════════════ Idempotence webhook Stripe ═══════════════════
+   Journal des événements Stripe déjà traités : ignore les redeliveries (même
+   event.id). Table technique globale (pas de radio_id → hors RLS). */
+export const stripeEvents = pgTable("stripe_events", {
+  eventId: text("event_id").primaryKey(),
+  type: text("type").notNull(),
+  eventCreatedAt: timestamp("event_created_at", { withTimezone: true }),
+  processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* ═══════════════════ Dedup des rappels d'émission ═══════════════════
+   Remplace le Set en mémoire process (qui dupliquait les push en multi-instance).
+   Unicité (slot_id, reminder_date) : l'INSERT ON CONFLICT DO NOTHING sert de verrou
+   partagé entre instances → un seul rappel part par créneau et par jour. */
+export const reminderLog = pgTable(
+  "reminder_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id"),
+    slotId: uuid("slot_id").notNull(),
+    reminderDate: text("reminder_date").notNull(), // "YYYY-MM-DD" (jour Montréal)
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slotDateIdx: uniqueIndex("reminder_log_slot_date_idx").on(t.slotId, t.reminderDate),
   }),
 );
 

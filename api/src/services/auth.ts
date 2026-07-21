@@ -78,6 +78,17 @@ export async function rotateRefreshToken(
   return { pair, user };
 }
 
+/** Résout l'utilisateur d'un refresh token à partir de son hash, SANS filtrer sur
+   l'expiration ni la révocation. Utilisé par « logout everywhere » : on veut pouvoir
+   révoquer toutes les sessions même si le token présenté est expiré/inconnu à la
+   rotation (tant qu'il correspond à une ligne stockée). Renvoie null si aucun match. */
+export async function userIdForRefreshToken(raw: string): Promise<string | null> {
+  const row = await db.query.refreshTokens.findFirst({
+    where: eq(refreshTokens.tokenHash, hashRefreshToken(raw)),
+  });
+  return row?.userId ?? null;
+}
+
 /** Révoque un refresh précis (logout simple). */
 export async function revokeRefreshToken(raw: string): Promise<void> {
   const tokenHash = hashRefreshToken(raw);

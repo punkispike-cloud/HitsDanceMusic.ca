@@ -23,6 +23,7 @@ import {
   rotateRefreshToken,
   revokeRefreshToken,
   revokeAllForUser,
+  userIdForRefreshToken,
   type TokenPair,
 } from "../services/auth.js";
 import { createAuthToken, consumeAuthToken } from "../services/auth-tokens.js";
@@ -96,8 +97,10 @@ authRoutes.post("/logout", async (c) => {
   if (!raw && body && typeof body.refreshToken === "string") raw = body.refreshToken;
   if (raw) {
     if (body?.all === true) {
-      const result = await rotateRefreshToken(raw).catch(() => null);
-      if (result) await revokeAllForUser(result.user.id);
+      // « Déconnecter partout » : révoquer toutes les sessions même si le token
+      // présenté est expiré/inconnu à la rotation (on résout l'user par le hash).
+      const userId = await userIdForRefreshToken(raw);
+      if (userId) await revokeAllForUser(userId);
     } else {
       await revokeRefreshToken(raw);
     }
