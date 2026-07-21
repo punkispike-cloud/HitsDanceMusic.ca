@@ -51,6 +51,9 @@ export async function withAdvisoryLock<T>(
     return undefined;
   }
 
+  // Suivi de la libération du verrou : si l'unlock échoue, la connexion détient
+  // ENCORE le verrou de session → on la détruira au lieu de la remettre au pool.
+  let unlocked = true;
   try {
     let acquired = false;
     try {
@@ -65,11 +68,17 @@ export async function withAdvisoryLock<T>(
     try {
       return await fn();
     } finally {
-      await client.query("SELECT pg_advisory_unlock($1::bigint)", [lockKey]).catch((e) => {
-        console.warn(`[lock] échec libération pour "${key}"`, e);
-      });
+      unlocked = await client
+        .query("SELECT pg_advisory_unlock($1::bigint)", [lockKey])
+        .then(() => true)
+        .catch((e) => {
+          console.warn(`[lock] échec libération pour "${key}"`, e);
+          return false;
+        });
     }
   } finally {
-    client.release();
+    // Unlock OK → remise au pool ; unlock en échec → destruction (release(true))
+    // pour ne pas empoisonner le pool avec une connexion qui tient le verrou.
+    client.release(unlocked ? undefined : true);
   }
 }

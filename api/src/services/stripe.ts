@@ -13,7 +13,7 @@
 
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { radios, subscriptions, type RadioStatus } from "../db/schema.js";
+import { radios, subscriptions, stripeEvents, type RadioStatus } from "../db/schema.js";
 import { env, isStripeBillingConfigured } from "../env.js";
 import { invalidateRadioCache } from "./tenant.js";
 import type Stripe from "stripe";
@@ -174,30 +174,49 @@ export async function createPortalSession(
 }
 
 /** Upsert d'une ligne `subscriptions` depuis un objet Subscription Stripe, + cascade
- *  du statut radio. Résolu via metadata.radio_id, sinon stripe_customer_id, sinon
- *  stripe_subscription_id. Renvoie la radio_id concernée (ou null si orphelin). */
-export async function syncSubscriptionFromStripe(sub: Stripe.Subscription): Promise<string | null> {
+ *  du statut radio. `eventCreatedAt` = horodatage de l'événement Stripe (event.created)
+ *  pour la garde anti-désordre. Renvoie la radio_id concernée (ou null si orphelin). */
+export async function syncSubscriptionFromStripe(
+  sub: Stripe.Subscription,
+  eventCreatedAt: Date,
+): Promise<string | null> {
   const radioId = (sub.metadata?.radio_id as string | undefined) || null;
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
   const tier = (sub.metadata?.plan_tier as string | undefined) || priceIdToTier(sub.items?.data?.[0]?.price?.id);
   const status = mapStripeStatus(sub.status);
   const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000) : null;
 
-  // Résolution de la radio : metadata d'abord, sinon ligne existante par customer/sub id.
-  let resolvedRadioId = radioId;
-  if (!resolvedRadioId) {
-    const [existing] = await db
+  // Résolution de la radio. Priorité à la ligne qui possède DÉJÀ ce subscription id :
+  // elle est autoritative (un abonnement Stripe appartient à exactement une radio), ce
+  // qui évite une violation d'unicité sur stripe_subscription_id si metadata.radio_id
+  // diverge d'une ligne existante. Sinon metadata, sinon la ligne du customer.
+  const [bySub] = await db
+    .select({ radioId: subscriptions.radioId, lastEventAt: subscriptions.lastEventAt })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, sub.id))
+    .limit(1);
+  let resolvedRadioId = bySub?.radioId ?? radioId;
+  if (!resolvedRadioId && customerId) {
+    const [byCust] = await db
       .select({ radioId: subscriptions.radioId })
       .from(subscriptions)
-      .where(
-        customerId
-          ? eq(subscriptions.stripeCustomerId, customerId)
-          : eq(subscriptions.stripeSubscriptionId, sub.id),
-      )
+      .where(eq(subscriptions.stripeCustomerId, customerId))
       .limit(1);
-    resolvedRadioId = existing?.radioId ?? null;
+    resolvedRadioId = byCust?.radioId ?? null;
   }
   if (!resolvedRadioId) return null; // événement orphelin (aucune radio connue)
+
+  // Garde anti-désordre : Stripe ne garantit pas l'ordre de livraison. Si un événement
+  // plus RÉCENT a déjà été appliqué, on ignore ce (plus ancien) pour ne pas ré-écraser
+  // le statut (ex. un `updated` actif retardé ne doit pas ré-activer une radio annulée).
+  const [current] = await db
+    .select({ lastEventAt: subscriptions.lastEventAt })
+    .from(subscriptions)
+    .where(eq(subscriptions.radioId, resolvedRadioId))
+    .limit(1);
+  if (current?.lastEventAt && eventCreatedAt.getTime() < current.lastEventAt.getTime()) {
+    return resolvedRadioId; // événement périmé → ne rien changer
+  }
 
   await db
     .insert(subscriptions)
@@ -208,6 +227,7 @@ export async function syncSubscriptionFromStripe(sub: Stripe.Subscription): Prom
       planTier: tier ?? "starter",
       status,
       currentPeriodEnd: periodEnd,
+      lastEventAt: eventCreatedAt,
     })
     .onConflictDoUpdate({
       target: subscriptions.radioId,
@@ -217,6 +237,7 @@ export async function syncSubscriptionFromStripe(sub: Stripe.Subscription): Prom
         planTier: tier ?? undefined,
         status,
         currentPeriodEnd: periodEnd,
+        lastEventAt: eventCreatedAt,
         updatedAt: new Date(),
       },
     });
@@ -249,16 +270,44 @@ export async function constructWebhookEvent(rawBody: string, signature: string):
   return stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET);
 }
 
+/** Enregistre un event.id comme « en cours de traitement ». Renvoie false si l'event
+ *  a déjà été traité (redelivery) → l'appelant doit l'ignorer. Sert de verrou
+ *  d'idempotence partagé (ON CONFLICT DO NOTHING). */
+async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {
+  const rows = await db
+    .insert(stripeEvents)
+    .values({
+      eventId: event.id,
+      type: event.type,
+      eventCreatedAt: event.created ? new Date(event.created * 1000) : null,
+    })
+    .onConflictDoNothing({ target: stripeEvents.eventId })
+    .returning({ id: stripeEvents.eventId });
+  return rows.length > 0;
+}
+
 /** Dispatch un événement Stripe vérifié. La synchro des abonnements passe par les
  *  événements customer.subscription.* (ils portent l'objet Subscription complet).
- *  Les invoice.* sont ignorés (informationnels). */
+ *  Les invoice.* sont ignorés (informationnels).
+ *  Idempotent : un event.id déjà traité est ignoré. En cas d'échec du traitement,
+ *  la réservation est retirée pour laisser Stripe réessayer (le webhook renvoie 500). */
 export async function handleStripeEvent(event: Stripe.Event): Promise<string | null> {
-  switch (event.type) {
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      return syncSubscriptionFromStripe(event.data.object as Stripe.Subscription);
-    default:
-      return null; // événement non traité
+  const fresh = await claimStripeEvent(event);
+  if (!fresh) return null; // déjà traité → no-op
+
+  const eventCreatedAt = event.created ? new Date(event.created * 1000) : new Date();
+  try {
+    switch (event.type) {
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        return await syncSubscriptionFromStripe(event.data.object as Stripe.Subscription, eventCreatedAt);
+      default:
+        return null; // événement non traité
+    }
+  } catch (err) {
+    // Échec : on annule la réservation pour que la redelivery Stripe soit re-traitée.
+    await db.delete(stripeEvents).where(eq(stripeEvents.eventId, event.id)).catch(() => {});
+    throw err;
   }
 }

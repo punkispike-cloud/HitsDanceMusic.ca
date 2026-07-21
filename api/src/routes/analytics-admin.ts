@@ -89,6 +89,18 @@ analyticsAdminRoutes.get("/stream", async (c) => {
   const timers: ReturnType<typeof setInterval>[] = [];
   let offBeacon: (() => void) | null = null;
 
+  // Démontage partagé (timers + listener bus). Idempotent. Appelé par le repli
+  // canonique `cancel()` du ReadableStream (déclenché par node-server à la
+  // déconnexion) ET, en bonus, par un éventuel event "close" (adaptateur node brut).
+  const teardown = () => {
+    if (closed) return;
+    closed = true;
+    for (const t of timers) clearInterval(t);
+    timers.length = 0;
+    offBeacon?.();
+    offBeacon = null;
+  };
+
   const snapshot = async (): Promise<string> => {
     const [overview, geo, sessions] = await Promise.all([
       fetchOverview(radioId),
@@ -124,28 +136,20 @@ analyticsAdminRoutes.get("/stream", async (c) => {
       // Push quasi-instantané à la réception d'un beacon (même instance).
       offBeacon = onAnalyticsBeacon(radioId, () => { void push(); });
 
-      // Nettoyage sur déconnexion client (socket close). `c.req.raw` est typé
-      // `Request` (web standard) mais, sur @hono/node-server, c'est un IncomingMessage
-      // node qui émet "close" → cast sûr + feature-detect. `cancel()` (plus bas) est
-      // le repli canonique si l'événement n'est pas disponible.
-      const cleanup = () => {
-        if (closed) return;
-        closed = true;
-        for (const t of timers) clearInterval(t);
-        timers.length = 0;
-        offBeacon?.();
-        offBeacon = null;
-        try { controller.close(); } catch { /* déjà fermé */ }
-      };
+      // Nettoyage sur déconnexion. Le chemin GARANTI est `cancel()` ci-dessous
+      // (@hono/node-server l'appelle quand le client se déconnecte). En complément,
+      // SI l'adaptateur expose un `c.req.raw` de type IncomingMessage node (`.on`),
+      // on s'abonne aussi à "close" ; sous node-server, `c.req.raw` est un `Request`
+      // web sans `.on` → l'abonnement est un no-op inoffensif (pas de fuite, cancel
+      // s'en charge).
       const rawReq = c.req.raw as unknown as { on?: (e: "close", fn: () => void) => void };
-      rawReq.on?.("close", cleanup);
+      rawReq.on?.("close", () => {
+        teardown();
+        try { controller.close(); } catch { /* déjà fermé */ }
+      });
     },
     cancel() {
-      closed = true;
-      for (const t of timers) clearInterval(t);
-      timers.length = 0;
-      offBeacon?.();
-      offBeacon = null;
+      teardown();
     },
   });
 
