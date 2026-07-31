@@ -165,6 +165,13 @@ body.is-offline #netbar { display: block; }
 .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(208px, 248px)); justify-content: center; }
 .grid:empty { min-height: 320px; }
 .empty { color: var(--muted); padding: 26px 4px; grid-column: 1 / -1; }
+/* En-tête de section (découverte par lieu) : pleine largeur dans la grille. */
+.grid-section {
+  grid-column: 1 / -1; margin: 6px 0 -4px; display: flex; align-items: center; gap: 10px;
+  font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--faint);
+}
+.grid-section::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-bright); box-shadow: 0 0 8px rgba(var(--glow), 0.7); }
+.grid-section:not(:first-child) { margin-top: 20px; }
 
 .station {
   position: relative; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-lg);
@@ -267,7 +274,7 @@ a:focus-visible, button:focus-visible, .chip:focus-visible, .swchip:focus-visibl
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--st-glow), 0.6); } 70% { box-shadow: 0 0 0 8px rgba(var(--st-glow), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--st-glow), 0); } }
 .badge.coming { color: var(--muted); background: rgba(0,0,0,0.4); border: 1px solid var(--hairline); }
 
-.fav, .info {
+.fav, .info, .share {
   position: absolute; z-index: 3; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
   border: 1px solid var(--hairline); background: rgba(6, 8, 15, 0.5); color: var(--muted);
   -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
@@ -275,10 +282,11 @@ a:focus-visible, button:focus-visible, .chip:focus-visible, .swchip:focus-visibl
 }
 .fav { top: 14px; left: 14px; }
 .info { bottom: 14px; right: 14px; }
-.fav:hover, .info:hover { color: var(--txt); border-color: var(--hairline-strong); background: rgba(6, 8, 15, 0.75); }
+.share { bottom: 14px; left: 14px; }
+.fav:hover, .info:hover, .share:hover { color: var(--txt); border-color: var(--hairline-strong); background: rgba(6, 8, 15, 0.75); }
 .fav:active { transform: scale(0.85); }
-.info:active { transform: scale(0.9); }
-.fav svg, .info svg { width: 18px; height: 18px; fill: currentColor; }
+.info:active, .share:active { transform: scale(0.9); }
+.fav svg, .info svg, .share svg { width: 18px; height: 18px; fill: currentColor; }
 .fav.on { color: var(--pink); border-color: rgba(255, 93, 177, 0.55); background: rgba(255, 93, 177, 0.12); }
 .fav.on svg { animation: pop 0.32s var(--ease); }
 @keyframes pop { 0% { transform: scale(0.6); } 55% { transform: scale(1.25); } 100% { transform: scale(1); } }
@@ -401,6 +409,15 @@ a:focus-visible, button:focus-visible, .chip:focus-visible, .swchip:focus-visibl
 .sheet-actions { display: flex; align-items: center; gap: 16px; margin: 22px 0 10px; }
 .sheet-site { font-weight: 600; color: var(--accent-bright); display: inline-flex; align-items: center; gap: 5px; }
 .sheet-site:hover { text-decoration: underline; }
+.sheet-share {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--txt); padding: 9px 15px; border-radius: var(--r-pill);
+  border: 1px solid var(--hairline); background: rgba(6, 8, 15, 0.5);
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.sheet-share svg { fill: currentColor; }
+.sheet-share:hover { color: var(--accent-bright); border-color: var(--hairline-strong); background: rgba(6, 8, 15, 0.75); }
+.sheet-share:active { transform: scale(0.96); }
 .sheet-switch-wrap { margin-top: 20px; border-top: 1px solid var(--hairline); padding-top: 16px; }
 .sheet-switch-label { color: var(--faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 9px; }
 .sheet-switch { display: flex; gap: 9px; flex-wrap: wrap; }
@@ -414,6 +431,10 @@ footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 4
 footer .wordmark { font-size: 1.3rem; font-weight: 700; }
 footer p { margin-top: 7px; }
 footer p.fine { margin-top: 10px; color: #7c87a0; }
+footer .foot-legal { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: center; }
+footer .foot-legal a { color: var(--muted); }
+footer .foot-legal a:hover { color: var(--accent-bright); }
+footer .foot-legal .sep { color: var(--faint); }
 
 /* ============================ PLATEAU ON-AIR ============================ */
 
@@ -503,7 +524,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 25; pointer-even
   .ambient span { animation: none; filter: blur(60px); opacity: 0.4; }
   .ambient .o3 { display: none; }
   /* Allège le backdrop-filter répété par carte (coûteux en GPU sur mobile) */
-  .badge, .fav, .info { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .badge, .fav, .info, .share { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @media (prefers-reduced-data: reduce) { .ambient span { animation: none; } }
 
