@@ -14,13 +14,14 @@ Images servies par le site (hero + icônes PWA) :
 > Les icônes/OG sont régénérées depuis le logo par `scripts/gen-enondes-icons.py`
 > (bascule sur la marque dessinée si aucun logo n'est fourni).
 
-## Optimisation (à faire avec un outil d'image)
+## Optimisation
 
-Plusieurs PNG dépassent 200 Ko (`icon-512.png`, `icon-maskable-512.png`, `og-image.png`).
-À recompresser quand un outil est disponible, p. ex. :
+Les images sont compressées par `scripts/optimize-enondes-assets.py` (Pillow :
+PNG quantifiés 256 couleurs, JPEG progressif q78 — ~1 042 Ko → ~242 Ko).
+À relancer après toute régénération par `gen-enondes-icons.py` :
 
 ```bash
-pngquant --quality=65-85 --ext .png --force assets/icon-512.png assets/icon-maskable-512.png assets/og-image.png
+python scripts/optimize-enondes-assets.py
 ```
 
 ## Aperçu local
