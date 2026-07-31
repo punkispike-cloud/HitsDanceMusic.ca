@@ -1,10 +1,12 @@
 /* En Ondes — Build Stations (annuaire public du hub d'écoute)
  *
  * Compile le registre privé (brand/clients.json) + la config par marque
- * (brand/<slug>.json) en DEUX sorties :
+ * (brand/<slug>.json) en TROIS sorties :
  *   1. enondes-site/stations.json  — manifeste PUBLIC lu par hub.js.
  *   2. enondes-site/nginx.conf     — blocs « location = /np/<slug> » (proxy
  *      now-playing par station) régénérés entre les marqueurs NP-PROXY.
+ *   3. enondes-site/index.html     — données structurées schema.org (RadioStation
+ *      de CHAQUE station listée) régénérées entre les marqueurs JSON-LD.
  *
  * Règles :
  *   - Opt-in : une station n'est incluse que si clients.json a
@@ -36,8 +38,11 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const checkMode = process.argv.includes("--check");
 const OUT_JSON = join(root, "enondes-site", "stations.json");
 const OUT_NGINX = join(root, "enondes-site", "nginx.conf");
+const OUT_INDEX = join(root, "enondes-site", "index.html");
 const NP_BEGIN = "    # === NP-PROXY:BEGIN";
 const NP_END = "    # === NP-PROXY:END ===";
+const JSONLD_BEGIN = "  <!-- JSON-LD:BEGIN";
+const JSONLD_END = "  <!-- JSON-LD:END -->";
 
 // Placeholders : "CHANGEME", "(à créer)", et le TLD réservé ".example" (ancré
 // par \b pour ne PAS matcher un vrai hôte du genre "stream.examplemusic.fm").
@@ -53,8 +58,9 @@ const registryText = await readFile(join(root, "brand/clients.json"), "utf-8").c
 
 if (registryText === null) {
   /* brand/clients.json absent : pas de (re)génération possible. En --check, on
-     valide l'intégrité des artefacts COMMITÉS (stations.json + nginx.conf) ;
-     sinon on avertit et on n'écrit rien. Jamais de crash. */
+     valide l'intégrité des artefacts COMMITÉS (stations.json + nginx.conf +
+     bloc JSON-LD d'index.html) ; sinon on avertit et on n'écrit rien.
+     Jamais de crash. */
   if (!checkMode) {
     console.warn("[build-stations] ⚠ registre privé brand/clients.json absent — rien à régénérer (exit 0).");
     process.exit(0);
@@ -117,6 +123,27 @@ if (registryText === null) {
     } else if (j < i) {
       console.error("[build-stations] ✗ nginx.conf : marqueurs NP-PROXY dans le mauvais ordre (END avant BEGIN).");
       bad++;
+    }
+  }
+
+  // 3. index.html : bloc JSON-LD présent, borné et syntaxiquement valide.
+  const indexText = await readFile(OUT_INDEX, "utf-8").catch(() => null);
+  if (indexText === null) {
+    console.error("[build-stations] ✗ enondes-site/index.html introuvable.");
+    bad++;
+  } else {
+    const block = extractJsonLd(indexText);
+    if (block === null) {
+      console.error("[build-stations] ✗ index.html : marqueurs JSON-LD absents ou dans le mauvais ordre.");
+      bad++;
+    } else {
+      try {
+        const doc = JSON.parse(block.slice(block.indexOf("{"), block.lastIndexOf("}") + 1).replace(/<\\\//g, "</"));
+        if (doc["@context"] !== "https://schema.org" || !Array.isArray(doc["@graph"])) throw new Error("@context/@graph manquant");
+      } catch (err) {
+        console.error(`[build-stations] ✗ index.html : JSON-LD invalide — ${err.message}`);
+        bad++;
+      }
     }
   }
 
@@ -275,6 +302,70 @@ function regenNginx(current) {
   return head + body + tail;
 }
 
+/* ---------- 3. Données structurées schema.org (annuaire indexable) ---------- */
+// Bloc JSON-LD régénéré dans index.html entre les marqueurs JSON-LD : une entrée
+// RadioStation PAR station listée (clients + partenaires), pour l'indexation de
+// l'annuaire. "</" est échappé en "<\/" (valide en JSON) pour qu'aucun champ
+// texte ne puisse refermer le bloc <script>.
+function jsonLdDoc() {
+  const stationNodes = stations.map((s) => {
+    const node = {
+      "@type": "RadioStation",
+      "@id": `https://enondes.ca/?station=${s.slug}#station`,
+      name: s.name,
+      alternateName: s.shortName,
+      url: `https://enondes.ca/?station=${s.slug}`,
+      inLanguage: "fr-CA",
+    };
+    const genres = s.genre.split("·").map((g) => g.trim()).filter(Boolean);
+    if (genres.length) node.genre = genres;
+    if (s.description) node.description = s.description;
+    if (s.region) node.areaServed = s.region;
+    if (s.site) node.sameAs = s.site;
+    if (s.owned) node.parentOrganization = { "@id": "https://enondes.ca/#org" };
+    return node;
+  });
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "@id": "https://enondes.ca/#org", name: "En Ondes", url: "https://enondes.ca/", email: "bonjour@enondes.ca", slogan: "Radio en direct · Podcast — clé en main, en français", areaServed: "CA-QC" },
+      { "@type": "WebSite", "@id": "https://enondes.ca/#site", url: "https://enondes.ca/", name: "En Ondes", inLanguage: "fr-CA", publisher: { "@id": "https://enondes.ca/#org" } },
+      ...stationNodes,
+    ],
+  };
+}
+
+function jsonLdBlock() {
+  const body = JSON.stringify(jsonLdDoc(), null, 2)
+    .replace(/<\//g, "<\\/")
+    .split("\n")
+    .map((l) => `  ${l}`)
+    .join("\n");
+  return (
+    `${JSONLD_BEGIN} (généré par scripts/build-stations.mjs — ne pas éditer) -->\n` +
+    `  <script type="application/ld+json">\n` +
+    `${body}\n` +
+    `  </script>\n` +
+    JSONLD_END
+  );
+}
+
+function extractJsonLd(current) {
+  const i = current.indexOf(JSONLD_BEGIN);
+  const j = current.indexOf(JSONLD_END);
+  if (i === -1 || j === -1 || j < i) return null;
+  return current.slice(i, j + JSONLD_END.length);
+}
+
+function regenIndexHtml(current) {
+  const block = extractJsonLd(current);
+  if (block === null) {
+    console.warn("[build-stations] ⚠ marqueurs JSON-LD absents de enondes-site/index.html — bloc non régénéré");
+    return null;
+  }
+  return current.replace(block, jsonLdBlock());
+}
+
 /* ---------- Écriture / vérification ---------- */
 let drift = 0;
 
@@ -292,6 +383,16 @@ if (beforeNginx != null) {
     drift++;
     if (!checkMode) await writeFile(OUT_NGINX, nextNginx, "utf-8");
     console.log(`[build-stations] ${checkMode ? "✗" : "✓"} nginx.conf (/np : ${npProxies.map((p) => p.slug).join(", ") || "aucun"})`);
+  }
+}
+
+const beforeIndex = await readFile(OUT_INDEX, "utf-8").catch(() => null);
+if (beforeIndex != null) {
+  const nextIndex = regenIndexHtml(beforeIndex);
+  if (nextIndex != null && nextIndex !== beforeIndex) {
+    drift++;
+    if (!checkMode) await writeFile(OUT_INDEX, nextIndex, "utf-8");
+    console.log(`[build-stations] ${checkMode ? "✗" : "✓"} index.html (JSON-LD : ${stations.length} station·s)`);
   }
 }
 

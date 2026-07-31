@@ -7,7 +7,7 @@
  *   - JAMAIS de cache pour /np/* (now-playing, temps réel), les flux audio
  *     (cross-origin, donc non interceptés) ni les requêtes Range.
  */
-const VERSION = "eo-hub-v9";
+const VERSION = "eo-hub-v10";
 const SHELL = [
   "./",
   "./index.html",
