@@ -1,17 +1,28 @@
-# Assets de la landing « En Ondes »
+# Assets du hub « En Ondes »
 
-Ce dossier reçoit les images de la vitrine :
+Images servies par le site (hero + icônes PWA) :
 
-| Fichier | Rôle | Source |
-|---|---|---|
-| `logo.png` | logo du hero | copié depuis `brand/enondes/assets/logo.png` |
-| `favicon.png` | onglet navigateur | généré depuis le logo |
-| `og-image.png` | aperçu de partage (1200×630) | généré depuis le logo |
+| Fichier | Rôle |
+|---|---|
+| `favicon.svg` | onglet navigateur (vectoriel) |
+| `apple-touch-icon.png` | icône iOS |
+| `icon-192.png`, `icon-512.png` | icônes PWA (any) |
+| `icon-maskable-512.png` | icône PWA maskable |
+| `studio-bg.jpg` | bannière du hero (accueil) |
+| `og-image.png` | aperçu de partage (1200×630) |
 
-> 📥 **Tu n'as qu'à déposer le logo une seule fois** dans `brand/enondes/assets/logo.png`.
-> Ensuite je génère favicon + og-image et je copie le tout ici automatiquement
-> (via `sharp`). En attendant, la page s'affiche déjà bien (wordmark CSS).
+> Les icônes/OG sont régénérées depuis le logo par `scripts/gen-enondes-icons.py`
+> (bascule sur la marque dessinée si aucun logo n'est fourni).
+
+## Optimisation (à faire avec un outil d'image)
+
+Plusieurs PNG dépassent 200 Ko (`icon-512.png`, `icon-maskable-512.png`, `og-image.png`).
+À recompresser quand un outil est disponible, p. ex. :
+
+```bash
+pngquant --quality=65-85 --ext .png --force assets/icon-512.png assets/icon-maskable-512.png assets/og-image.png
+```
 
 ## Aperçu local
-Ouvre simplement **`enondes-site/index.html`** dans ton navigateur (double-clic) pour
-voir la page. Aucune installation requise.
+
+Ouvre **`enondes-site/index.html`** dans un navigateur (double-clic). Aucune installation requise.
