@@ -1,0 +1,20 @@
+{
+  "_comment": "Radios PARTENAIRES opt-in de l'annuaire du hub En Ondes (enondes-site/stations.json). Ce sont des radios TIERCES, NON hébergées par En Ondes (contrairement à brand/clients.json). Curées manuellement par l'opérateur. Ce fichier est PUBLIC/commité (aucune donnée sensible), donc l'annuaire se régénère même en checkout CI. Lu par scripts/build-stations.mjs qui fusionne ces partenaires avec les clients listés. RÈGLES : (1) n'ajouter une radio qu'après attestation ÉCRITE de son opt-in ET de ses licences (SOCAN/Ré:Sonne) — conserver la preuve HORS dépôt ; (2) licenseAttested doit valoir true, sinon la station est ignorée au build (warning) ; (3) listed:false = fiche préparée mais NON publiée (équivaut à listing.directory=false côté clients). Champs par partenaire — requis : slug (id court unique, pas de collision avec un client), name, stream (URL https du flux, joué directement dans <audio>) ; optionnels : shortName, genre, description, site (https), region (ex. 'Québec'), lang (ex. 'Français'), colors {accent, accentBright, bg, glowRgb}. Le now-playing (titres live) n'est PAS proxifié pour un flux tiers au départ → nowPlaying:null (le hub dégrade proprement). owned est toujours forcé à false. NE PAS inventer de radios : la liste réelle vient du démarchage (radios communautaires, campus, OBNL du Québec).",
+  "partners": [
+    {
+      "_example": "GABARIT — copier hors de ce commentaire, remplir avec une VRAIE radio opt-in, puis passer listed à true.",
+      "slug": "exemple-radio",
+      "name": "Exemple Radio",
+      "shortName": "Exemple",
+      "genre": "Communautaire",
+      "description": "Radio communautaire partenaire du réseau En Ondes.",
+      "site": "https://exemple.example",
+      "stream": "https://flux.exemple.example/live",
+      "region": "Québec",
+      "lang": "Français",
+      "colors": { "accent": "#3aa0ff", "accentBright": "#5fb8ff", "bg": "#0a0e16", "glowRgb": "58, 160, 255" },
+      "licenseAttested": false,
+      "listed": false
+    }
+  ]
+}

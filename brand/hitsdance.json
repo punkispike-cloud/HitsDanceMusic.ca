@@ -4,6 +4,8 @@
   "shortName": "Hits Dance",
   "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
   "genre": "Dance · House",
+  "region": "Québec",
+  "lang": "Français",
   "domain": "hitsdancemusic.ca",
   "colors": {
     "accent": "#c8102e",

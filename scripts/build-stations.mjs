@@ -165,6 +165,8 @@ for (const c of listed) {
     status: live ? "live" : "coming",
     owned: c.listing.owned === true,
     site: site || null,
+    region: typeof brand.region === "string" ? brand.region : "",
+    lang: typeof brand.lang === "string" ? brand.lang : "",
     colors: {
       accent: brand.colors?.accent || "#3aa0ff",
       accentBright: brand.colors?.accentBright || brand.colors?.accent || "#5fb8ff",
@@ -175,6 +177,53 @@ for (const c of listed) {
     stream: live ? brand.stream.url : null,
     // Now-playing same-origin proxifié par nginx (cf. /np/<slug> généré ci-dessous).
     nowPlaying: hasNp ? `/np/${brand.slug}` : null,
+  });
+}
+
+/* ---------- Partenaires opt-in (radios tierces non hébergées) ---------- */
+// brand/partners.json est PUBLIC/commité (donc lisible partout). L'INTÉGRATION des
+// partenaires n'a lieu que dans cette branche (registre présent) ; en checkout CI
+// sans clients.json, on ne (re)génère pas — on régénère localement puis on commit
+// stations.json (qui embarque déjà les partenaires).
+const partnersDoc = await readFile(join(root, "brand/partners.json"), "utf-8")
+  .then(JSON.parse)
+  .catch(() => null);
+const takenSlugs = new Set(stations.map((s) => s.slug)); // slugs déjà pris par les clients
+const asStr = (v) => (typeof v === "string" ? v : ""); // ignore les valeurs non-string (region/lang)
+for (const p of partnersDoc?.partners ?? []) {
+  if (p?.listed !== true) continue; // fiche non publiée
+  if (p?.licenseAttested !== true) {
+    console.warn(`[build-stations] ⚠ partenaire ${p?.slug ?? "?"} sans licenseAttested — ignoré`);
+    continue;
+  }
+  if (!p.slug || !p.name || !isReal(p.stream)) {
+    console.warn(`[build-stations] ⚠ partenaire ${p?.slug ?? "?"} incomplet (slug/name/stream) — ignoré`);
+    continue;
+  }
+  if (takenSlugs.has(p.slug)) {
+    console.warn(`[build-stations] ⚠ partenaire ${p.slug} : slug déjà utilisé (client ou autre partenaire) — ignoré`);
+    continue;
+  }
+  takenSlugs.add(p.slug);
+  stations.push({
+    slug: p.slug,
+    name: p.name,
+    shortName: p.shortName || p.name,
+    genre: p.genre || "",
+    description: p.description || "",
+    status: "live",
+    owned: false, // partenaire tiers, jamais du réseau En Ondes
+    site: isReal(p.site) ? p.site : null,
+    region: asStr(p.region),
+    lang: asStr(p.lang),
+    colors: {
+      accent: p.colors?.accent || "#3aa0ff",
+      accentBright: p.colors?.accentBright || p.colors?.accent || "#5fb8ff",
+      bg: p.colors?.bg || "#0a0e16",
+      glowRgb: p.colors?.glowRgb || "58, 160, 255",
+    },
+    stream: p.stream,
+    nowPlaying: null, // pas de proxy /np pour un flux tiers (le hub dégrade proprement)
   });
 }
 
