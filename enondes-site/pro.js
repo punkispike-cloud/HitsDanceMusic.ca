@@ -4,16 +4,22 @@
   if (y) y.textContent = new Date().getFullYear();
 })();
 
-/* CTA Calendly « Choisir un créneau » : URL configurable en un seul endroit.
+/* CTA « Réserver un appel » : URL configurable en un seul endroit.
    ← REMPLACER RDV_URL par ton lien Calendly/Cal.com réel (décision ops/marketing).
-   Le href par défaut dans pro.html est un fallback ; JS le pose au chargement. */
+   Par défaut : repli mailto FONCTIONNEL (pas de lien mort tant que le Calendly n'existe pas).
+   Un lien http(s) ouvre un nouvel onglet ; un mailto ouvre le client courriel. */
 (function () {
-  var RDV_URL = "https://calendly.com/en-ondes/proposition-radio";
+  var RDV_URL = "mailto:bonjour@enondes.ca?subject=Proposition%20radio%20%E2%80%94%20r%C3%A9server%20un%20appel";
   var btn = document.getElementById("rdv-btn");
   if (btn) {
     btn.setAttribute("href", RDV_URL);
-    btn.setAttribute("target", "_blank");
-    btn.setAttribute("rel", "noopener");
+    if (/^https?:/i.test(RDV_URL)) {
+      btn.setAttribute("target", "_blank");
+      btn.setAttribute("rel", "noopener");
+    } else {
+      btn.removeAttribute("target");
+      btn.removeAttribute("rel");
+    }
   }
 })();
 

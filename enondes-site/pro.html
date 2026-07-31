@@ -427,10 +427,11 @@
           <a class="btn btn-primary" href="mailto:bonjour@enondes.ca?subject=Je%20veux%20ma%20radio&body=Bonjour%20En%20Ondes%2C%0A%0AJ%27aimerais%20parler%20de%20ma%20radio.%0A%0A-%20Nom%20%3A%20%0A-%20Nom%20de%20la%20radio%20%3A%20%0A-%20Type%20(communautaire%2C%20DJ%2Fcollectif%2C%20OBNL%2Ffestival%2C%20communaut%C3%A9)%20%3A%20%0A-%20Mon%20besoin%20(en%20quelques%20mots)%20%3A%20%0A%0AMerci%20!">
             <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
             Écris-nous (courriel pré-rempli)</a>
-          <!-- CTA Calendly : URL configurable ci-dessous (pro.js, RDV_URL). -->
-          <a class="btn btn-ghost" id="rdv-btn" href="https://calendly.com/en-ondes/proposition-radio" target="_blank" rel="noopener">
+          <!-- CTA « Réserver un appel » : URL configurable dans pro.js (RDV_URL).
+               Repli mailto fonctionnel ; JS pose le lien réel (Calendly) une fois défini. -->
+          <a class="btn btn-ghost" id="rdv-btn" href="mailto:bonjour@enondes.ca?subject=Proposition%20radio%20%E2%80%94%20r%C3%A9server%20un%20appel">
             <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
-            Choisir un créneau</a>
+            Réserver un appel</a>
         </div>
         <p class="scarcity">
           <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 7.1-1.01L12 2Z"/></svg>
@@ -447,8 +448,7 @@
       <nav class="foot-legal" aria-label="Mentions légales">
         <a href="confidentialite.html">Confidentialité (Loi 25)</a>
         <span class="sep" aria-hidden="true">·</span>
-        <!-- TODO: page Conditions d'utilisation — remplacer href="#" -->
-        <a href="#" data-todo="conditions">Conditions</a>
+        <a href="conditions.html">Conditions</a>
         <span class="sep" aria-hidden="true">·</span>
         <a href="mailto:bonjour@enondes.ca">bonjour@enondes.ca</a>
       </nav>
