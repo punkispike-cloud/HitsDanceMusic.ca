@@ -2,6 +2,7 @@
 
 import { store, STORAGE } from "./store.js";
 import { SLOT_TAGS, getCurrentSlot } from "./schedule.js";
+import { BRAND } from "./brand.generated.js";
 import { toast } from "./toast.js";
 
 async function ensureNotifPermission(silent = false) {
@@ -18,7 +19,7 @@ function notifyShowChange(slot) {
   if (document.visibilityState === "visible") return;
   const tag = SLOT_TAGS[slot.tag] || SLOT_TAGS.hitlist;
   try {
-    new Notification(`Maintenant sur Hits Dance Music : ${slot.title}`, {
+    new Notification(`Maintenant sur ${BRAND.name} : ${slot.title}`, {
       body: `${slot.from}–${slot.to} · ${slot.host || tag.label}`,
       icon: "assets/favicon.svg",
       tag: "hr-show",

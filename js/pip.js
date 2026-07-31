@@ -3,6 +3,7 @@
 
 import { state } from "./state.js";
 import { getCurrentSlot } from "./schedule.js";
+import { BRAND } from "./brand.generated.js";
 import { toast } from "./toast.js";
 
 let _pipVideo = null;
@@ -52,7 +53,7 @@ function drawPipFrame() {
   ctx.fillStyle = "#ff3a6e";
   const slot = state.currentSlot || getCurrentSlot();
   ctx.font = "bold 20px system-ui, sans-serif";
-  wrapText(ctx, slot?.title || "Hits Dance Music", 270, 90, 200, 24);
+  wrapText(ctx, slot?.title || BRAND.name, 270, 90, 200, 24);
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = "16px system-ui, sans-serif";
   if (state.currentTrack?.title) {

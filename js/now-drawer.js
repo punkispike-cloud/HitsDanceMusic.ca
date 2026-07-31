@@ -6,6 +6,7 @@ import { SLOT_TAGS } from "./schedule.js";
 import { getAudio, togglePlayback } from "./player.js";
 import { shareCurrent } from "./share.js";
 import { toggleHistory } from "./history-drawer.js";
+import { BRAND } from "./brand.generated.js";
 
 function ensureNowPlayingDrawer() {
   let d = document.getElementById("nowPlayingDrawer");
@@ -54,7 +55,7 @@ export function openNowPlayingDrawer() {
     npCover.src = coverSrc;
     npBg.style.backgroundImage = `url("${coverSrc}")`;
   }
-  d.querySelector("#npTitle").textContent = state.currentSlot?.title || "Hits Dance Music";
+  d.querySelector("#npTitle").textContent = state.currentSlot?.title || BRAND.name;
   d.querySelector("#npHost").textContent = state.currentSlot?.host || "";
   const tag = SLOT_TAGS?.[state.currentSlot?.tag] || null;
   const npTag = d.querySelector("#npTag");

@@ -7,6 +7,7 @@ import { getCurrentSlot } from "./schedule.js";
 import { toggleMute } from "./player.js";
 import { toast } from "./toast.js";
 import { openNowPlayingDrawer } from "./now-drawer.js";
+import { BRAND } from "./brand.generated.js";
 
 /* ----- Ticker EN DIRECT — actualisé toutes les 15 s ----- */
 function refreshTicker() {
@@ -42,7 +43,7 @@ function injectTicker() {
   t.setAttribute("aria-live", "off");
   t.innerHTML = `<div class="hr-ticker-track" id="hrTickerTrack">
     <span class="hr-ticker-dot" aria-hidden="true"></span>
-    <span class="hr-ticker-text">EN DIRECT — Hits Dance Music · La radio</span>
+    <span class="hr-ticker-text">EN DIRECT — ${BRAND.name} · La radio</span>
   </div>`;
   header.parentElement.insertBefore(t, header.nextSibling);
   refreshTicker();

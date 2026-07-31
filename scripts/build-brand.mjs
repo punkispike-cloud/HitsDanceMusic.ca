@@ -38,11 +38,14 @@ console.log(`[build-brand] marque active : ${active.slug} (${active.name})`);
 
 function genBrandJs(b) {
   return `/* GÉNÉRÉ par scripts/build-brand.mjs — NE PAS ÉDITER À LA MAIN.
-   Config runtime de la marque (lue par api-config.js / now-playing.js). */
+   Config runtime de la marque (nom, flux, URLs, contact) : tout module qui
+   affiche la marque doit la lire ici plutôt que de la coder en dur. */
 export const BRAND = {
   name: ${JSON.stringify(b.name)},
+  shortName: ${JSON.stringify(b.shortName || b.name)},
   stream: { url: ${JSON.stringify(b.stream.url)}, panel: ${JSON.stringify(b.stream.panel)} },
   urls: { api: ${JSON.stringify(b.urls.api)}, presenceWss: ${JSON.stringify(b.urls.presenceWss)} },
+  contact: { phone: ${JSON.stringify(b.contact?.phone || "")}, email: ${JSON.stringify(b.contact?.email || "")} },
 };
 `;
 }
@@ -77,8 +80,17 @@ function pairs(from, to) {
     // Flux / now-playing (nginx) : proxy complet d'abord, puis l'hôte seul.
     [from.stream?.nowPlayingProxy, to.stream?.nowPlayingProxy],
     [from.stream?.host, to.stream?.host],
+    // URLs du flux audio dans le HTML (<source>, liens panel) : complètes,
+    // sinon le chemin /proxy/<slug-client>/ de la baseline survivrait au build.
+    [from.stream?.url, to.stream?.url],
+    [from.stream?.panel, to.stream?.panel],
     [from.domain, to.domain],
     [from.contact.phone, to.contact.phone],
+    [from.contact?.email, to.contact?.email],
+    // shortName APRÈS name (sous-chaîne) : le tri long→court ci-dessous
+    // garantit que « Hits Dance Music » est remplacé avant « Hits Dance ».
+    [from.shortName, to.shortName],
+    [from.genre, to.genre],
     [from.colors.themeColor, to.colors.themeColor],
     [from.colors.bgColor, to.colors.bgColor],
   ].filter(([a, b]) => a && b && a !== b);
@@ -106,7 +118,9 @@ const htmlFiles = rootFiles.filter((f) => f.endsWith(".html") && !f.startsWith("
 const partials = (await readdir(join(root, "_partials")).catch(() => []))
   .filter((f) => f.endsWith(".html"))
   .map((f) => join("_partials", f));
-const textTargets = [...htmlFiles, ...partials, "manifest.webmanifest", "nginx.conf"];
+// sw.js est une cible texte (titre de notification de marque) : build-brand
+// tourne AVANT build-sw dans build-all, donc le hash du shell reste correct.
+const textTargets = [...htmlFiles, ...partials, "manifest.webmanifest", "nginx.conf", "sw.js"];
 
 for (const rel of textTargets) {
   const path = join(root, rel);

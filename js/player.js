@@ -8,6 +8,7 @@ import { state } from "./state.js";
 import { getCurrentSlot, SLOT_TAGS, highlightCurrentSlot } from "./schedule.js";
 import { getMontrealParts } from "./time.js";
 import { STREAM_URL, fetchNowPlaying, fetchCover, fallbackCoverDataUri, pushHistory } from "./now-playing.js";
+import { BRAND } from "./brand.generated.js";
 import { toast } from "./toast.js";
 
 let audio = null;
@@ -338,12 +339,12 @@ export async function refreshLiveTrack() {
 export function updateMediaSession() {
   if (!("mediaSession" in navigator)) return;
   const slot = state.currentSlot || getCurrentSlot();
-  const title = state.currentTrack ? (state.currentTrack.title || "Hits Dance Music") : (slot.title || "Hits Dance Music");
-  const artist = state.currentTrack ? (state.currentTrack.artist || slot.host || "Hits Dance Music") : (slot.host || "Programmation");
+  const title = state.currentTrack ? (state.currentTrack.title || BRAND.name) : (slot.title || BRAND.name);
+  const artist = state.currentTrack ? (state.currentTrack.artist || slot.host || BRAND.name) : (slot.host || "Programmation");
   const artworkSrc = state.currentCover || fallbackCoverDataUri(slot);
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title, artist, album: "Hits Dance Music — La radio",
+      title, artist, album: `${BRAND.name} — La radio`,
       artwork: [
         { src: artworkSrc, sizes: "300x300", type: artworkSrc.startsWith("data:") ? "image/svg+xml" : "image/jpeg" },
       ],

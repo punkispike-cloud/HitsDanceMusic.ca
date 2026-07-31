@@ -8,6 +8,7 @@ import {
   playerUIs, togglePlayback, setVolume, toggleMute,
 } from "./player.js";
 import { fallbackCoverDataUri } from "./now-playing.js";
+import { BRAND } from "./brand.generated.js";
 
 /* Révèle un changement de texte par une micro-animation (Web Animations API :
    aucun CSS requis → respecte le gel CSS de Hits Dance). Sans effet si l'API
@@ -133,14 +134,14 @@ export function makeMiniPlayerUI() {
   const bar = document.createElement("aside");
   bar.id = "miniPlayer";
   bar.className = "mini-player";
-  bar.setAttribute("aria-label", "Lecteur radio Hits Dance Music");
+  bar.setAttribute("aria-label", `Lecteur radio ${BRAND.name}`);
   bar.innerHTML = `
     <button class="mini-play" id="miniPlay" type="button" aria-label="Lancer la radio" data-state="paused">
       <span class="mini-play-icon" aria-hidden="true"></span>
     </button>
     <div class="mini-meta">
-      <span class="mini-show" id="miniShow">Hits Dance Music</span>
-      <span class="mini-track" id="miniTrack">Les Hits Dance Music</span>
+      <span class="mini-show" id="miniShow">${BRAND.name}</span>
+      <span class="mini-track" id="miniTrack">Les ${BRAND.name}</span>
       <span class="mini-session" id="sessionBadgeMini" hidden></span>
     </div>
     <div class="mini-controls">
