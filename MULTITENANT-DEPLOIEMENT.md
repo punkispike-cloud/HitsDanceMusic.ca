@@ -89,22 +89,25 @@ Deux scénarios :
 
 ---
 
-## 5. Durcissement RLS (Phase 5/6) — migration posée, activation progressive
+## 5. Durcissement RLS (Phase 5/6) — middleware ALS + rôle applicatif
 
-Le « mur dans le code » est **déjà** l'isolation effective. Le **RLS Postgres** est une **deuxième barrière** (la base refuse une fuite même si un futur code oublie un filtre). État :
+Le « mur dans le code » (filtre `radioId`) reste la première barrière. Le **RLS
+Postgres** est la deuxième. État runtime :
 
-- **Migrations 0022 → 0024** : `ENABLE ROW LEVEL SECURITY` + policy `tenant_isolation` sur 21 tables tenant (policy = tout visible tant que `app.radio_id` est vide).
-- **Migration `0025_force_rls`** : `FORCE ROW LEVEL SECURITY` sur les 21 tables + création du rôle applicatif `enondes_app` (LOGIN, NOBYPASSRLS) + `GRANT` CRUD sur toutes les tables + `ALTER DEFAULT PRIVILEGES`. SÉCURITAIRE : zéro rupture (GUC vide = tout visible, migrate/seed/jobs inchangés).
-- **Primitives runtime** : `api/src/db/tenant-guc.ts` — `withTenantGuc(radioId, tx => …)` (isolation tenant), `withCrossRadio(tx => …)` (owner/jobs, GUC vide), `acquireRequestDb/releaseRequestDb` (chemin middleware par requête). Posent `set_config('app.radio_id', …, true|false)`.
-- **Garde statique strict** : `RLS_STRICT=1 npm run tenant:guard` signale les handlers tenant pas encore migrés vers les wrappers (66 blocs à ce jour = TODO d'activation). Mode par défaut inchangé (CI verte).
-- **Test d'intégration** : `npm run test:rls` (env-driven) valide sur vraie base que le tenant A ne voit pas le tenant B (se connecter via `RLS_TEST_URL` = rôle `enondes_app` pour que RLS s'applique réellement).
+- **Migrations 0022 → 0025** : ENABLE + FORCE RLS + rôle `enondes_app`.
+- **Middleware** : `publicTenant` / `adminTenant` appellent `bindRequestDb` →
+  client pool dédié + `set_config('app.radio_id', …)` + **AsyncLocalStorage**
+  (`api/src/db/client.ts`). Les `import { db }` (routes **et** services) voient
+  la GUC sans réécrire chaque handler.
+- **Exemptions** : `/v1/admin/analytics/stream` (SSE — pas de pin longue durée),
+  `/v1/owner`, `/v1/webhooks`, `/v1/catalog` (cross-radio / GUC vide).
+- **Wrappers** `withTenantGuc` / `withCrossRadio` : jobs, SSE ponctuel, exceptions.
+- **Garde** : `RLS_STRICT=1 npm run tenant:guard` (ALS_HTTP=1 par défaut) accepte
+  wrappers **ou** `radioId`. `ALS_HTTP=0` force l'ancien mode wrappers-only.
+- **Test** : `npm run test:rls` avec `RLS_TEST_URL=enondes_app` sur base jetable.
 
-**Activation (ops + code)** :
-1. `ALTER ROLE enondes_app WITH PASSWORD '<fort>'` puis pointer `DATABASE_URL` du service `api` sur ce rôle.
-2. Migrer les handlers tenant (`admin.ts`, `public.ts`, etc.) vers `withTenantGuc(radioId, tx => …)` — pister via `RLS_STRICT=1 npm run tenant:guard`.
-3. `npm run test:rls` sur une base de test (Rockfort) → isolation confirmée.
-
-Tant que la GUC n'est pas posée par requête, l'isolation reste assurée par le code (mur applicatif). Le RLS s'active **sans rupture** une fois les wrappers en place.
+**Activation ops** : voir [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md) Vague 3.1.
+Ne pas pointer Hits Dance prod sur `enondes_app` avant `test:rls` vert.
 
 ---
 

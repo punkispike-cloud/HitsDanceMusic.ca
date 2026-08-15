@@ -5,22 +5,11 @@
    (les titres viennent du flux : on évite toute injection). */
 
 import { API_BASE } from "./api-config.js";
+// Identifiant créé au moment du 🤘 seulement (action de la personne) : il sert à
+// dédoublonner les votes. L'affichage de l'historique n'en demande aucun.
+import { ensureClientId } from "./client-id.js";
 
-const LS_CLIENT = "hr.clientId";
 const LS_LIKES = "hr.trackLikes";
-
-function getClientId() {
-  try {
-    let id = localStorage.getItem(LS_CLIENT);
-    if (!id) {
-      id = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem(LS_CLIENT, id);
-    }
-    return id;
-  } catch {
-    return "anon";
-  }
-}
 
 function likedSet() {
   try {
@@ -44,7 +33,7 @@ async function fetchRecent(limit) {
 }
 
 async function toggleLike(trackId, liked) {
-  const cid = encodeURIComponent(getClientId());
+  const cid = encodeURIComponent(ensureClientId());
   const r = await fetch(`${API_BASE}/v1/tracks/${trackId}/like?clientId=${cid}`, {
     method: liked ? "DELETE" : "POST",
   });

@@ -48,13 +48,13 @@ const SCAN_DIRS = [join(ROOT, "src", "routes"), join(ROOT, "src", "services")];
    Identifiants Drizzle (camelCase) + noms SQL (snake_case, pour le SQL brut). */
 const TENANT_TABLES = [
   "artists", "users", "shows", "scheduleSlots", "episodes", "mixes",
-  "uploadIntents", "analyticsSessions", "analyticsShowListen", "trackHistory",
+  "uploadIntents", "analyticsSessions", "analyticsShowListen", "analyticsDaily", "trackHistory",
   "trackLikes", "pushSubscriptions", "auditLog", "reportLog", "songRequests",
   "polls", "pollVotes", "mediaAssets", "adRotations", "subscriptions",
 ];
 const TENANT_SNAKE = [
   "artists", "users", "shows", "schedule_slots", "episodes", "mixes",
-  "upload_intents", "analytics_sessions", "analytics_show_listen", "track_history",
+  "upload_intents", "analytics_sessions", "analytics_show_listen", "analytics_daily", "track_history",
   "track_likes", "push_subscriptions", "audit_log", "report_log", "song_requests",
   "polls", "poll_votes", "media_assets", "ad_rotations", "subscriptions",
 ];
@@ -81,12 +81,16 @@ const ALLOWED_BLOCKS = new Set([
 const CAMEL_ALT = TENANT_TABLES.join("|");
 const SNAKE_ALT = TENANT_SNAKE.join("|");
 
-/* Mode strict (opt-in via RLS_STRICT=1) : une fois RLS activé au runtime, tout
-   accès à une table tenant doit passer par un wrapper transactionnel posant la GUC
-   (withTenantGuc / withCrossRadio de src/db/tenant-guc.ts). Ce mode signale les
-   handlers pas encore migrés. Par défaut (sans RLS_STRICT), le garde conserve son
-   check existant (présence de radioId/radio_id) — CI verte, activation progressive. */
+/* Mode strict (opt-in via RLS_STRICT=1) : avec le chemin middleware + ALS
+   (bindRequestDb dans middleware/tenant.ts + Proxy `db` dans client.ts), les
+   handlers HTTP n'ont plus besoin de withTenantGuc ligne à ligne — la GUC est
+   posée par requête. STRICT accepte donc :
+     1. withTenantGuc / withCrossRadio (jobs, SSE, exceptions), OU
+     2. radioId/radio_id (filtre applicatif) sur un bloc couvert par l'ALS HTTP.
+   Sans ALS_HTTP (défaut historique), STRICT exigeait uniquement les wrappers.
+   ALS_HTTP=0 force l'ancien comportement. */
 const STRICT = /^(1|true)$/i.test(process.env.RLS_STRICT || "");
+const ALS_HTTP = !/^(0|false)$/i.test(process.env.ALS_HTTP || "1");
 
 /* Détecte un accès Drizzle à une table tenant sur une ligne. */
 const DRIZZLE_RE = new RegExp(
@@ -193,12 +197,12 @@ function scanFile(absPath) {
       if (hits.length === 0) continue;
 
       /* Validité du bloc :
-         - mode strict (RLS_STRICT=1) : exige un wrapper transactionnel
-           (withTenantGuc / withCrossRadio) — l'isolation RLS ne tient que si la GUC
-           est posée par requête. Signale les handlers à migrer.
+         - mode strict (RLS_STRICT=1) : wrapper withTenantGuc/withCrossRadio, OU
+           (ALS_HTTP) présence de radioId — le middleware pose la GUC via ALS.
          - mode par défaut : accepte la présence de radioId/radio_id (filtre applicatif). */
       if (STRICT) {
-        if (/\bwithTenantGuc\b|\bwithCrossRadio\b/.test(body)) continue;
+        if (/\bwithTenantGuc\b|\bwithCrossRadio\b|\bbindRequestDb\b/.test(body)) continue;
+        if (ALS_HTTP && /\bradioId\b|\bradio_id\b/i.test(body)) continue;
       } else {
         if (/\bradioId\b|\bradio_id\b/i.test(body)) continue;
       }
@@ -228,13 +232,17 @@ function main() {
   if (total === 0) {
     console.log(
       `[tenant-guard] ✓ aucun accès tenant sans radioId sur ${files.length} fichiers.` +
-        (STRICT ? " (mode strict RLS_STRICT : tous wrappés withTenantGuc/withCrossRadio)" : ""),
+        (STRICT
+          ? ALS_HTTP
+            ? " (mode strict + ALS HTTP : wrappers OU radioId)"
+            : " (mode strict RLS_STRICT : tous wrappés withTenantGuc/withCrossRadio)"
+          : ""),
     );
     return 0;
   }
 
   console.error(
-    `[tenant-guard] ✗ ${total} bloc(s) avec accès tenant ${STRICT ? "non wrappé(s) (withTenantGuc/withCrossRadio)" : "sans radioId"} :\n`,
+    `[tenant-guard] ✗ ${total} bloc(s) avec accès tenant ${STRICT ? "non wrappé(s) / sans radioId (STRICT)" : "sans radioId"} :\n`,
   );
   for (const v of all) {
     console.error(`  ${v.file} — bloc « ${v.block} » (ligne ${v.startLine}) :`);
@@ -243,9 +251,9 @@ function main() {
   }
   if (STRICT) {
     console.error(
-      "[tenant-guard] Mode strict (RLS_STRICT=1) : migrer ces handlers vers " +
-        "withTenantGuc(radioId, tx => ...) / withCrossRadio(tx => ...) (src/db/tenant-guc.ts) " +
-        "pour poser la GUC app.radio_id par requête. Les fichiers cross-radio (owner.ts, " +
+      "[tenant-guard] Mode strict (RLS_STRICT=1) : wrappers withTenantGuc/withCrossRadio " +
+        "pour jobs/SSE, ou radioId si ALS HTTP (bindRequestDb dans middleware/tenant.ts). " +
+        "ALS_HTTP=0 pour exiger uniquement les wrappers. Fichiers cross-radio (owner.ts, " +
         "auth.ts, jobs) restent allowlistés.",
     );
   } else {

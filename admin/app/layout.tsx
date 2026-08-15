@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/auth";
 import { RadioProvider } from "@/lib/radio";
 import { SWRProvider } from "@/lib/swr";
 import { ToastProvider } from "@/components/toast";
+import { SentryInit } from "@/components/sentry-init";
 
 export const metadata: Metadata = {
   title: "Admin — Hits Dance Music",
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body>
+        <SentryInit />
         <AuthProvider>
           <RadioProvider>
             <SWRProvider>

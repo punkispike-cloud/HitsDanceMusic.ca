@@ -1,27 +1,25 @@
 /* Primitives d'isolation multi-tenant au runtime (RLS Postgres).
  *
- La migration 0022 pose les policies ; 0025 ajoute FORCE RLS + le rôle applicatif
- `enondes_app`. L'isolation ne s'active QUE si l'API pose la GUC `app.radio_id`
- par requête. Comme le pool partage les connexions, la GUC doit être posée DANS une
- transaction (SET LOCAL / set_config(..., true)) ou sur un client dédié à la requête
- (set_config(..., false) au niveau session, reset à la libération).
+ * La migration 0022 pose les policies ; 0025 ajoute FORCE RLS + le rôle applicatif
+ * `enondes_app`. L'isolation ne s'active QUE si l'API pose la GUC `app.radio_id`
+ * par requête. Comme le pool partage les connexions, la GUC doit être posée DANS une
+ * transaction (SET LOCAL / set_config(..., true)) ou sur un client dédié à la requête
+ * (set_config(..., false) au niveau session, reset à la libération).
  *
- Deux modes d'emploi :
- *  - withTenantGuc(radioId, fn) / withCrossRadio(fn) : wrappers transactionnels —
- *    le callback reçoit un `tx` Drizzle (mêmes méthodes que `db`) à utiliser à la
- *    place de `db`. C'est le chemin d'activation : migrer les handlers tenant vers
- *    ces wrappers (le garde `tenant:guard` avec RLS_STRICT=1 signale les accès non
- *    wrappés). withCrossRadio laisse la GUC vide → tout visible (owner/it, jobs).
- *  - acquireRequestDb/releaseRequestDb : acquisition d'un client dédié + GUC session,
- *    pour un middleware par requête exposant un `db` request-scoped (c.set("db")).
+ * Modes d'emploi :
+ *  - bindRequestDb(radioId, next) : chemin HTTP principal (middleware tenant) —
+ *    client dédié + AsyncLocalStorage pour que tous les `import { db }` voient la GUC.
+ *  - withTenantGuc(radioId, fn) / withCrossRadio(fn) : wrappers transactionnels
+ *    (jobs, SSE ponctuel). Le callback reçoit un `tx` à utiliser à la place de `db`.
+ *  - acquireRequestDb / releaseRequestDb : primitives bas niveau.
  *
- NB : set_config (et non `SET LOCAL ... = $1`) accepte un paramètre bindé — `SET`
- n'accepte pas de paramètres prepared. Le 3e arg `true` = local (transaction). */
+ * NB : set_config (et non `SET LOCAL ... = $1`) accepte un paramètre bindé — `SET`
+ * n'accepte pas de paramètres prepared. Le 3e arg `true` = local (transaction). */
 
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
-import { db, pool } from "./client.js";
+import { db, pool, runWithRequestDb } from "./client.js";
 import * as schema from "./schema.js";
 
 /** Type de la transaction Drizzle passée à db.transaction (mêmes méthodes que db). */
@@ -71,4 +69,18 @@ export async function releaseRequestDb(client: PoolClient): Promise<void> {
     /* noop — on libère quoi qu'il arrive */
   }
   client.release();
+}
+
+/** Lie un client request-scoped (GUC posée) pour toute la durée de `next`.
+ *  À utiliser depuis publicTenant / adminTenant. `radioId` null = cross-radio. */
+export async function bindRequestDb(
+  radioId: string | null,
+  next: () => Promise<unknown>,
+): Promise<void> {
+  const { db: reqDb, client } = await acquireRequestDb(radioId);
+  try {
+    await runWithRequestDb(reqDb, next);
+  } finally {
+    await releaseRequestDb(client);
+  }
 }

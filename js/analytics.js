@@ -2,33 +2,19 @@
    - pageview à l'ouverture
    - heartbeat (temps sur le site) quand l'onglet est visible
    - listen (temps d'écoute par émission) quand la radio joue
-   Réutilise le clientId de presence (hr.clientId) pour corréler le visiteur.
+   Réutilise le clientId partagé (js/client-id.js) pour corréler le visiteur.
    Envois via sendBeacon (fire-and-forget, pas de CORS bloquant, survit à l'unload). */
 
 import { API_BASE } from "./api-config.js";
 import { state } from "./state.js";
 import { getAudio } from "./player.js";
+import { ensureClientId } from "./client-id.js";
 
 const TRACK_URL = `${API_BASE}/v1/track`;
 const TICK_MS = 20_000;
 
-function getClientId() {
-  const KEY = "hr.clientId";
-  try {
-    const existing = localStorage.getItem(KEY);
-    if (existing && /^[A-Za-z0-9_-]{8,64}$/.test(existing)) return existing;
-    const id = (crypto?.randomUUID?.() || `${Date.now()}${Math.random().toString(36).slice(2)}`)
-      .replace(/[^A-Za-z0-9_-]/g, "")
-      .slice(0, 64);
-    localStorage.setItem(KEY, id);
-    return id;
-  } catch {
-    return null;
-  }
-}
-
 function send(payload) {
-  const clientId = getClientId();
+  const clientId = ensureClientId();
   if (!clientId) return;
   try {
     const body = JSON.stringify({ clientId, ...payload });
@@ -45,7 +31,8 @@ let _timer = 0;
 let _lastTick = Date.now();
 
 export function initAnalytics() {
-  if (!getClientId()) return;
+  // Appelé uniquement après consentement (cf. main.js → startAudience).
+  if (!ensureClientId()) return;
   send({ type: "pageview" });
 
   if (_timer) return;

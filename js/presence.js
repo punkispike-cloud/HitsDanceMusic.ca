@@ -1,7 +1,7 @@
 /* Compteur de présence en temps réel (WS). Visiteurs uniques par clientId. */
 
-import { store } from "./store.js";
 import { setPresenceListenerHook } from "./player.js";
+import { ensureClientId } from "./client-id.js";
 
 let presenceWS = null;
 let presenceWantConnected = true;
@@ -21,22 +21,9 @@ function presenceGetUrl() {
   return url;
 }
 
-// UUID stable par installation/profil navigateur : permet au service
-// presence de compter les visiteurs UNIQUES (et pas les sockets ouverts).
-function getPresenceClientId() {
-  const KEY = "hr.clientId";
-  let id = store.get(KEY, null);
-  if (id && /^[A-Za-z0-9_-]{8,64}$/.test(id)) return id;
-  if (crypto?.randomUUID) {
-    id = crypto.randomUUID();
-  } else {
-    const a = new Uint8Array(16);
-    (crypto?.getRandomValues || ((b) => b))(a);
-    id = Array.from(a, (n) => n.toString(36).padStart(2, "0")).join("");
-  }
-  store.set(KEY, id);
-  return id;
-}
+// UUID stable par installation/profil navigateur (js/client-id.js) : permet au
+// service presence de compter les visiteurs UNIQUES (et pas les sockets ouverts).
+// initPresence n'est appelé qu'après consentement (cf. main.js → startAudience).
 
 function presenceUpdateUI(visitors, listeners) {
   const badge = document.getElementById("presenceBadge");
@@ -80,7 +67,7 @@ function presenceConnect() {
 
   ws.addEventListener("open", () => {
     presenceReconnectAttempt = 0;
-    try { ws.send(JSON.stringify({ type: "hello", clientId: getPresenceClientId() })); } catch { /* noop */ }
+    try { ws.send(JSON.stringify({ type: "hello", clientId: ensureClientId() })); } catch { /* noop */ }
     if (presenceListening) presenceSendListening(true);
   });
 

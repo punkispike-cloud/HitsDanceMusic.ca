@@ -4,6 +4,9 @@
    pas de clé VAPID configurée. */
 
 import { API_BASE } from "./api-config.js";
+// L'abonnement push est une action de la personne (clic sur #pushOptIn) : on
+// crée l'identifiant à ce moment-là s'il n'existe pas encore.
+import { ensureClientId } from "./client-id.js";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -12,10 +15,6 @@ function urlBase64ToUint8Array(base64String) {
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
-}
-
-function getClientId() {
-  try { return localStorage.getItem("hr.clientId") || null; } catch { return null; }
 }
 
 async function getServerKey() {
@@ -91,7 +90,7 @@ export async function initPushOptIn() {
         body: JSON.stringify({
           endpoint: newSub.endpoint,
           keys: json.keys,
-          clientId: getClientId(),
+          clientId: ensureClientId(),
           showSlug: null, // tous les rappels
         }),
       });

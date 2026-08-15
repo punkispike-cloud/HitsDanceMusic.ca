@@ -13,6 +13,7 @@ import {
   smallint,
   doublePrecision,
   timestamp,
+  date,
   jsonb,
   index,
   uniqueIndex,
@@ -363,6 +364,14 @@ export const analyticsSessions = pgTable(
     browser: text("browser"),
     firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
     lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+    // Horodatage du DERNIER beacon ayant réellement crédité du temps, par nature
+    // de temps. Sert à plafonner chaque incrément au temps écoulé depuis lui :
+    // deux fenêtres ouvertes en parallèle partagent le même client_id et
+    // gonflaient sinon les compteurs (2 × le temps réel). Deux colonnes plutôt
+    // qu'une : sans ça, un heartbeat d'une fenêtre « mangerait » la seconde
+    // d'écoute que la fenêtre qui joue s'apprêtait à créditer.
+    lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
+    lastListenAt: timestamp("last_listen_at", { withTimezone: true }),
     activeSec: integer("active_sec").notNull().default(0),
     listenSec: integer("listen_sec").notNull().default(0),
     pageViews: integer("page_views").notNull().default(0),
@@ -371,6 +380,35 @@ export const analyticsSessions = pgTable(
     clientIdx: uniqueIndex("analytics_sessions_client_idx").on(t.radioId, t.clientId),
     lastSeenIdx: index("analytics_sessions_last_seen_idx").on(t.lastSeen),
     radioIdx: index("analytics_sessions_radio_idx").on(t.radioId),
+  }),
+);
+
+/* ───────────────────────── analytics_daily (ventilation par jour) ─────────────────────────
+   Une ligne par (radio, jour, visiteur). Indispensable parce que
+   analytics_sessions est un CUMUL DE VIE par visiteur : en grouper les totaux
+   par first_seen attribuait à un seul jour — celui de la première visite — tout
+   ce que la personne a écouté depuis (un auditeur fidèle depuis mars n'apparaît
+   jamais sur les jours récents). Ici chaque beacon crédite le jour où il arrive.
+
+   Le jour est calculé au fuseau de la radio (America/Toronto), comme le reste des
+   agrégats de analytics-admin.ts, pour que « aujourd'hui » veuille dire la même
+   chose partout. Aucune donnée personnelle (ni IP, ni user-agent) : purgé avec le
+   reste de l'analytics par le job de rétention. */
+
+export const analyticsDaily = pgTable(
+  "analytics_daily",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    clientId: text("client_id").notNull(),
+    activeSec: integer("active_sec").notNull().default(0),
+    listenSec: integer("listen_sec").notNull().default(0),
+    pageViews: integer("page_views").notNull().default(0),
+  },
+  (t) => ({
+    dayClientIdx: uniqueIndex("analytics_daily_day_client_idx").on(t.radioId, t.day, t.clientId),
+    dayIdx: index("analytics_daily_day_idx").on(t.radioId, t.day),
   }),
 );
 
@@ -910,6 +948,7 @@ export type NewTrack = typeof tracks.$inferInsert;
 export type Role = (typeof userRole.enumValues)[number];
 export type SlotTag = (typeof slotTag.enumValues)[number];
 export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
+export type AnalyticsDaily = typeof analyticsDaily.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type AuditLogRow = typeof auditLog.$inferSelect;
 export type AuthToken = typeof authTokens.$inferSelect;

@@ -1,13 +1,24 @@
 /* Consentement à la mesure d'audience (Loi 25 / RGPD).
    La mesure d'audience — beacons /v1/track (js/analytics.js) ET le compteur de
    présence temps réel (js/presence.js) — n'est activée qu'après consentement
-   explicite. Tant qu'aucun choix n'est enregistré, AUCUNE donnée n'est collectée
-   (pas même l'identifiant anonyme hr.clientId).
+   explicite. Tant qu'aucun choix n'est enregistré, AUCUNE mesure n'est faite et
+   aucun identifiant n'est créé par le chargement des pages.
+
+   Nuance importante (et documentée sur confidentialite.html) : les fonctions
+   INTERACTIVES — voter à un sondage, aimer un titre, envoyer le formulaire,
+   s'abonner aux rappels — créent l'identifiant anonyme hr.clientId au moment du
+   clic, parce qu'elles en ont besoin (dédoublonnage des votes, suivi de la
+   demande). Elles ne déclenchent aucune mesure d'audience pour autant. Le code
+   qui part tout seul, lui, ne fait que LIRE l'identifiant (js/client-id.js :
+   getClientId vs ensureClientId).
+
+   Refuser (ou retirer son choix) efface l'identifiant.
 
    Le choix est stocké en localStorage (clé hr.consent) : "yes" | "no".
    Modifiable à tout moment (bouton #consentReset sur la page Confidentialité). */
 
 import { store } from "./store.js";
+import { clearClientId } from "./client-id.js";
 
 const KEY = "hr.consent";
 const EVT = "hr-consent-change";
@@ -22,7 +33,9 @@ export function hasAnalyticsConsent() {
 }
 
 export function setConsent(value) {
-  store.set(KEY, value === "yes" ? "yes" : "no");
+  const v = value === "yes" ? "yes" : "no";
+  store.set(KEY, v);
+  if (v === "no") clearClientId(); // refus → on ne garde pas l'identifiant
   try { window.dispatchEvent(new CustomEvent(EVT, { detail: { consent: getConsent() } })); }
   catch { /* noop */ }
 }
@@ -34,6 +47,7 @@ export function onConsentChange(cb) {
 
 export function clearConsent() {
   try { localStorage.removeItem(KEY); } catch { /* noop */ }
+  clearClientId(); // retrait du choix → l'identifiant repart de zéro
   try { window.dispatchEvent(new CustomEvent(EVT, { detail: { consent: null } })); }
   catch { /* noop */ }
 }
@@ -80,7 +94,7 @@ export function initConsent() {
   bar.setAttribute("aria-label", "Consentement à la mesure d'audience");
   bar.innerHTML =
     '<p>Nous mesurons l\'audience (pages vues, temps d\'écoute) pour améliorer la radio. ' +
-    'Aucune donnée n\'est collectée avant ton accord. Voir la ' +
+    'Aucune mesure n\'est faite avant ton accord. Voir la ' +
     '<a href="confidentialite.html">politique de confidentialité</a>.</p>' +
     '<div class="consent-actions">' +
     '<button type="button" class="consent-btn consent-refuse">Refuser</button>' +
