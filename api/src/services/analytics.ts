@@ -9,6 +9,10 @@ import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 // Bornes anti-abus : un beacon ne peut pas ajouter plus que l'intervalle prévu.
 const MAX_SECONDS_PER_BEACON = 60;
 
+/* Fuseau des agrégats quotidiens. Identique à celui de analytics-admin.ts :
+   « aujourd'hui » doit vouloir dire la même chose à l'écriture et à la lecture. */
+const RADIO_TZ = "America/Toronto";
+
 // Géo-IP best-effort : une seule tentative par visiteur et par process.
 const _geoAttempted = new Set<string>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
@@ -117,44 +121,127 @@ export interface TrackInput {
   userAgent: string;
 }
 
+/* Upsert de la session (par client_id), avec PLAFONNEMENT au temps réellement
+   écoulé. Le client annonce des secondes ; on n'en crédite jamais plus que ce
+   qui s'est écoulé depuis le dernier beacon ayant crédité le même type de temps.
+   Sans ce plafond, deux fenêtres ouvertes en parallèle (même client_id, timers
+   décalés) créditaient chacune son intervalle → 2 × le temps réel sur « temps
+   sur le site ».
+
+   Deux repères distincts (last_active_at / last_listen_at) : avec un seul, le
+   heartbeat d'une fenêtre consommerait la seconde d'écoute que la fenêtre qui
+   joue s'apprêtait à créditer, et « temps d'écoute » serait sous-estimé.
+   Repli sur `first_seen` (et NON `last_seen`, que n'importe quel beacon
+   rafraîchit) tant qu'un repère est nul : sinon le premier `listen` arrivant
+   après un `heartbeat` serait plafonné à 0, et comme il ne poserait jamais
+   `last_listen_at`, l'écoute resterait à zéro pour toujours.
+
+   Le CTE `d` calcule les deltas retenus AVANT l'upsert et la requête les
+   renvoie : on les réutilise tels quels pour analytics_daily et
+   analytics_show_listen, qui restent ainsi cohérents avec la session.
+   (Deux beacons rigoureusement simultanés lisent le même instantané et peuvent
+   encore compter double une fois ; à 20 s d'intervalle par onglet, c'est du
+   bruit — la dérive systématique, elle, disparaît.)
+
+   Exporté pour que tests/analytics-ingest.test.ts exécute le SQL RÉEL sur un
+   Postgres embarqué, plutôt qu'une copie qui dériverait. */
+export function sessionUpsertQuery(p: {
+  radioId: string;
+  clientId: string;
+  ip: string;
+  userAgent: string;
+  browser: string;
+  device: string;
+  activeReq: number;
+  listenReq: number;
+  pageAdd: number;
+}) {
+  const { radioId, clientId, ip, userAgent, browser, device, activeReq, listenReq, pageAdd } = p;
+  return sql`
+    WITH d AS (
+      SELECT
+        CASE WHEN p.id IS NULL THEN ${activeReq}
+             ELSE LEAST(${activeReq}, GREATEST(0, floor(extract(epoch FROM now() - COALESCE(p.last_active_at, p.first_seen)))::int))
+        END AS active_add,
+        CASE WHEN p.id IS NULL THEN ${listenReq}
+             ELSE LEAST(${listenReq}, GREATEST(0, floor(extract(epoch FROM now() - COALESCE(p.last_listen_at, p.first_seen)))::int))
+        END AS listen_add
+      FROM (SELECT 1) one
+      LEFT JOIN analytics_sessions p
+             ON p.radio_id = ${radioId} AND p.client_id = ${clientId}
+    ),
+    ins AS (
+      INSERT INTO analytics_sessions
+        (radio_id, client_id, ip, user_agent, browser, device,
+         first_seen, last_seen, last_active_at, last_listen_at,
+         active_sec, listen_sec, page_views)
+      SELECT ${radioId}, ${clientId}, ${ip}, ${userAgent}, ${browser}, ${device},
+             now(), now(),
+             CASE WHEN d.active_add > 0 THEN now() END,
+             CASE WHEN d.listen_add > 0 THEN now() END,
+             d.active_add, d.listen_add, ${pageAdd}
+      FROM d
+      ON CONFLICT (radio_id, client_id) DO UPDATE SET
+        ip = EXCLUDED.ip,
+        user_agent = EXCLUDED.user_agent,
+        browser = EXCLUDED.browser,
+        device = EXCLUDED.device,
+        last_seen = now(),
+        last_active_at = COALESCE(EXCLUDED.last_active_at, analytics_sessions.last_active_at),
+        last_listen_at = COALESCE(EXCLUDED.last_listen_at, analytics_sessions.last_listen_at),
+        active_sec = analytics_sessions.active_sec + EXCLUDED.active_sec,
+        listen_sec = analytics_sessions.listen_sec + EXCLUDED.listen_sec,
+        page_views = analytics_sessions.page_views + EXCLUDED.page_views
+      RETURNING 1
+    )
+    SELECT d.active_add AS "activeAdd", d.listen_add AS "listenAdd" FROM d
+  `;
+}
+
+/* Ventilation quotidienne. On écrit la ligne du jour même quand les deltas sont
+   nuls : elle vaut « ce visiteur était là ce jour-là », ce qui est la définition
+   du compteur « visiteurs aujourd'hui ». Exporté pour la même raison que
+   ci-dessus. */
+export function dailyUpsertQuery(p: {
+  radioId: string;
+  clientId: string;
+  activeAdd: number;
+  listenAdd: number;
+  pageAdd: number;
+}) {
+  const { radioId, clientId, activeAdd, listenAdd, pageAdd } = p;
+  return sql`
+    INSERT INTO analytics_daily (radio_id, day, client_id, active_sec, listen_sec, page_views)
+    VALUES (
+      ${radioId},
+      (now() AT TIME ZONE ${RADIO_TZ}::text)::date,
+      ${clientId},
+      ${activeAdd}, ${listenAdd}, ${pageAdd}
+    )
+    ON CONFLICT (radio_id, day, client_id) DO UPDATE SET
+      active_sec = analytics_daily.active_sec + EXCLUDED.active_sec,
+      listen_sec = analytics_daily.listen_sec + EXCLUDED.listen_sec,
+      page_views = analytics_daily.page_views + EXCLUDED.page_views
+  `;
+}
+
 export async function ingestTrack(input: TrackInput): Promise<void> {
   const { clientId, type, ip, userAgent, radioId } = input;
   const { browser, device } = parseUserAgent(userAgent);
-  const now = new Date();
 
-  const activeAdd = type === "heartbeat" || type === "listen" ? clampSec(input.seconds) : 0;
-  const listenAdd = type === "listen" ? clampSec(input.seconds) : 0;
+  const activeReq = type === "heartbeat" || type === "listen" ? clampSec(input.seconds) : 0;
+  const listenReq = type === "listen" ? clampSec(input.seconds) : 0;
   const pageAdd = type === "pageview" ? 1 : 0;
 
-  // Upsert de la session (par client_id). On rafraîchit IP/UA à chaque beacon.
-  await db
-    .insert(analyticsSessions)
-    .values({
-      radioId,
-      clientId,
-      ip,
-      userAgent,
-      browser,
-      device,
-      firstSeen: now,
-      lastSeen: now,
-      activeSec: activeAdd,
-      listenSec: listenAdd,
-      pageViews: pageAdd,
-    })
-    .onConflictDoUpdate({
-      target: [analyticsSessions.radioId, analyticsSessions.clientId],
-      set: {
-        ip,
-        userAgent,
-        browser,
-        device,
-        lastSeen: now,
-        activeSec: sql`${analyticsSessions.activeSec} + ${activeAdd}`,
-        listenSec: sql`${analyticsSessions.listenSec} + ${listenAdd}`,
-        pageViews: sql`${analyticsSessions.pageViews} + ${pageAdd}`,
-      },
-    });
+  const upserted = await db.execute(
+    sessionUpsertQuery({ radioId, clientId, ip, userAgent, browser, device, activeReq, listenReq, pageAdd }),
+  );
+
+  const applied = upserted.rows[0] as { activeAdd: number; listenAdd: number } | undefined;
+  const activeAdd = Number(applied?.activeAdd ?? 0);
+  const listenAdd = Number(applied?.listenAdd ?? 0);
+
+  await db.execute(dailyUpsertQuery({ radioId, clientId, activeAdd, listenAdd, pageAdd }));
 
   // Géo-IP : une tentative par visiteur (asynchrone, n'attend pas).
   if (!_geoAttempted.has(clientId)) {
@@ -172,9 +259,12 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
     void resolveCountry(ip, clientId, radioId);
   }
 
-  // Temps d'écoute par émission (agrégat par paire émission/visiteur).
+  // Temps d'écoute par émission (agrégat par paire émission/visiteur). On
+  // reporte le delta RETENU, pas celui annoncé par le client : sinon l'écoute
+  // par émission dépasserait l'écoute totale de la session.
   if (listenAdd > 0 && input.showTitle) {
     const showTitle = input.showTitle.slice(0, 200);
+    const now = new Date();
     await db
       .insert(analyticsShowListen)
       .values({ radioId, showTitle, clientId, listenSec: listenAdd, lastAt: now })

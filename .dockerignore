@@ -10,6 +10,13 @@ node_modules
 api
 admin
 presence
+enondes-site
+
+# Marque / manifests npm : inutiles dans l'image HTML (nginx deny en complément)
+# NB : nginx.conf et Dockerfile restent dans le contexte — le Dockerfile les COPY.
+package.json
+package-lock.json
+brand
 
 # Outils de build / dev inutiles dans l'image statique
 scripts
@@ -18,3 +25,4 @@ tests
 .vscode
 *.ps1
 *.py
+.github

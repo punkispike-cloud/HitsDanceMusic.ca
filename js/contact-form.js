@@ -7,8 +7,9 @@ import { $, escapeHtml, clampString, fetchWithTimeout, NET_TIMEOUTS } from "./ut
 import { toast } from "./toast.js";
 import { API_BASE } from "./api-config.js";
 import { BRAND } from "./brand.generated.js";
-
-const CLIENT_KEY = "hr.clientId";
+// Identifiant créé au moment de l'envoi seulement (action de la personne) :
+// il permet à l'animateur de relier la demande à son auteur.
+import { ensureClientId } from "./client-id.js";
 
 export function bindContactForm() {
   const form = $("#contactForm");
@@ -40,20 +41,6 @@ export function bindContactForm() {
     trackInput.value = li.textContent || "";
     suggestList.hidden = true;
   });
-
-  /* Même UUID stable que presence/analytics (localStorage hr.clientId). Si
-     absent, on en génère un et on le pose (corrélation avec les autres flux). */
-  function ensureClientId() {
-    try {
-      let id = localStorage.getItem(CLIENT_KEY);
-      if (id) return id;
-      id = crypto.randomUUID();
-      try { localStorage.setItem(CLIENT_KEY, id); } catch { /* mode privé */ }
-      return id;
-    } catch {
-      return crypto.randomUUID();
-    }
-  }
 
   /* L'autocomplete iTunes produit « Artiste — Titre » (em dash). On sépare sur
      le 1er séparateur trouvé ; sans séparateur, tout va dans le titre. */

@@ -2,28 +2,20 @@
    (GET /v1/polls/active) et permet à l'auditeur de voter (POST /v1/polls/:id/vote).
    Réutilise le même clientId stable que presence/analytics/contact-form
    (localStorage hr.clientId). S'auto-masque quand aucun sondage n'est actif.
-   No-op si le conteneur #pollWidget est absent de la page. */
+   No-op si le conteneur #pollWidget est absent de la page.
+
+   Confidentialité : le rafraîchissement est AUTOMATIQUE → il n'envoie le
+   clientId que s'il existe déjà (getClientId), sans jamais en créer. Seul le
+   vote — action déclenchée par la personne — en crée un au besoin
+   (ensureClientId), car le dédoublonnage des votes en dépend. */
 
 import { $, escapeHtml, fetchWithTimeout, NET_TIMEOUTS } from "./util.js";
 import { toast } from "./toast.js";
 import { API_BASE } from "./api-config.js";
+import { getClientId, ensureClientId } from "./client-id.js";
 
-const CLIENT_KEY = "hr.clientId";
 const POLL_MS = 5000;  // rafraîchissement quand un sondage est actif
 const IDLE_MS = 20000; // re-détection d'un nouveau sondage quand aucun n'est actif
-
-/* Même UUID stable que presence/analytics/contact-form. */
-function ensureClientId() {
-  try {
-    let id = localStorage.getItem(CLIENT_KEY);
-    if (id) return id;
-    id = crypto.randomUUID();
-    try { localStorage.setItem(CLIENT_KEY, id); } catch { /* mode privé */ }
-    return id;
-  } catch {
-    return crypto.randomUUID();
-  }
-}
 
 export function initPolls() {
   const host = $("#pollWidget");
@@ -113,12 +105,13 @@ export function initPolls() {
 
   async function refresh() {
     try {
-      const clientId = ensureClientId();
-      const r = await fetchWithTimeout(
-        `${API_BASE}/v1/polls/active?clientId=${encodeURIComponent(clientId)}`,
-        {},
-        NET_TIMEOUTS.generic,
-      );
+      // Lecture seule : pas de création d'identifiant. `clientId` est optionnel
+      // côté API (il ne sert qu'à renvoyer `myVote`).
+      const clientId = getClientId();
+      const url = clientId
+        ? `${API_BASE}/v1/polls/active?clientId=${encodeURIComponent(clientId)}`
+        : `${API_BASE}/v1/polls/active`;
+      const r = await fetchWithTimeout(url, {}, NET_TIMEOUTS.generic);
       if (!r.ok) { host.hidden = true; return null; }
       const poll = await r.json();
       render(poll);

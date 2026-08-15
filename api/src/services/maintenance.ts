@@ -3,15 +3,21 @@
 
 import { lt, and, eq, isNotNull, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, auditLog, rateBuckets, songRequests } from "../db/schema.js";
+import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, analyticsDaily, auditLog, rateBuckets, songRequests } from "../db/schema.js";
 import { env } from "../env.js";
 import { deleteObject, isS3Configured } from "../lib/s3.js";
 import { withAdvisoryLock } from "./lock.js";
+import { bindRequestDb } from "../db/tenant-guc.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const AUDIT_RETENTION_DAYS = 365; // on garde l'audit plus longtemps que l'analytics
 
 export async function runCleanup(): Promise<void> {
+  // GUC vide explicite (cross-radio) — cohérent si DATABASE_URL = enondes_app.
+  await bindRequestDb(null, () => runCleanupInner());
+}
+
+async function runCleanupInner(): Promise<void> {
   const now = Date.now();
   try {
     // Refresh tokens : supprime les expirés, et les révoqués depuis > 7 jours
@@ -65,6 +71,11 @@ export async function runCleanup(): Promise<void> {
       .delete(analyticsShowListen)
       .where(lt(analyticsShowListen.lastAt, analyticsCutoff))
       .returning({ id: analyticsShowListen.id });
+    // Ventilation quotidienne : même fenêtre (elle porte un client_id).
+    const delDaily = await db
+      .delete(analyticsDaily)
+      .where(lt(analyticsDaily.day, analyticsCutoff.toISOString().slice(0, 10)))
+      .returning({ id: analyticsDaily.id });
 
     // Demandes de titres / dédicaces : dedication + requester_name sont des données
     // potentiellement personnelles → purge alignée sur la même fenêtre (Loi 25).
@@ -88,7 +99,7 @@ export async function runCleanup(): Promise<void> {
 
     console.log(
       `[cleanup] refresh_tokens: ${delTokens.length}, upload_intents: ${delIntents.length} (objets S3 orphelins: ${orphanObjects}), ` +
-        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, song_requests: ${delRequests.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
+        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, analytics_daily: ${delDaily.length}, song_requests: ${delRequests.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
     );
   } catch (err) {
     console.error("[cleanup] échec (non bloquant)", err);

@@ -78,9 +78,18 @@
         <p>
           La mesure d'audience (pages vues, temps d'écoute) et le compteur de présence
           en temps réel reposent sur un <strong>identifiant anonyme</strong> stocké dans
-          ton navigateur (<code>hr.clientId</code>). <strong>Aucune donnée n'est collectée
-          avant ton consentement</strong> : tant que tu n'as pas accepté, aucun identifiant
-          n'est créé et aucun beacon n'est envoyé.
+          ton navigateur (<code>hr.clientId</code>). <strong>Aucune mesure d'audience n'a
+          lieu avant ton consentement</strong> : tant que tu n'as pas accepté, la simple
+          consultation des pages ne crée aucun identifiant et n'envoie aucun beacon.
+        </p>
+        <p>
+          Une exception, par nécessité technique : si tu utilises une fonction
+          <strong>interactive</strong> — voter à un sondage, aimer un titre (🤘), envoyer
+          le formulaire de contact ou t'abonner aux rappels d'émission — cet identifiant
+          anonyme est créé à ce moment-là, parce que la fonction en dépend (éviter les
+          votes en double, relier ta demande à sa réponse). Il ne déclenche pour autant
+          aucune mesure d'audience. Si tu refuses, ou si tu retires ton choix,
+          l'identifiant est <strong>effacé</strong> de ton navigateur.
         </p>
         <p>
           Tu peux à tout moment modifier ton choix — la bannière réapparaîtra alors à la
@@ -104,6 +113,7 @@
           <li><strong>Railway</strong> — hébergement de l'API, de la mesure d'audience et du compteur de présence (adresses IP, identifiants anonymes, mesures d'usage).</li>
           <li><strong>AsuraHosting</strong> — diffusion du flux audio (l'adresse IP de l'auditeur est transmise à l'hôte du flux à la lecture).</li>
           <li><strong>Google Fonts</strong> — polices d'écriture (l'adresse IP est transmise à Google au chargement des polices).</li>
+          <li><strong>geojs.io</strong> et <strong>freeipapi.com</strong> — géolocalisation approximative (ville / pays) à partir de l'adresse IP, uniquement si tu as accepté la mesure d'audience. Aucun profil publicitaire n'est construit.</li>
         </ul>
         <p>
           Aucun autre tiers publicitaire ni revendeur de données n'a accès à tes
@@ -131,9 +141,10 @@
           Le site utilise le stockage local du navigateur pour mémoriser tes préférences
           (volume, thème, favoris : clés <code>hr.volume</code>, <code>hr.mute</code>,
           <code>hr.favs</code>…) ainsi que ton <strong>choix de consentement</strong>
-          (<code>hr.consent</code>) et, seulement après acceptation, un identifiant
-          anonyme de session (<code>hr.clientId</code>). Aucun cookie publicitaire
-          n'est déposé.
+          (<code>hr.consent</code>) ainsi qu'un identifiant anonyme de session
+          (<code>hr.clientId</code>), créé après acceptation de la mesure d'audience ou
+          à l'usage d'une fonction interactive (vote, 🤘, formulaire, rappels).
+          Aucun cookie publicitaire n'est déposé.
         </p>
       </section>
 

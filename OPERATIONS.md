@@ -70,6 +70,8 @@ Pour propager un correctif :
 
 - **Sentry par projet** : poser `SENTRY_DSN` sur l'`api` de chaque client (DSN
   distinct par client → erreurs isolées). Déjà branché côté code (gated).
+- **Admin** : `NEXT_PUBLIC_SENTRY_DSN` sur le service admin (rebuild Next requis).
+- Checklist ops Vagues 1–3 : **`RUNBOOK-PRODUCTION.md`**.
 - Le `/health` (statut) couvre le « up/down » ; Sentry couvre le « pourquoi ça casse ».
 
 ---

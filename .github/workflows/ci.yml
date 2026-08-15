@@ -37,7 +37,40 @@ jobs:
           node-version: 20
       # Garde statique : rejette tout accès à une table tenant sans radioId dans
       # le même bloc (api/src/routes + api/src/services). Voir scripts/check-tenant-queries.mjs.
-      - run: node scripts/check-tenant-queries.mjs
+      # RLS_STRICT=1 + ALS_HTTP (défaut) : accepte wrappers OU radioId (middleware
+      # bindRequestDb pose la GUC). Activer DATABASE_URL=enondes_app seulement après
+      # npm run test:rls vert sur une base jetable — pas encore en CI.
+      - run: RLS_STRICT=1 npm run tenant:guard
+
+  frontend-unit:
+    name: Site (tests unitaires)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  smoke:
+    name: Smoke Playwright (pas de snapshots)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke accueil + schedule API
+        run: npx playwright test --config=tests/smoke/playwright.config.mjs
+        env:
+          SMOKE_API_URL: https://patient-endurance-production-21c8.up.railway.app
 
   admin:
     name: Admin (typecheck · test · build)

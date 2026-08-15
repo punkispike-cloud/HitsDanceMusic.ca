@@ -16,6 +16,11 @@ import type { AppBindings } from "../types.js";
    Le seuil est volontairement bas (un auditeur qui reste < 15 s a zappé). */
 const SKIP_THRESHOLD_SEC = 15;
 
+/* Fuseau des agrégats quotidiens — le même qu'à l'ingestion
+   (services/analytics.ts), sans quoi « aujourd'hui » ne désignerait pas la même
+   journée à l'écriture et à la lecture. */
+const RADIO_TZ = "America/Toronto";
+
 export const analyticsAdminRoutes = new Hono<AppBindings>();
 
 /** Échappe une valeur pour une cellule CSV (RFC 4180) + neutralise l'injection
@@ -44,11 +49,6 @@ async function fetchOverview(radioId: string) {
     .select({
       totalSessions: sql<number>`count(*)::int`,
       live: sql<number>`count(*) filter (where ${analyticsSessions.lastSeen} > now() - interval '60 seconds')::int`,
-      // « aujourd'hui » au fuseau de la radio (America/Toronto), cohérent avec
-      // /timeseries qui génère ses jours dans ce même fuseau. `date_trunc('day',
-      // now())` utiliserait le fuseau de session (UTC) → minuit UTC = 19 h/20 h
-      // la veille à Toronto, faussant le compteur en début/fin de journée.
-      today: sql<number>`count(*) filter (where (last_seen AT TIME ZONE 'America/Toronto')::date = (now() AT TIME ZONE 'America/Toronto')::date)::int`,
       sumActive: sql<number>`coalesce(sum(${analyticsSessions.activeSec}),0)::int`,
       sumListen: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
       pageViews: sql<number>`coalesce(sum(${analyticsSessions.pageViews}),0)::int`,
@@ -56,11 +56,24 @@ async function fetchOverview(radioId: string) {
     .from(analyticsSessions)
     .where(eq(analyticsSessions.radioId, radioId));
 
+  /* « Visiteurs aujourd'hui » = visiteurs distincts ayant une ligne du jour dans
+     analytics_daily. Se lit sur la MÊME table que /timeseries → la carte et la
+     première barre du graphique disent forcément la même chose. Le jour est
+     calculé au fuseau de la radio : `date_trunc('day', now())` utiliserait le
+     fuseau de session (UTC), et minuit UTC = 19 h/20 h la veille à Toronto. */
+  const todayRes = await db.execute(sql`
+    SELECT count(*)::int AS "today"
+    FROM analytics_daily
+    WHERE radio_id = ${radioId}
+      AND day = (now() AT TIME ZONE ${RADIO_TZ}::text)::date
+  `);
+  const today = Number((todayRes.rows[0] as { today?: number } | undefined)?.today ?? 0);
+
   const total = agg?.totalSessions ?? 0;
   return {
     totalSessions: total,
     live: agg?.live ?? 0,
-    today: agg?.today ?? 0,
+    today,
     pageViews: agg?.pageViews ?? 0,
     totalActiveSec: agg?.sumActive ?? 0,
     totalListenSec: agg?.sumListen ?? 0,
@@ -258,24 +271,30 @@ analyticsAdminRoutes.get("/top-tracks", async (c) => {
   );
 });
 
-/* GET /v1/admin/analytics/timeseries?days=30 — série quotidienne (radio courante). */
+/* GET /v1/admin/analytics/timeseries?days=30 — série quotidienne (radio courante).
+   Source : analytics_daily, alimentée beacon par beacon. `sessions` = visiteurs
+   ACTIFS ce jour-là (et non « arrivés ce jour-là » comme avant : la série était
+   construite sur analytics_sessions, un cumul de vie groupé par first_seen, ce
+   qui reversait toute l'écoute d'un habitué sur le jour de sa première visite).
+   Les jours antérieurs à la migration 0027 restent alimentés par la reprise
+   d'historique, approximative par construction. */
 analyticsAdminRoutes.get("/timeseries", async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const days = Math.min(180, Math.max(1, Number(c.req.query("days")) || 30));
   const result = await db.execute(sql`
     SELECT to_char(d::date, 'YYYY-MM-DD') AS day,
-           count(s.id)::int AS sessions,
-           coalesce(sum(s.listen_sec), 0)::int AS listen_sec,
-           coalesce(sum(s.active_sec), 0)::int AS active_sec,
-           coalesce(sum(s.page_views), 0)::int AS page_views
+           count(a.id)::int AS sessions,
+           coalesce(sum(a.listen_sec), 0)::int AS listen_sec,
+           coalesce(sum(a.active_sec), 0)::int AS active_sec,
+           coalesce(sum(a.page_views), 0)::int AS page_views
     FROM generate_series(
-           (now() AT TIME ZONE 'America/Toronto')::date - (${days - 1} || ' days')::interval,
-           (now() AT TIME ZONE 'America/Toronto')::date,
+           (now() AT TIME ZONE ${RADIO_TZ}::text)::date - (${days - 1} || ' days')::interval,
+           (now() AT TIME ZONE ${RADIO_TZ}::text)::date,
            interval '1 day'
          ) d
-    LEFT JOIN analytics_sessions s
-           ON date_trunc('day', s.first_seen AT TIME ZONE 'America/Toronto') = d
-          AND s.radio_id = ${radioId}
+    LEFT JOIN analytics_daily a
+           ON a.day = d::date
+          AND a.radio_id = ${radioId}
     GROUP BY d
     ORDER BY d
   `);

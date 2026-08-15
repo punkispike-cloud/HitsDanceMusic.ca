@@ -283,6 +283,7 @@ cd api && npm test              # round-trip grille (SCHEDULE ↔ minutes)
     main.js             → orchestrateur (initCritical / initIdle)
     api-config.js       → base URL de l'API (NOUVEAU)
     analytics.js        → beacons d'audience vers /v1/track (NOUVEAU)
+    client-id.js        → hr.clientId, source unique : getClientId() lit, ensureClientId() crée
     content.js          → rend animateurs + émissions depuis l'API (NOUVEAU)
     schedule.js         → grille (fallback hardcodé + loadScheduleFromApi)
     player.js, presence.js, ...
