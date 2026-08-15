@@ -6,6 +6,7 @@
 import { $, escapeHtml, clampString, fetchWithTimeout, NET_TIMEOUTS } from "./util.js";
 import { toast } from "./toast.js";
 import { API_BASE } from "./api-config.js";
+import { BRAND } from "./brand.generated.js";
 
 const CLIENT_KEY = "hr.clientId";
 
@@ -74,7 +75,7 @@ export function bindContactForm() {
       String(fd.get("message") || ""),
     ].join("\n");
     const to = form.dataset.mail || "studio@hit.radio";
-    location.href = `mailto:${to}?subject=${encodeURIComponent("[Hits Dance Music] " + sujet)}&body=${encodeURIComponent(body)}`;
+    location.href = `mailto:${to}?subject=${encodeURIComponent(`[${BRAND.name}] ${sujet}`)}&body=${encodeURIComponent(body)}`;
     toast("Ouverture de ton client email…", "ok");
   }
 
@@ -120,7 +121,7 @@ export function bindContactForm() {
     }
     // Pas de titre → message général → on valide puis on ouvre le courriel.
     if (!form.checkValidity()) { form.reportValidity(); return; }
-    const sujet = fd.get("sujet") || "Message Hits Dance Music";
+    const sujet = fd.get("sujet") || `Message ${BRAND.name}`;
     openMailto(fd, sujet, track);
   });
 }

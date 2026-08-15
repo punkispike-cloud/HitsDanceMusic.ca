@@ -50,6 +50,10 @@
     li { margin-bottom: 6px; }
     .todo { color: var(--pink); font-style: italic; }
     footer { text-align: center; padding: 40px 0; color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--hairline); }
+    footer .foot-legal { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: center; }
+    footer .foot-legal a { color: var(--muted); }
+    footer .foot-legal a:hover { color: var(--accent-bright); }
+    footer .foot-legal .sep { color: var(--faint); }
     footer .fine { color: var(--faint); margin-top: 8px; }
   </style>
 </head>
@@ -59,7 +63,7 @@
       <span class="spark" aria-hidden="true">✦</span>
       <span class="wordmark grad">En Ondes</span>
     </a>
-    <a class="back" href="pro.html">
+    <a class="back" href="./">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
       Retour
     </a>
@@ -68,8 +72,7 @@
   <main>
     <div class="wrap">
       <h1>Politique de <span class="grad">confidentialité</span></h1>
-      <!-- TODO: date de dernière mise à jour réelle -->
-      <p class="updated">Dernière mise à jour : <span class="todo">[TODO: AAAA-MM-JJ]</span></p>
+      <p class="updated">Dernière mise à jour : 2026-07-21</p>
 
       <!-- AVIS : document modèle conforme à l'esprit de la Loi 25 (Québec, Loi modernisant
            des dispositions législatives en matière de protection des renseignements personnels).
@@ -124,10 +127,12 @@
         <ul>
           <li><b>Apple / iTunes</b> — métadonnées et pochettes des titres diffusés.</li>
           <li><b>Railway</b> — hébergement applicatif et infrastructure.</li>
-          <li><b>Hébergeur du flux / CDN</b> — <span class="todo">[TODO: nom de l'hébergeur du flux audio]</span></li>
+          <li><b>AsuraHosting</b> — hébergement et diffusion du flux audio en direct.</li>
           <li><span class="todo">[TODO: autres tiers réellement utilisés — ex. analytique, paiement, courriel]</span></li>
         </ul>
-        <p><span class="todo">[TODO: préciser si des renseignements sont communiqués ou stockés hors Québec/Canada]</span></p>
+        <p>Certains de ces fournisseurs (Railway, AsuraHosting, Apple) exploitent des serveurs situés
+          à l'extérieur du Québec, notamment aux États-Unis. Des renseignements peuvent donc y être
+          traités ou stockés.</p>
       </section>
 
       <section class="block">
@@ -144,8 +149,13 @@
       </section>
 
       <section class="block">
-        <h2>7. Témoins (cookies)</h2>
-        <p><span class="todo">[TODO: décrire les témoins/traceurs réellement utilisés et le mécanisme de consentement, le cas échéant]</span></p>
+        <h2>7. Témoins (cookies) et stockage local</h2>
+        <p>Le hub d'écoute n'utilise pas de témoins publicitaires ni de traceurs tiers. Il conserve
+          uniquement, dans le stockage local de ton navigateur, des préférences techniques
+          (dernière station écoutée, volume, favoris) qui restent sur ton appareil.</p>
+        <p>Si tu crées un compte pour le catalogue à la demande, un témoin strictement nécessaire
+          est utilisé pour maintenir ta session (authentification). Tu peux effacer ces données en
+          vidant le stockage local et les témoins de ton navigateur.</p>
       </section>
     </div>
   </main>
@@ -153,6 +163,13 @@
   <footer>
     <div class="wrap">
       <p>En Ondes · Radio clé en main, en français.</p>
+      <nav class="foot-legal" aria-label="Mentions légales">
+        <a href="confidentialite.html" aria-current="page">Confidentialité (Loi 25)</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="conditions.html">Conditions</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="mailto:bonjour@enondes.ca">bonjour@enondes.ca</a>
+      </nav>
       <p class="fine">© <span id="y"></span> En Ondes · enondes.ca</p>
     </div>
   </footer>

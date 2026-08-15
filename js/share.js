@@ -3,6 +3,7 @@
 import { haptic } from "./util.js";
 import { state } from "./state.js";
 import { getCurrentSlot } from "./schedule.js";
+import { BRAND } from "./brand.generated.js";
 import { toast } from "./toast.js";
 
 export async function shareCurrent() {
@@ -11,10 +12,10 @@ export async function shareCurrent() {
   const trackText = state.currentTrack
     ? (state.currentTrack.artist ? `${state.currentTrack.artist} — ${state.currentTrack.title}` : state.currentTrack.title)
     : slot.title;
-  const text = `J'écoute « ${trackText} » sur Hits Dance Music — La radio`;
+  const text = `J'écoute « ${trackText} » sur ${BRAND.name} — La radio`;
   const url = `${location.origin}${location.pathname}?play=1#player`;
   if (navigator.share) {
-    try { await navigator.share({ title: "Hits Dance Music", text, url }); return; }
+    try { await navigator.share({ title: BRAND.name, text, url }); return; }
     catch { /* annulé */ }
   }
   try {

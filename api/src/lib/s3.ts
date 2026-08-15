@@ -2,7 +2,7 @@
    l'API n'est jamais sur le chemin des octets — elle ne fait que signer
    l'URL PUT et vérifier l'objet ensuite (HEAD). */
 
-import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env, isS3Configured } from "../env.js";
 
@@ -50,6 +50,12 @@ export async function headObject(
   } catch {
     return null;
   }
+}
+
+/** Supprime un objet S3 (best-effort). Utilisé pour nettoyer les objets orphelins
+ *  d'intents d'upload jamais confirmés (purge d'entretien). */
+export async function deleteObject(objectKey: string): Promise<void> {
+  await client().send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: objectKey }));
 }
 
 /** URL publique finale (via CDN/domaine custom). */

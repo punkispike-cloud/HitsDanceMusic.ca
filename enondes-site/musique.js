@@ -673,14 +673,45 @@ async function submitAuth(e) {
 }
 
 /* ───────────────── Modales (générique) ───────────────── */
-function showModal(id) { byId(id).hidden = false; document.body.classList.add("modal-open"); }
-function hideModal(id) { byId(id).hidden = true; if (!document.querySelector(".modal:not([hidden])")) document.body.classList.remove("modal-open"); }
+let modalLastFocus = null;
+function modalFocusables(m) {
+  return [...m.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled && el.offsetParent !== null);
+}
+function showModal(id) {
+  const m = byId(id);
+  modalLastFocus = document.activeElement; // pour restaurer le focus à la fermeture
+  m.hidden = false;
+  document.body.classList.add("modal-open");
+  (modalFocusables(m)[0] || m).focus();
+}
+function hideModal(id) {
+  byId(id).hidden = true;
+  if (!document.querySelector(".modal:not([hidden])")) document.body.classList.remove("modal-open");
+  // Restaure le focus sur le déclencheur ; s'il a été détaché (ex. le menu compte
+  // s'est re-rendu après connexion), on se rabat sur un élément stable du header
+  // compte pour ne pas renvoyer le focus sur <body>.
+  const target = (modalLastFocus && document.contains(modalLastFocus))
+    ? modalLastFocus
+    : byId("acct")?.querySelector("button, a[href]");
+  target?.focus?.();
+  modalLastFocus = null;
+}
 function wireModals() {
   document.querySelectorAll(".modal").forEach((m) => {
     m.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", () => hideModal(m.id)));
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") document.querySelectorAll(".modal:not([hidden])").forEach((m) => hideModal(m.id));
+    const open = document.querySelector(".modal:not([hidden])");
+    if (!open) return;
+    if (e.key === "Escape") { hideModal(open.id); return; }
+    if (e.key !== "Tab") return;
+    // Piège de focus : le Tab reste dans la modale ouverte.
+    const f = modalFocusables(open);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
   byId("tabLogin").addEventListener("click", () => { setAuthMode("login"); byId("authErr").hidden = true; });
   byId("tabRegister").addEventListener("click", () => { setAuthMode("register"); byId("authErr").hidden = true; });

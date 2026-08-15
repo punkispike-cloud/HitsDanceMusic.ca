@@ -11,6 +11,8 @@
       "status": "live",
       "owned": true,
       "site": "https://hitsdancemusic.ca",
+      "region": "Québec",
+      "lang": "Français",
       "colors": {
         "accent": "#c8102e",
         "accentBright": "#e8192e",
@@ -29,6 +31,8 @@
       "status": "coming",
       "owned": true,
       "site": null,
+      "region": "Québec",
+      "lang": "Français",
       "colors": {
         "accent": "#cf9b3f",
         "accentBright": "#e6b85c",

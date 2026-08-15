@@ -100,6 +100,10 @@ for (const name of PAGES) {
     // aucune collecte (analytics/presence gating). Garde les captures focalisées
     // sur le rendu, indépendantes du choix de consentement.
     await page.addInitScript(() => { try { localStorage.setItem("hr.consent", "no"); } catch { /* noop */ } });
+    // Temps gelé : la grille/les rails « à venir » et le jour en surbrillance
+    // dépendent de la date → sans gel, index/horaire/animateurs dérivent dès
+    // que le calendrier avance. Instant fixe = captures reproductibles à jamais.
+    await page.clock.install({ time: new Date("2026-07-14T18:00:00Z") });
     await blockExternal(page);
     await page.goto(`/${name}.html`, { waitUntil: "load" });
     // Attend l'injection JS du bouton play dans l'en-tête (sinon la nav peut

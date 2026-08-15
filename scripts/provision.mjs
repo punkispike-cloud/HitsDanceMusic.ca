@@ -3,7 +3,7 @@
  Prérequis : la radio a été créée via POST /v1/owner/radios (admin /parc ou curl) —
  le tenant + son superadmin + l'abonnement trialing existent en DB (status=
  provisioning). Ce script orchestre la mise en ondes :
- *   1. build-all        : (ré)génère le site statique (npm run build).
+ *   1. build-all        : (ré)génère le site statique (BRAND=<slug> npm run build).
  *   2. Railway          : déploiement du service — best-effort via CLI `railway`
  *                         si RAILWAY_TOKEN présent, sinon étapes manuelles imprimées.
  *   3. DNS (Cloudflare) : crée les CNAME site/api/admin vers les domaines Railway
@@ -77,7 +77,7 @@ const note = (step, status, detail = "") =>
 /** Lance une commande, renvoie { code, stdout, stderr }. */
 function run(cmd, cmdArgs, opts = {}) {
   return new Promise((resolve) => {
-    const child = spawn(cmd, cmdArgs, { cwd: opts.cwd || root, env: process.env, shell: true });
+    const child = spawn(cmd, cmdArgs, { cwd: opts.cwd || root, env: { ...process.env, ...(opts.env || {}) }, shell: true });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d) => (stdout += d.toString()));
@@ -124,9 +124,11 @@ try {
     if (skipBuild) {
       note("build-all", "skip", "--skip-build");
     } else {
-      console.log("\n[provision] 1/4 build-all : npm run build");
-      const r = await run("npm", ["run", "build"]);
-      note("build-all", r.code === 0 ? "ok" : "fail", r.code === 0 ? "site statique généré" : (r.stderr || r.stdout).slice(-300));
+      // Sans BRAND=<slug>, build-all bâtirait la baseline hitsdance (piège ops) :
+      // on passe explicitement la marque de la radio provisionnée.
+      console.log(`\n[provision] 1/4 build-all : BRAND=${slug} npm run build`);
+      const r = await run("npm", ["run", "build"], { env: { BRAND: slug } });
+      note("build-all", r.code === 0 ? "ok" : "fail", r.code === 0 ? `site statique généré (BRAND=${slug})` : (r.stderr || r.stdout).slice(-300));
     }
 
     // ─── 2. Railway ───────────────────────────────────────────────────────────

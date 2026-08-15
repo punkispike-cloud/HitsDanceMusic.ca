@@ -23,6 +23,9 @@ const state = {
   reconnectTimer: null,
   reconnectAttempt: 0,
   watchdog: null,
+  starvationTimer: null,  // tampon vide depuis trop longtemps → reconnexion
+  bufferingTimer: null,   // n'affiche « Mise en mémoire… » que si ça dure
+  hiccupAt: 0,            // position au moment où le tampon s'est vidé
   lastPos: 0,
   lastTrackKey: "",
   track: null, // {artist,title} courant
@@ -47,6 +50,10 @@ const ink = (hex) => {
   return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#08111f" : "#fff";
 };
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+// Échappement HTML : les champs de station peuvent venir de radios TIERCES
+// (brand/partners.json) → jamais injecter brut dans innerHTML.
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 const byId = (id) => document.getElementById(id);
 const prefersReducedMotion = () =>
   typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -202,19 +209,22 @@ function stationCard(st) {
     <button class="fav ${fav ? "on" : ""}" data-act="fav" type="button" aria-pressed="${fav}" aria-label="${fav ? "Retirer des favoris" : "Ajouter aux favoris"}" title="Favori">
       <svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.7 2 5.5 5.2 5.5c1.9 0 3.2 1.1 3.8 2.3C9.6 6.6 10.9 5.5 12.8 5.5 16 5.5 17.4 8.7 16 11.7 13.5 16.4 12 21 12 21z"/></svg>
     </button>
-    <button class="playarea" data-act="play" type="button" aria-label="${st.status === "coming" ? `${st.shortName} — bientôt en ondes, voir les détails` : `Écouter ${st.shortName}`}">
+    <button class="playarea" data-act="play" type="button" aria-label="${st.status === "coming" ? `${esc(st.shortName)} — bientôt en ondes, voir les détails` : `Écouter ${esc(st.shortName)}`}">
       <span class="art">
-        <span class="vinyl"><span class="label">${initials(st.shortName)}</span></span>
+        <span class="vinyl"><span class="label">${esc(initials(st.shortName))}</span></span>
         <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       </span>
       <span class="meta">
-        <span class="name">${st.shortName}</span>
-        <span class="genre">${st.genre || "&nbsp;"}</span>
+        <span class="name">${esc(st.shortName)}</span>
+        <span class="genre">${st.genre ? esc(st.genre) : "&nbsp;"}</span>
         <span class="flag"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Écouter en direct</span>
       </span>
     </button>
-    <button class="info" data-act="info" type="button" aria-label="Détails ${st.shortName}" title="Détails">
+    <button class="info" data-act="info" type="button" aria-label="Détails ${esc(st.shortName)}" title="Détails">
       <svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zM11 11h2v6h-2zM12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+    </button>
+    <button class="share" data-act="share" type="button" aria-label="Partager ${esc(st.shortName)}" title="Partager">
+      <svg viewBox="0 0 24 24"><path d="M18 16.1a3 3 0 0 0-2.3 1.1l-6.8-3.9a3 3 0 0 0 0-2.6l6.8-3.9A3 3 0 1 0 15 4a3 3 0 0 0 .1.7L8.3 8.6a3 3 0 1 0 0 6.8l6.8 3.9a3 3 0 1 0 2.9-3.2z"/></svg>
     </button>`;
   return card;
 }
@@ -238,17 +248,47 @@ function renderGrid() {
     markActiveCard();
     return;
   }
-  list.forEach((st, i) => {
+  // Découverte par lieu (façon TuneIn) : on regroupe par région. Les en-têtes de
+  // section ne s'affichent que s'il y a ≥2 groupes (sinon grille plate, sans bruit).
+  const groups = groupByRegion(list);
+  let i = 0;
+  const appendCard = (st) => {
     const card = stationCard(st);
-    // Animation d'apparition UNE seule fois par station (pas à chaque rendu).
     if (!enteredCards.has(st.slug)) {
       card.classList.add("station--enter");
       card.style.animationDelay = `${Math.min(i * 45, 360)}ms`;
       enteredCards.add(st.slug);
     }
     grid.appendChild(card);
-  });
+    i++;
+  };
+  if (groups.length <= 1) {
+    list.forEach(appendCard);
+  } else {
+    for (const g of groups) {
+      const h = document.createElement("h3");
+      h.className = "grid-section";
+      h.textContent = g.label;
+      grid.appendChild(h);
+      g.stations.forEach(appendCard);
+    }
+  }
   markActiveCard();
+}
+
+// Regroupe une liste de stations par région, dans l'ordre d'apparition du manifeste.
+// Les stations sans région tombent dans « Autres stations » (placé en dernier).
+function groupByRegion(list) {
+  const order = [];
+  const map = new Map();
+  for (const st of list) {
+    const key = st.region || "";
+    if (!map.has(key)) { map.set(key, []); order.push(key); }
+    map.get(key).push(st);
+  }
+  return order
+    .sort((a, b) => (a === "" ? 1 : 0) - (b === "" ? 1 : 0)) // « Autres » (clé vide) en dernier
+    .map((key) => ({ label: key || "Autres stations", stations: map.get(key) }));
 }
 
 function markActiveCard() {
@@ -270,12 +310,42 @@ function markActiveCard() {
 
 function stationBySlug(slug) { return state.stations.find((s) => s.slug === slug); }
 
+/* ───────────────── Deep-link & partage ───────────────── */
+// Lien profond partageable vers une station : https://…/?station=<slug>.
+function stationUrl(slug) {
+  const u = new URL(location.href);
+  u.searchParams.set("station", slug);
+  u.searchParams.delete("play"); // le flag de raccourci PWA ne reste pas dans l'URL
+  return u;
+}
+// Reflète la station courante dans l'URL sans recharger (lien copiable/partageable).
+function updateUrl(slug) {
+  try { history.replaceState(null, "", stationUrl(slug)); } catch {}
+}
+// Partage natif (navigator.share) avec repli copie-presse-papier.
+async function shareStation(st) {
+  if (!st) return;
+  const url = stationUrl(st.slug).toString();
+  const title = `${st.name} · En Ondes`;
+  const text = st.status === "coming"
+    ? `${st.name} arrive bientôt sur En Ondes`
+    : `J'écoute ${st.name} en direct sur En Ondes`;
+  try {
+    if (navigator.share) { await navigator.share({ title, text, url }); return; }
+  } catch (e) {
+    if (e?.name === "AbortError") return; // partage annulé par l'utilisateur
+  }
+  try { await navigator.clipboard.writeText(url); announce("Lien de la station copié"); }
+  catch { announce(url); }
+}
+
 /* ───────────────── Player ───────────────── */
 function selectStation(st, autoplay) {
   if (!st || st.status === "coming" || !st.stream) return;
   const switching = state.current?.slug !== st.slug;
   state.current = st;
   store(LS.station, st.slug);
+  updateUrl(st.slug);
 
   // Mise à jour visuelle du lecteur (accent, textes, pochette, carte active).
   const applyVisuals = () => {
@@ -288,7 +358,7 @@ function selectStation(st, autoplay) {
     setCover(null, st);
     markActiveCard();
     updateHeroOnair();
-    if (sheetOpenFor()) renderSheet(st); // garde la fiche en phase
+    if (sheetOpenFor() === st.slug) renderSheet(st); // ne rafraîchit la fiche que si elle montre CETTE station
   };
   // Fondu-enchaîné au changement de station (View Transitions API), avec repli
   // direct si l'API est absente ou si l'utilisateur préfère un mouvement réduit.
@@ -311,10 +381,17 @@ function selectStation(st, autoplay) {
 function setLoadingUI(on) {
   for (const id of ["pPlay", "sheetPlay"]) byId(id)?.classList.toggle("is-loading", on);
 }
-async function startPlayback() {
+/* userInitiated = false uniquement pour l'appel issu du timer de reconnexion :
+   sinon stopReconnect() y remettrait le compteur à zéro et le backoff (comme
+   le plafond de tentatives) ne s'appliquerait jamais. */
+async function startPlayback(userInitiated = true) {
   state.intent = true;
   store(LS.playing, "1"); // mémorise l'intention d'écoute pour la reprise de session (QW-3)
   hideResumePrompt();
+  // Un geste utilisateur annule la reconnexion en attente : sans ça, le timer
+  // se déclenche après coup et coupe le flux qu'on vient de relancer.
+  if (userInitiated) stopReconnect();
+  clearHiccupTimers();
   setLoadingUI(true);
   try {
     if (!audio.src && state.current) audio.src = state.current.stream;
@@ -322,7 +399,13 @@ async function startPlayback() {
   } catch (e) { setPlayingUI(false); console.warn("[hub] lecture refusée", e?.message || e); }
   finally { setLoadingUI(false); }
 }
-function pausePlayback() { state.intent = false; store(LS.playing, "0"); audio.pause(); }
+function pausePlayback() {
+  state.intent = false;
+  store(LS.playing, "0");
+  stopReconnect();
+  clearHiccupTimers();
+  audio.pause();
+}
 function togglePlay() { audio.paused ? startPlayback() : pausePlayback(); }
 
 function setPlayingUI(on, label) {
@@ -385,7 +468,7 @@ async function pollNowPlaying() {
 
 function setCover(url, st) {
   const box = byId("pCover");
-  box.innerHTML = url ? `<img src="${url}" alt="" />` : `<span class="mono">${initials(st.shortName)}</span>`;
+  box.innerHTML = url ? `<img src="${esc(url)}" alt="" />` : `<span class="mono">${esc(initials(st.shortName))}</span>`;
   box.style.background = `linear-gradient(150deg, ${st.colors.accent}, #0a0a0a)`;
 }
 
@@ -472,27 +555,66 @@ function scheduleReconnect(reason) {
     state.reconnectTimer = null;
     if (!state.current) return;
     audio.src = `${state.current.stream}${state.current.stream.includes("?") ? "&" : "?"}_=${Date.now()}`;
-    startPlayback();
+    startPlayback(false);
   }, delay);
 }
 function stopReconnect() {
   if (state.reconnectTimer) { clearTimeout(state.reconnectTimer); state.reconnectTimer = null; }
   state.reconnectAttempt = 0;
 }
+function clearHiccupTimers() {
+  if (state.starvationTimer) { clearTimeout(state.starvationTimer); state.starvationTimer = null; }
+  if (state.bufferingTimer) { clearTimeout(state.bufferingTimer); state.bufferingTimer = null; }
+}
 function wireAudio() {
-  audio.addEventListener("playing", () => { stopReconnect(); setPlayingUI(true); });
+  audio.addEventListener("playing", () => { clearHiccupTimers(); stopReconnect(); setPlayingUI(true); });
   audio.addEventListener("pause", () => { if (!state.reconnectTimer) setPlayingUI(false); });
-  audio.addEventListener("stalled", () => { if (!audio.paused) scheduleReconnect("stalled"); });
+  // `stalled` NE déclenche PAS de reconnexion : le navigateur l'émet dès que la
+  // socket reste ~3 s sans octet, ce qui est le régime normal d'un direct (il
+  // cesse de lire quand son tampon est plein, et les serveurs Shoutcast ont des
+  // trous de livraison de plusieurs secondes). Reconnecter là-dessus détruisait
+  // un flux sain — c'était la coupure elle-même, pas son symptôme.
+  audio.addEventListener("stalled", () => console.info("[hub] stalled (ignoré)"));
   audio.addEventListener("ended", () => scheduleReconnect("ended"));
   audio.addEventListener("error", () => { if (state.current) scheduleReconnect("error"); });
-  audio.addEventListener("waiting", () => setPlayingUI(state.playing, "Mise en mémoire…"));
+  audio.addEventListener("waiting", () => {
+    // Hoquet court (< 1,2 s) : le son ne s'interrompt pas vraiment, on ne
+    // fait pas clignoter le player. Au-delà de 5 s le navigateur ne s'en
+    // sortira pas seul → socket neuve.
+    if (!state.bufferingTimer) {
+      state.bufferingTimer = setTimeout(() => {
+        state.bufferingTimer = null;
+        setPlayingUI(state.playing, "Mise en mémoire…");
+      }, 1200);
+    }
+    if (!state.starvationTimer) {
+      state.hiccupAt = audio.currentTime;
+      state.starvationTimer = setTimeout(() => {
+        state.starvationTimer = null;
+        if (!audio.paused) scheduleReconnect("tampon vide");
+      }, 5000);
+    }
+  });
+  // On ne désamorce que si la position a réellement AVANCÉ depuis le hoquet :
+  // un timeupdate à la même position (émis juste après `waiting` par certains
+  // navigateurs) annulerait la reprise d'un flux réellement bloqué.
+  audio.addEventListener("timeupdate", () => {
+    if (!state.starvationTimer && !state.bufferingTimer) return;
+    if (audio.currentTime > state.hiccupAt) clearHiccupTimers();
+  });
   clearInterval(state.watchdog);
   state.watchdog = setInterval(() => {
     if (audio.paused || state.reconnectTimer) { state.lastPos = audio.currentTime; return; }
     if (audio.currentTime > 0 && audio.currentTime === state.lastPos) scheduleReconnect("watchdog");
     state.lastPos = audio.currentTime;
   }, 12000);
-  window.addEventListener("online", () => { if (state.current && !audio.paused) scheduleReconnect("online"); });
+  window.addEventListener("online", () => {
+    if (!state.current || audio.paused) return;
+    // Si la lecture tourne avec du tampon d'avance, elle a survécu à la
+    // coupure réseau : la relancer ne ferait que la couper pour de bon.
+    if (audio.readyState >= 3) return;
+    scheduleReconnect("réseau rétabli");
+  });
 }
 
 /* ───────────────── Réseau (bannière hors-ligne) ───────────────── */
@@ -592,7 +714,7 @@ function closeSheet() {
 function renderSheet(st) {
   const isCurrent = state.current?.slug === st.slug;
   byId("sheetArt").style.background = `linear-gradient(150deg, ${st.colors.accent}, #0a0a0a)`;
-  byId("sheetArt").innerHTML = (isCurrent && state.cover) ? `<img src="${state.cover}" alt="" />` : `<span class="mono">${initials(st.shortName)}</span>`;
+  byId("sheetArt").innerHTML = (isCurrent && state.cover) ? `<img src="${esc(state.cover)}" alt="" />` : `<span class="mono">${esc(initials(st.shortName))}</span>`;
   byId("sheetName").textContent = st.name;
   byId("sheetGenre").textContent = st.genre || "";
   byId("sheetDesc").textContent = st.description || "";
@@ -671,13 +793,29 @@ async function loadStations() {
   renderGrid();
   if (!state._wiredVolume) { wireVolume(); state._wiredVolume = true; }
 
+  // Deep-link : ?station=<slug> (lien partagé) et ?play=1 (raccourci PWA).
+  const params = new URLSearchParams(location.search);
+  const wanted = stationBySlug(params.get("station") || "");
+  const wantPlay = params.get("play") === "1";
+
+  // Lien partagé vers une station pas encore en ondes : on montre sa fiche et on
+  // s'arrête là — sélectionner une autre station réécrirait l'URL et créerait une
+  // course avec l'animation de transition (fiche affichant la mauvaise station).
+  if (wanted && wanted.status === "coming") { openSheet(wanted); return; }
+
   const last = stationBySlug(load(LS.station));
-  const restore = (last && last.status !== "coming") ? last : liveStations()[0];
+  const restore = (wanted && wanted.status !== "coming") ? wanted
+    : (last && last.status !== "coming") ? last
+    : liveStations()[0];
   if (restore) {
     selectStation(restore, false);
-    // Reprise de session (QW-3) : si l'utilisateur écoutait précisément cette
-    // station à sa dernière visite, on propose de reprendre la lecture.
-    if (last && restore.slug === last.slug && load(LS.playing) === "1") showResumePrompt(restore);
+    // L'autoplay est bloqué sans geste : pour un lien profond ou le raccourci PWA,
+    // on propose la lecture en un tap (même UX que la reprise de session QW-3).
+    if ((wanted && wanted.slug === restore.slug) || wantPlay) {
+      showResumePrompt(restore);
+    } else if (last && restore.slug === last.slug && load(LS.playing) === "1") {
+      showResumePrompt(restore);
+    }
   }
 }
 
@@ -715,6 +853,7 @@ async function init() {
     if (!st) return;
     if (act.dataset.act === "fav") toggleFav(st.slug);
     else if (act.dataset.act === "info") openSheet(st);
+    else if (act.dataset.act === "share") shareStation(st);
     else if (act.dataset.act === "play") {
       // Station « bientôt » : pas de flux → on ouvre la fiche au lieu de rester muet.
       if (st.status === "coming") { openSheet(st); return; }
@@ -737,6 +876,7 @@ async function init() {
     const st = stationBySlug(sheetSlug); if (!st || st.status === "coming") return;
     state.current?.slug === st.slug ? togglePlay() : selectStation(st, true);
   });
+  byId("sheetShare").addEventListener("click", () => { const st = stationBySlug(sheetSlug); if (st) shareStation(st); });
   document.addEventListener("keydown", (e) => {
     if (!sheetOpenFor()) return;
     if (e.key === "Escape") closeSheet();

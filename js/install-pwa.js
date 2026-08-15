@@ -4,6 +4,7 @@
 import { $$ } from "./util.js";
 import { toast } from "./toast.js";
 import { activateModalTrap } from "./a11y-modal.js";
+import { BRAND } from "./brand.generated.js";
 
 let deferredInstallPrompt = null;
 const ua = navigator.userAgent || "";
@@ -27,7 +28,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
   hideInstallButtons();
-  toast("Hits Dance Music installé sur ton appareil ! 🎉", "ok");
+  toast(`${BRAND.name} installé sur ton appareil ! 🎉`, "ok");
 });
 
 export async function triggerInstall() {
@@ -50,7 +51,7 @@ function showInstallSheet(platform, brave) {
   const existing = document.getElementById("installSheet");
   if (existing) existing.remove();
 
-  const title = "Installer Hits Dance Music";
+  const title = `Installer ${BRAND.name}`;
   let body = "";
 
   if (platform === "ios" && brave) {
@@ -77,7 +78,7 @@ function showInstallSheet(platform, brave) {
       <ol>
         <li>Touche le menu <strong>⋮</strong> en haut à droite de Brave.</li>
         <li>Choisis <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</li>
-        <li>Confirme. L'icône Hits Dance Music apparaît sur ton écran d'accueil 🎉</li>
+        <li>Confirme. L'icône ${BRAND.name} apparaît sur ton écran d'accueil 🎉</li>
       </ol>`;
   } else if (platform === "android") {
     body = `
@@ -91,7 +92,7 @@ function showInstallSheet(platform, brave) {
       <ol>
         <li>Dans la barre d'adresse, cherche l'icône <strong>⊕</strong> ou <strong>⬇️</strong> à droite.</li>
         <li>Clique puis confirme <strong>« Installer »</strong>.</li>
-        <li>Hits Dance Music s'ouvre comme une vraie app. 🎉</li>
+        <li>${BRAND.name} s'ouvre comme une vraie app. 🎉</li>
       </ol>`;
   }
 

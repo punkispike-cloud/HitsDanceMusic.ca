@@ -9,6 +9,7 @@ import { shareCurrent } from "./share.js";
 import { toggleLyrics } from "./lyrics.js";
 import { togglePip } from "./pip.js";
 import { floatEmoji } from "./emoji-float.js";
+import { BRAND } from "./brand.generated.js";
 
 let _watchClockTimer = 0;
 
@@ -52,7 +53,7 @@ function ensureWatchMode() {
         ${Array.from({length: 24}, (_, i) => `<span style="--i:${i}"></span>`).join("")}
       </div>
       <div class="watch-info">
-        <p class="watch-tag" id="watchTag">LIVE · Hits Dance Music</p>
+        <p class="watch-tag" id="watchTag">LIVE · ${BRAND.name}</p>
         <h2 class="watch-title" id="watchTitle">En direct</h2>
         <p class="watch-host" id="watchHost">Programmation</p>
         <p class="watch-track" id="watchTrack" hidden></p>

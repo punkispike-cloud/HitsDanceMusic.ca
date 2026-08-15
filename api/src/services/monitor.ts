@@ -20,6 +20,9 @@ async function reachable(url: string): Promise<boolean> {
   const t = setTimeout(() => ctrl.abort(), 5000);
   try {
     const r = await fetch(url, { signal: ctrl.signal });
+    // On ne s'intéresse qu'au statut : annuler le corps sans le télécharger libère
+    // aussitôt la connexion (sinon undici la retient — coûteux sur un flux audio).
+    r.body?.cancel().catch(() => {});
     return r.ok;
   } catch {
     return false;

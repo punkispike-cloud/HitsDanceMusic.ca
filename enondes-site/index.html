@@ -32,13 +32,68 @@
   <link rel="preload" as="image" href="assets/studio-bg.jpg" fetchpriority="high" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="hub.css" />
+  <!-- JSON-LD:BEGIN (généré par scripts/build-stations.mjs — ne pas éditer) -->
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@graph":[
-    {"@type":"Organization","@id":"https://enondes.ca/#org","name":"En Ondes","url":"https://enondes.ca/","email":"bonjour@enondes.ca","slogan":"Radio en direct · Podcast — clé en main, en français","areaServed":"CA-QC"},
-    {"@type":"WebSite","@id":"https://enondes.ca/#site","url":"https://enondes.ca/","name":"En Ondes","inLanguage":"fr-CA","publisher":{"@id":"https://enondes.ca/#org"}},
-    {"@type":"RadioStation","name":"Hits Dance Music","genre":["Dance","House"],"url":"https://hitsdancemusic.ca","inLanguage":"fr-CA","broadcastDisplayName":"Hits Dance Music"}
-  ]}
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://enondes.ca/#org",
+        "name": "En Ondes",
+        "url": "https://enondes.ca/",
+        "email": "bonjour@enondes.ca",
+        "slogan": "Radio en direct · Podcast — clé en main, en français",
+        "areaServed": "CA-QC"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://enondes.ca/#site",
+        "url": "https://enondes.ca/",
+        "name": "En Ondes",
+        "inLanguage": "fr-CA",
+        "publisher": {
+          "@id": "https://enondes.ca/#org"
+        }
+      },
+      {
+        "@type": "RadioStation",
+        "@id": "https://enondes.ca/?station=hitsdance#station",
+        "name": "Hits Dance Music",
+        "alternateName": "Hits Dance",
+        "url": "https://enondes.ca/?station=hitsdance",
+        "inLanguage": "fr-CA",
+        "genre": [
+          "Dance",
+          "House"
+        ],
+        "description": "Radio en ligne live, dance et house. Programmation 2026 et lecteur direct.",
+        "areaServed": "Québec",
+        "sameAs": "https://hitsdancemusic.ca",
+        "parentOrganization": {
+          "@id": "https://enondes.ca/#org"
+        }
+      },
+      {
+        "@type": "RadioStation",
+        "@id": "https://enondes.ca/?station=rockradio#station",
+        "name": "Rockfort",
+        "alternateName": "Rockfort",
+        "url": "https://enondes.ca/?station=rockradio",
+        "inLanguage": "fr-CA",
+        "genre": [
+          "Rock vintage"
+        ],
+        "description": "Rock vintage — le son chaud des amplis à lampes. Classiques, hard et indé. Bientôt en ondes.",
+        "areaServed": "Québec",
+        "parentOrganization": {
+          "@id": "https://enondes.ca/#org"
+        }
+      }
+    ]
+  }
   </script>
+  <!-- JSON-LD:END -->
 </head>
 <body>
   <a class="skip" href="#grid">Aller aux stations</a>
@@ -95,6 +150,13 @@
       <footer>
         <div class="wordmark grad">En Ondes</div>
         <p>Le réseau de radios en direct · en français.</p>
+        <nav class="foot-legal" aria-label="Mentions légales">
+          <a href="confidentialite.html">Confidentialité (Loi 25)</a>
+          <span class="sep" aria-hidden="true">·</span>
+          <a href="conditions.html">Conditions</a>
+          <span class="sep" aria-hidden="true">·</span>
+          <a href="mailto:bonjour@enondes.ca">bonjour@enondes.ca</a>
+        </nav>
         <p class="fine">© <span id="y"></span> En Ondes · <a href="pro.html">Lancer ta radio</a></p>
       </footer>
     </div>
@@ -159,6 +221,10 @@
       <div class="sheet-actions">
         <button class="ctl play" id="sheetPlay" type="button" aria-label="Lecture">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="sheet-share" id="sheetShare" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M18 16.1a3 3 0 0 0-2.3 1.1l-6.8-3.9a3 3 0 0 0 0-2.6l6.8-3.9A3 3 0 1 0 15 4a3 3 0 0 0 .1.7L8.3 8.6a3 3 0 1 0 0 6.8l6.8 3.9a3 3 0 1 0 2.9-3.2z"/></svg>
+          Partager
         </button>
         <a class="sheet-site" id="sheetSite" target="_blank" rel="noopener" hidden>Site complet&nbsp;→</a>
       </div>

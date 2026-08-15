@@ -55,6 +55,15 @@ if (ALLOWED_ORIGINS.length === 0) {
   console.warn("[api] ⚠️  ALLOWED_ORIGINS vide — aucune origine navigateur ne sera autorisée (CORS). Renseigner la variable en prod (site + admin + hub).");
 }
 if (ALLOWED_ORIGINS.includes("*")) {
+  if (isProd) {
+    // '*' + credentials:true reflète TOUTE origine avec les cookies → un site
+    // malveillant peut appeler /auth/refresh et lire le token. On refuse de booter
+    // (même posture que JWT_SECRET faible), plutôt que de démarrer non sécurisé.
+    console.error(
+      "[api] ❌ ALLOWED_ORIGINS='*' interdit en production : reflète toute origine avec credentials → vol de token possible. Lister les domaines explicitement (site + admin + hub).",
+    );
+    process.exit(1);
+  }
   console.warn("[api] ⚠️  ALLOWED_ORIGINS contient '*' — à NE PAS utiliser en production.");
 }
 
