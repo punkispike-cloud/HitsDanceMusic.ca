@@ -49,10 +49,21 @@ Ou UI : Settings → Branches → main → Require approvals = 1.
 
 ### Railway staging
 
-1. Projet `independent-perception` → Environment **staging** (copie).
-2. Services : Postgres jetable + api + admin (pas le domaine hitsdancemusic.ca).
-3. Variables staging distinctes (`JWT_SECRET`, `SEED_*`, pas de Stripe live).
-4. Workflow : PR → vérifier CI → smoke staging manuel → merge `main` → prod.
+**Créé (2026-08-15)** : environnement `staging` (duplication de `production`)
+dans le projet `independent-perception` (id `7d622214-1b02-4d3d-bc28-bfbd65f40a8a`).
+
+À faire ensuite dans le dashboard Railway :
+1. Générer des domaines staging distincts (api/admin) — **pas** hitsdancemusic.ca.
+2. Remplacer `JWT_SECRET` / `SEED_*` staging (ne pas partager la prod).
+3. Désactiver Stripe live / webhooks prod sur staging.
+4. Workflow : PR → CI → smoke staging manuel → merge `main` → prod.
+
+### Railway staging (création)
+
+```bash
+railway environment new staging --duplicate production
+railway environment link production   # revenir sur prod après
+```
 
 ### Rollback
 
