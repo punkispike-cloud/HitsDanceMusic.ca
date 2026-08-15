@@ -1,416 +1,56 @@
-# État du projet — Hits Dance Music (reprise sur Mac)
+# État du projet — Hits Dance Music / En Ondes
 
-> Document de reprise : tout ce qu'il faut pour continuer le travail.
-> Dernière mise à jour : **2026-07-14**. Branche : `main` (déploiement auto Railway).
-
----
-
-## Mise à jour 2026-07-14 — Plan « 100 % fonctionnel » (Phases 2a–2g + 4)
-
-> Suite au plan d'activation + roadmap. Code en place, typechecké (api ✓ 73 tests ✓,
-> admin ✓). Les migrations **0022 → 0024** s'appliquent au prochain deploy (soft,
-> sans rupture). Les features gated restent inactives jusqu'à configuration externe.
-
-| Phase | Livrable | Statut | Reste (action externe / câblage) |
-|---|---|---|---|
-| 2a | Notif push « demande jouée » | ✅ code | Activation VAPID (clés générées) |
-| 2b | **Loops Studio DJ** (moteur) | ✅ moteur | UI studio à câler (boutons setLoop/clearLoop) |
-| 2c | Créneau courant enrichi (`/v1/schedule/now` + artist/show/next) | ✅ code | — |
-| 2g | **RLS multi-tenant** (policies Postgres, soft rollout) | ✅ migration | Rôle DB non-propriétaire + `SET LOCAL app.radio_id`/req (à valider sur vraie base) |
-| 2d | **Pubs/jingles** (`media_assets` + `ad_rotations` + CRUD `/v1/admin/media` + `/rotations`) | ✅ backend | Page admin + synchro AzuraCast (gated) |
-| 2f | **Facturation Stripe** (`subscriptions` + lecture `/v1/owner/.../billing` + webhook gated) | ✅ scaffold | Lib `stripe` + compte Stripe + portail (Phase 5) |
-| 2e | **Live DJ → AzuraCast** (`createStreamer` harbor) | ✅ scaffold | Serveur AzuraCast + Webcaster.js front (Phase 3/5) |
-| 4 | `verify-deploy.mjs` étendu (schedule/now, media, webhook Stripe) | ✅ code | — |
-
-**Migrations à appliquer au prochain deploy** : `0022_tenant_rls` → `0023_media_ads` → `0024_subscriptions`.
-**Nouvelles vars d'env** (optionnelles, gated) : `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`.
-
-> ⚠️ Les migrations 0022–0024 sont **hand-authored** (pas de snapshot drizzle-kit).
-> Au prochain `npm run db:generate`, vérifier qu'aucun diff ne re-crée ces tables
-> (les snapshots 0022–0024 ne sont pas générés — à produire si on régénère).
+> Document de reprise. Dernière mise à jour : **2026-08-15**.
+> Branche : `main` (déploiement auto Railway). Runbook ops : [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md).
 
 ---
 
-## 0. Reprise 2026-06-29 — Engagement auditeur & plan « forte valeur »
+## Snapshot 2026-08-15 — production durcie + staging isolé
 
-> **Note développeur** : gros lot de fonctionnalités implémenté en local, **pas encore
-> committé ni déployé** (voir `git status`). Cette section décrit où on en est et ce
-> qu'il reste avant mise en prod.
-
-### Ce qui vient d'être construit (working tree, non poussé)
-
-| # | Fonction | Statut code | Fichiers / migrations clés |
-|---|---|---|---|
-| 1 | **Demandes & dédicaces + file animateur** | ✅ complet | `song_requests` + enum `request_status` → **`0016_yellow_shard.sql`** ; `POST /v1/requests` ; `GET/PATCH /v1/admin/requests` ; page admin `/demandes` ; `js/contact-form.js` → API (repli mailto si pas de titre) ; purge Loi 25 dans `maintenance.ts` |
-| 3 | **Feedback programmation (top titres)** | ✅ complet | `GET /v1/admin/analytics/top-tracks?days=` ; section dans `/statistiques` |
-| 2 | **Sondages en direct** | ✅ complet | `polls` + `poll_votes` → **`0018_empty_maverick.sql`** ; admin `/sondages` ; widget public `js/polls.js` + `#pollWidget` sur `index.html` |
-| 4 | **Outil distribution** | ✅ complet | colonne `radios.distribution` (jsonb) → **`0019_nosy_tyrannus.sql`** ; `GET/PATCH /v1/owner/radios/:id/distribution` ; carte dans `/parc/[id]` |
-| 5 | **Replay / catch-up directs** | ✅ backend gated | `api/src/services/replay.ts` + `listRecordings()` dans `azuracast.ts` ; **inactif par défaut** (`AZURACAST_REPLAY_ENABLED=false`) |
-| — | **Bibliothèque pistes + Studio DJ** | 🔄 WIP parallèle | table `tracks` → **`0017_tracks_library.sql`** ; pages admin `/pistes` + `/studio` (moteur audio client, waveform, upload) ; **pas dans le plan « forte valeur » original** |
-
-**Migrations à appliquer au prochain deploy** (dans l'ordre) : `0016` → `0017` → `0018` → `0019`.
-
-**Vérifications passées** (2026-06-29) :
-- `api/` : `typecheck` ✓ · `tenant:guard` ✓ · `test` ✓ (73)
-- `admin/` : `typecheck` ✓
-- racine : `npm test` ✓ (36)
-- `npm run check` : ⚠️ échec **pré-existant** sur `styles.bundle.css` (bundle pas regénéré — relancer `node scripts/build-css.mjs` si besoin)
-
-### Variables d'env nouvelles / à connaître
-
-| Variable | Défaut | Rôle |
-|---|---|---|
-| `AZURACAST_REPLAY_ENABLED` | `false` | Active le job replay (enregistrements AzuraCast → épisodes brouillon) |
-| `REPLAY_INTERVAL_MS` | `900000` (15 min) | Intervalle du job replay |
-
-Les sondages, demandes et distribution n'ajoutent **pas** de clé obligatoire — ils fonctionnent dès que les migrations sont appliquées.
-
-### Ce qu'il RESTE (priorité suggérée)
-
-1. **Commit + push + deploy** — tout le lot ci-dessus est encore local uniquement.
-2. ~~**Studio ↔ file demandes**~~ — ✅ **FAIT le 2026-07-14** : panneau « Demandes en direct » câblé sur `/studio` (`useRequests("new")` + `"queued"`, polling 5 s, actions En file / Jouée / Ignorer via `PATCH /v1/admin/requests/:id`).
-3. **Web Push « ta demande passe ! »** — mentionné dans le plan (notifier l'auditeur quand statut → `played`) ; **non implémenté**.
-4. **Plans non démarrés** (discussions antérieures, hors lot juin 29) :
-   - **Studio / En direct** (sessions live, créneau courant enrichi)
-   - **Bibliothèque médias + pubs/jingles** (`media_assets`, `ad_rotations`)
-   - **Extension portail opérateur** (au-delà de parc + distribution déjà là)
-5. **Bibliothèque pistes / Studio DJ** (`0017`, `/pistes`, `/studio`) — code présent mais à **valider en prod** (S3/R2, CORS upload, perf navigateur).
-6. **Replay AzuraCast** — tester l'endpoint recordings sur l'instance réelle avant d'activer `AZURACAST_REPLAY_ENABLED`.
-7. ~~**Révélation site live**~~ — ✅ **FAIT le 2026-07-14** : nav Podcasts ajoutée sur les 9 pages, `#liveBadge` câblé sur `index.html` (près du player, `initLiveBadge` déjà importé par `js/main.js`), lien Confidentialité en footer. Baselines visuelles rafraîchies (`snap:baseline`). Le « frontend public gelé » est volontairement cassé sur le chrome (nav/footer/badge).
-
-### Checklist reprise rapide
-
-```bash
-git status                    # voir l'étendue du lot non committé
-cd api && npm run typecheck && npm run tenant:guard && npm test
-cd ../admin && npm run typecheck
-cd .. && npm test
-# Après commit + push : migrations 0016-0019 s'appliquent auto (preDeployCommand)
-```
-
----
-
-## 0 bis. Nouveautés 2026-06-19 — 10 améliorations (frontend public gelé)
-
-Ajoutées sans modifier le visuel des pages existantes (le live garde son lien) :
-
-1. **Player podcasts/mixes** — nouvelle page `podcasts.html` (lecteur à la demande).
-2. **Flux RSS** — `GET /v1/rss/:showSlug` (compatible Apple Podcasts/Spotify).
-3. **Badge live « à venir »** — *code prêt côté serveur (`/v1/schedule/now`), câblage front en attente de ton feu vert (touche une page gelée).*
-4. **Rappels Web Push** — abonnement depuis `podcasts.html`, rappels auto 10 min avant l'émission.
-5. **Partage Open Graph** — `GET /v1/share/{artist,show,episode,mix}/:slug` (beaux aperçus de liens).
-6. **Sentry** — monitoring d'erreurs (api).
-7. **Analytics avancé** — graphe écoute/jour (7/30/90 j) + export CSV (sessions/émissions).
-8. **Journal d'audit** — page admin `/journal` (qui a modifié quoi, quand, IP).
-9. **Invitations & reset mot de passe** — par email + page `/compte` (changer son mdp) + page publique `/set-password`.
-10. **Recherche + pagination** — barre de recherche admin + `?q=&limit=&offset=` sur l'API.
-
-**À activer par variable d'env (sinon inactif, comme S3)** — sur le service `api` :
-
-| Fonction | Variables | Note |
-|---|---|---|
-| Sentry (#6) | `SENTRY_DSN` | crée un projet Sentry, colle le DSN |
-| Emails (#9) | `RESEND_API_KEY`, `EMAIL_FROM` | compte Resend + domaine vérifié |
-| Web Push (#4) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | générer : `cd api && npm run vapid` |
-| Liens (#2,#5,#9) | `PUBLIC_SITE_URL`, `ADMIN_BASE_URL` | déjà des défauts corrects |
-| Rétention Loi 25 | `ANALYTICS_RETENTION_DAYS` | défaut 180 j (purge auto des IP) |
-
-> Migrations DB **0002** (push_subscriptions, audit_log) et **0003** (auth_tokens)
-> s'appliquent automatiquement au déploiement. Dépendances ajoutées : `@sentry/node`, `web-push`.
-
-### ▶️ Reprise demain sur Mac — checklist
-
-1. **Récupérer le code** : `git pull origin main` (tout est poussé, branche `main`, dernier commit `3fbc0f2`).
-2. **Réinstaller les deps** (nouvelles libs ajoutées) :
-   ```bash
-   cd api && npm install      # @sentry/node, web-push, @types/web-push
-   cd ../admin && npm install
-   ```
-3. **Vérifier que tout build** : `cd api && npm run typecheck && npm test && npm run build` ; `cd ../admin && npm run build`.
-4. **(Optionnel) activer les 3 fonctions gated** — variables sur le service `api` (Railway) :
-   - Sentry : `SENTRY_DSN`
-   - Emails (invitations/reset) : `RESEND_API_KEY` + `EMAIL_FROM` (domaine vérifié chez Resend)
-   - Web Push (rappels) : générer avec `cd api && npm run vapid` → coller `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`
-   - Puis configurer le **CORS du bucket S3** + variables `S3_*` pour activer l'upload audio (sinon pas de podcasts à jouer).
-5. **Sécurité** : ✅ **fait le 2026-06-22** — `JWT_SECRET`, mot de passe **Postgres** et mot de passe **admin** rotés/renforcés via le CLI Railway (secrets jamais exposés dans le chat) ; faible `Carlogix` retiré de l'env (`SEED_ADMIN_PASSWORD` aligné). PITR Postgres actif + snapshot manuel pris. **Reste** : drill de restauration Postgres. Runbook : `SECURITE-ROTATION.md`.
-6. **« Reveal » du projet (quand tu voudras)** — rendre visibles sur le SITE LIVE les 3 ajouts gardés sur les pages neuves :
-   - lien « Podcasts » dans la nav partagée (`_partials/header-tools.html` ou la `<nav>` de chaque page) ;
-   - badge live : ajouter `<div id="liveBadge" hidden></div>` près du player sur `index.html` ;
-   - lien « Confidentialité » dans le footer partagé.
-   > Tant que ce n'est pas fait, `podcasts.html` / `confidentialite.html` existent mais ne sont liées nulle part depuis le site live (« projet secret »).
-
-**État au 2026-06-19 (soir)** : 10 améliorations construites, committées, poussées, déployées. Frontend live INCHANGÉ (vérifié : aucune page existante modifiée). Reste = activer les clés + reveal + sécurité.
-
----
-
-## 1. Ce qu'est devenu le projet
-
-Au départ : une **landing page statique** (PWA vanilla JS) avec un player radio live.
-Aujourd'hui : une **plateforme de gestion radio complète** :
-
-- **Site public** (inchangé visuellement) — player live, grille, animateurs, émissions
-- **API backend** (Hono + Drizzle + PostgreSQL) — auth, contenu, analytics
-- **Console admin** (Next.js) — gestion grille / animateurs / émissions / podcasts / mixes / utilisateurs / **statistiques d'audience**
-- **Service presence** (WebSocket) — compteur visiteurs live (existant)
-
-Le site lit désormais son contenu (grille, animateurs, émissions) depuis l'API,
-et envoie des **données d'audience** (analytics) que l'admin affiche en temps réel.
-
----
-
-## 2. Services déployés (Railway)
-
-Inventaire vérifié le **2026-08-15** via `railway status --json`.
-
-Compte `punkispike-cloud's Projects`, projet **`independent-perception`** (env `production`),
-6 services. Deux familles y cohabitent : la **plateforme En Ondes** (mutualisée entre
-toutes les radios clientes) et **Hits Dance Music** (client #0).
-
-| Service Railway | Famille | Dossier repo | Rôle réel | Domaine public |
-|---|---|---|---|---|
-| `patient-endurance` | En Ondes | `api/` | API backend (port 8082) | `patient-endurance-production-21c8.up.railway.app` |
-| `zucchini-charisma` | En Ondes | `admin/` | Console admin Next.js (port 3000) | `zucchini-charisma-production-3a67.up.railway.app` |
-| `Postgres` | En Ondes | — (image) | Base managée + bucket `Postgres-PITR` | privé (`postgres.railway.internal`) |
-| `enondes-hub` | En Ondes | `enondes-site/` | Hub d'écoute multi-stations | `enondes-hub-production.up.railway.app` |
-| `hitdanceradio.ca` | Hits Dance | `/` (racine) | **Site public** (nginx) | **`hitsdancemusic.ca`** + `www` |
-| `HitsDanceMusic.ca` | Hits Dance | `presence/` | **Compteur WebSocket** (presence) | `hitsdancemusicca-production.up.railway.app` |
-
-> ⚠️ **Piège de nommage — les deux derniers noms sont trompeurs.**
-> `HitsDanceMusic.ca` **n'est pas le site** : c'est le service *presence*.
-> Le site public, c'est `hitdanceradio.ca`, et c'est lui qui porte le domaine
-> `hitsdancemusic.ca`. Les noms `patient-endurance` / `zucchini-charisma` sont
-> auto-générés par Railway. **Toujours se fier à la colonne « Rôle réel »**,
-> jamais au nom, avant toute action destructive.
-
-**Déploiement** : `git push origin main` → Railway rebuild et redéploie automatiquement
-les services concernés. L'API applique **migrations + seed automatiquement** avant
-de démarrer (`preDeployCommand` → `node dist/db/deploy.js`).
-
-> ⚠️ **`enondes-hub` n'est pas connecté à GitHub** : il se déploie à la main et
-> dérive donc silencieusement du dépôt (constaté le 2026-08-15 : 5 semaines de
-> commits hub jamais mis en ligne). Tant qu'il n'est pas branché sur le dépôt
-> avec racine `enondes-site/`, il faut le déployer explicitement :
->
-> ```bash
-> # depuis la RACINE du dépôt — le flag --path-as-root est obligatoire
-> railway up enondes-site --path-as-root --service enondes-hub --ci
-> ```
->
-> Sans `--path-as-root`, `railway up` prend la **racine du dépôt Git** comme
-> contexte de build (pas le dossier courant) : le hub se retrouve alors à servir
-> le site Hits Dance. Erreur commise et corrigée le 2026-08-15.
-
-### Autres projets du compte
-
-| Projet | Contenu | Statut |
-|---|---|---|
-| `castly` | `castly-web` (app web « Castly »), `castly-media` (API JSON), `Postgres` | En Ondes — déploiements **manuels** (même risque de dérive que le hub) |
-| `evalust` | `frontend` + `backend` (dépôt `punkispike-cloud/ai-companion`), `Postgres-Y5Nm` | Hors périmètre radio |
-| `Carlogix Crm` | — | Hors périmètre radio |
-
-`en-ondes-test` (instance jetable de validation multi-tenant, juin 2026) a été
-**supprimée le 2026-08-15** : 4 services (`api`, `admin`, `db`, `probe` jamais déployé),
-inactive depuis le 2026-06-23.
-
----
-
-## 3. Accès
-
-- **Admin** : https://zucchini-charisma-production-3a67.up.railway.app
-  - Login : `admin@hitsdancemusic.ca`
-  - Mot de passe : celui défini dans la variable `SEED_ADMIN_PASSWORD` du service `api`
-    (actuellement faible — **à renforcer**, voir §7 Sécurité).
-- **API health** : https://patient-endurance-production-21c8.up.railway.app/health
-- **GitHub** : https://github.com/punkispike-cloud/HitsDanceMusic.ca (branche `main`)
-
----
-
-## 4. Reprendre le développement (sur Mac)
-
-```bash
-git clone https://github.com/punkispike-cloud/HitsDanceMusic.ca.git
-cd HitsDanceMusic.ca
-# Node 20 requis (nvm install 20 && nvm use 20)
-```
-
-### API (backend) en local
-```bash
-cd api
-cp .env.example .env            # ajuster DATABASE_URL + JWT_SECRET
-npm install
-# Postgres local rapide :
-#   docker run -d --name hr-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
-npm run db:migrate              # applique les migrations
-npm run seed                    # superadmin + animateurs + émissions + grille
-npm run dev                     # http://localhost:8082
-```
-
-### Admin (console) en local
-```bash
-cd admin
-cp .env.example .env            # NEXT_PUBLIC_API_URL=http://localhost:8082
-npm install
-npm run dev                     # http://localhost:3000
-```
-(L'API doit tourner ; `http://localhost:3000` est déjà dans son `ALLOWED_ORIGINS`.)
-
-### Site public en local
-Servir la racine en statique (n'importe quel serveur) :
-```bash
-npx serve .        # ou: python3 -m http.server
-```
-> Le site appelle l'API de prod par défaut (URL codée dans `js/api-config.js`,
-> surchargeable via `<meta name="hr-api-url">`).
-
-### Après modification du site statique (JS/CSS/HTML du shell)
-```bash
-node scripts/build-sw.mjs       # recalcule le hash du service worker (sinon cache périmé)
-```
-
-### Tests API
-```bash
-cd api && npm test              # round-trip grille (SCHEDULE ↔ minutes)
-```
-
----
-
-## 5. Structure du repo
-
-```
-/                       → site statique (nginx) — service web
-  index.html, animateurs.html, emissions.html, horaire.html, contact.html, stats.html
-  js/                   → modules ES du site
-    main.js             → orchestrateur (initCritical / initIdle)
-    api-config.js       → base URL de l'API (NOUVEAU)
-    analytics.js        → beacons d'audience vers /v1/track (NOUVEAU)
-    client-id.js        → hr.clientId, source unique : getClientId() lit, ensureClientId() crée
-    content.js          → rend animateurs + émissions depuis l'API (NOUVEAU)
-    schedule.js         → grille (fallback hardcodé + loadScheduleFromApi)
-    player.js, presence.js, ...
-  styles/               → CSS (29 fichiers séquentiels)
-  sw.js                 → service worker (cache shell ; hash auto via build-sw.mjs)
-  nginx.conf            → config + CSP (connect-src inclut l'API ; img-src inclut S3)
-  scripts/build-sw.mjs, build-html.mjs
-
-api/                    → backend Hono + Drizzle + PostgreSQL (TypeScript)
-  src/
-    index.ts            → app Hono, montage routes, shutdown
-    env.ts              → validation env (BUILTIN_ORIGINS fusionnés — voir §8)
-    db/{schema,client,migrate,seed,seed-data,deploy}.ts
-    lib/{jwt,password,errors,validation,s3}.ts
-    middleware/{cors,auth,rbac,rateLimit,error}.ts
-    routes/{auth,public,admin,uploads,track,analytics-admin,health}.ts
-    services/{auth,schedule,analytics}.ts
-  migrations/           → SQL versionné (0000_init, 0001_analytics)
-  railway.json          → preDeployCommand: node dist/db/deploy.js (migrate+seed)
-
-admin/                  → console Next.js (App Router, TypeScript)
-  app/
-    login/, page.tsx
-    (admin)/            → layout protégé + pages
-      dashboard, statistiques, grille, animateurs, emissions, podcasts, mixes, utilisateurs
-  components/           → crud, ui, toast, sidebar, audio-upload, image-upload
-  lib/                  → api (client auto-refresh), auth (contexte), types
-
-presence/               → service WebSocket (existant, inchangé)
-```
-
-Docs liées : [api/README.md](api/README.md), [admin/README.md](admin/README.md), [DEPLOY-RAILWAY.md](DEPLOY-RAILWAY.md).
-
----
-
-## 6. Ce qui est FAIT ✅
-
-- **Auth** : login/refresh (rotation + détection réutilisation)/logout/me/change-password ; rôles superadmin/animateur/lecteur ; RBAC ownership (`artist_id`).
-- **Contenu** : CRUD animateurs (photo, bio, réseaux sociaux), émissions, grille (éditeur visuel par jour), podcasts, mixes, utilisateurs.
-- **API publique** : `/v1/schedule` (format exact), `/v1/artists`, `/v1/shows`, `/v1/episodes`, `/v1/mixes`.
-- **Site ↔ API** : grille + animateurs + émissions lus depuis l'API (visuel identique, fallback HTML).
-- **Analytics** : beacons (pageview/heartbeat/listen) → IP, navigateur, appareil, **géoloc pays/ville**, temps sur le site, temps d'écoute par émission. Page admin « Statistiques » (live, moyennes, sessions+IP).
-- **Upload audio + photo** : composants admin prêts (presign → PUT S3 → confirm). **Nécessite S3 configuré** (voir §7).
-- **Infra** : déploiement Railway config-as-code, migrations + seed auto au deploy.
-
----
-
-## 7. Ce qui RESTE à faire 🔜
-
-### A. Activer S3 (pour upload photo + audio)
-Le code est prêt ; il manque la config AWS :
-1. Variables sur le service `api` (Railway → patient-endurance → Variables) :
-   ```
-   S3_REGION=ca-central-1
-   S3_BUCKET=<ton-bucket>
-   S3_ACCESS_KEY_ID=<...>
-   S3_SECRET_ACCESS_KEY=<...>
-   S3_PUBLIC_BASE_URL=https://<ton-bucket>.s3.ca-central-1.amazonaws.com
-   ```
-2. CORS du bucket S3 (AWS Console → S3 → bucket → Permissions → CORS) :
-   ```json
-   [{ "AllowedOrigins": ["https://zucchini-charisma-production-3a67.up.railway.app"],
-      "AllowedMethods": ["PUT","GET","HEAD"], "AllowedHeaders": ["*"],
-      "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 }]
-   ```
-   (`*.amazonaws.com` est déjà autorisé dans la CSP `img-src` du site.)
-
-### B. Player podcasts/mixes sur le site public
-Écouter les audios uploadés depuis le site (on-demand). Nécessite :
-- une page/section qui liste `/v1/episodes` et `/v1/mixes`
-- ajouter le domaine S3/CDN à la CSP `media-src` de `nginx.conf`
-
-### C. ✅ FAIT — Fiche animateur détaillée
-Clic sur une carte `.talent-card` → modal profil (grande photo, bio, réseaux,
-ses émissions, prochains passages calculés depuis la grille). Fichiers :
-`js/animateur-detail.js`, `styles/29-animateur-detail.css`, câblé dans `js/content.js`.
-(Évolution possible : vraies pages `/animateurs/[slug]` pour le SEO.)
-
-### D. Sécurité
-- **Roter le mot de passe Postgres** (exposé pendant la mise en place).
-- **Renforcer le mot de passe admin** (actuellement faible). Pas encore de page
-  « changer mot de passe » dans l'admin — l'endpoint API existe (`POST /auth/change-password`).
-- Mention **Loi 25** dans la politique de confidentialité (collecte d'IP).
-
-### E. Bugs frontend
-- ✅ **CORRIGÉ** — `nginx.conf` proxy `/np` : ajout de la zone `proxy_cache_path np_cache` + `proxy_cache` (le `proxy_cache_valid` était inerte sans zone).
-- ⚠️ Faux positifs (NE PAS recorriger) : `clampString`/`clampLyrics` (`js/util.js`) sont **corrects** — leurs regexes `/[\x00-\x1F\x7F]+/g` strippent les caractères de contrôle et préservent tirets/espaces/newlines (l'affichage masquait les caractères de contrôle).
-- Mineur (faible impact) : `js/player.js` `#liveTrackHint` n'est pas retiré après récupération des métadonnées.
-
-### F. Optionnel
-- Domaines custom `api.hitsdancemusic.ca` + `admin.hitsdancemusic.ca` (résout les cookies tiers proprement).
-- Flux RSS podcasts (`/v1/rss/:showSlug`) pour Apple Podcasts/Spotify.
-
----
-
-## 8. Pièges & leçons Railway (IMPORTANT pour continuer)
-
-1. **`preDeployCommand` ne s'exécute PAS dans un shell** → `&&` ne chaîne pas.
-   Utiliser un script node unique : `node dist/db/deploy.js` (lance migrate puis seed).
-2. **Domaines `*.up.railway.app` = cross-site** (public suffix) → le cookie refresh
-   doit être `SameSite=None; Secure` en prod (déjà fait dans `routes/auth.ts`).
-3. **CORS** : le domaine admin est ajouté en dur dans `BUILTIN_ORIGINS` (`api/src/env.ts`)
-   ET via `ALLOWED_ORIGINS`. Si le domaine admin change, mettre à jour les deux.
-4. **Service worker** : après toute modif d'un fichier du `SHELL` (JS/CSS/HTML),
-   relancer `node scripts/build-sw.mjs` sinon les utilisateurs gardent l'ancienne version.
-5. **Seed idempotent** : ne re-seede le contenu que si la base est vierge → les
-   éditions faites dans l'admin sont préservées à chaque redéploiement.
-6. **Migrations** : générées avec `npm run db:generate` (drizzle-kit), committées dans
-   `api/migrations/`, appliquées auto au deploy.
-
----
-
-## 9. Variables d'environnement (référence)
-
-### Service `api`
-| Var | Rôle |
+| Élément | État |
 |---|---|
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (privé) |
-| `JWT_SECRET` | secret JWT (≥32 car.) |
-| `ALLOWED_ORIGINS` | origines CORS (fusionné avec BUILTIN_ORIGINS) |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | bootstrap superadmin |
-| `S3_*` | stockage audio/photo (à configurer — §7) |
-| `NODE_ENV=production` | |
+| Site live hitsdancemusic.ca | UP — deny nginx infra (404) |
+| API prod `patient-endurance` | UP — migrations jusqu’à **0027**, RLS ALS runtime |
+| Admin prod | UP — Sentry gated (`NEXT_PUBLIC_SENTRY_DSN`) |
+| Staging Railway | UP — API/admin/site/hub domaines `*-staging.up.railway.app` |
+| Postgres staging | **`Postgres-2fkU`** (dédié, TCP proxy actif). Ancien `Postgres` : volume déjà supprimé, service FAILED à retirer au dashboard |
+| Presence staging | Domaine + `ALLOWED_ORIGINS` (site/hub staging + prod) |
+| RLS | **`test:rls` vert** sur staging avec rôle `enondes_app` (`node scripts/setup-rls-role.mjs <DATABASE_PUBLIC_URL>`) |
+| CI | jobs unit/smoke/nginx-deny + smoke-staging best-effort ; 1 review sur `main` |
+| Hub En Ondes | Prod + staging via `railway up enondes-site --path-as-root` ; **pas encore** branché GitHub |
 
-### Service `admin`
-| Var | Rôle |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | URL publique de l'API (inlinée au build) |
+### URLs staging
 
-Détails complets dans `api/.env.example` et `admin/.env.example`.
+- API : https://patient-endurance-staging.up.railway.app  
+- Admin : https://zucchini-charisma-staging.up.railway.app  
+- Site : https://hitdanceradioca-staging.up.railway.app  
+- Hub : https://enondes-hub-staging.up.railway.app  
+- Presence : https://hitsdancemusicca-staging.up.railway.app  
+
+```bash
+npm run verify:prod
+npm run verify:staging
+npm run check:nginx-deny
+```
+
+### Reste ops (humain)
+
+1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin
+2. Brancher `enondes-hub` sur GitHub, root `enondes-site/`
+3. Supprimer le service staging `Postgres` orphelin (dashboard)
+4. Pointer `DATABASE_URL` api staging → `enondes_app` (RLS déjà validée), puis prod après 2 semaines
+5. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
+
+---
+
+## Architecture (rappel)
+
+- **Site public** — nginx racine (`hitdanceradio.ca`)
+- **API** — Hono + Drizzle + Postgres (`api/`)
+- **Admin** — Next.js (`admin/`)
+- **Presence** — WebSocket (`presence/`)
+- **Hub** — En Ondes multi-stations (`enondes-site/`)
+
+Déploiement : `git push origin main` → Railway. API : `preDeployCommand` → `node dist/db/deploy.js` (migrate + seed).
+
+Docs : [DEPLOY-RAILWAY.md](DEPLOY-RAILWAY.md) · [OPERATIONS.md](OPERATIONS.md) · [MULTITENANT-DEPLOIEMENT.md](MULTITENANT-DEPLOIEMENT.md) · [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md).

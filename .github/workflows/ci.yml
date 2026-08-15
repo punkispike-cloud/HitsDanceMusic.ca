@@ -108,11 +108,26 @@ jobs:
       # avoir tourné après une modif). build-css requiert lightningcss (npm ci).
       - name: Vérifier le pipeline de build (marque · partials · hash SW)
         run: node scripts/build-all.mjs --check
+      - name: Vérifier le deny nginx des fichiers infra
+        run: node scripts/check-nginx-deny.mjs
       # Vérifie que chaque module ES parse (attrape les erreurs de syntaxe).
       - name: Vérifier la syntaxe des modules JS
         run: |
           set -e
           for f in js/*.js; do node --check "$f"; done
+
+  smoke-staging:
+    name: Smoke API staging (verify-deploy)
+    runs-on: ubuntu-latest
+    # Best-effort : ne bloque pas le merge si staging est down (continue-on-error).
+    # Sert de filet quotidien sur les PR.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/verify-deploy.mjs https://patient-endurance-staging.up.railway.app
 
   stations:
     name: "Hub stations (intégrité manifeste)"
