@@ -145,10 +145,101 @@ function pauseSessionClock() {
   renderSessionBadge();
 }
 
+/* ----- Reconnexion & surveillance du flux -----
+   L'état vit au niveau module (et non dans une fermeture de bindAudioEvents)
+   pour que startPlayback / pausePlayback puissent annuler une tentative en
+   attente : un timer orphelin qui se déclenche après coup recharge la source
+   et coupe un flux qui venait de repartir. */
+const MAX_RECONNECT = 8;
+const STARVATION_MS = 5000;   // tampon vide plus longtemps que ça = vraie coupure
+const FROZEN_MS = 9000;       // position figée : filet de sécurité
+const BUFFERING_UI_MS = 1200; // n'affiche « tampon » que si le hoquet dure
+
+let reconnectTimer = null;
+let reconnectAttempt = 0;
+let starvationTimer = null;
+let bufferingUiTimer = null;
+let watchdog = null;
+let lastTime = 0;
+let lastTimeAt = 0;
+let hiccupAtTime = 0; // position au moment où le tampon s'est vidé
+
+const wantPlay = () => store.get(STORAGE.playing, "0") === "1";
+
+function cancelReconnect() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  reconnectAttempt = 0;
+}
+function clearHiccupTimers() {
+  if (starvationTimer) { clearTimeout(starvationTimer); starvationTimer = null; }
+  if (bufferingUiTimer) { clearTimeout(bufferingUiTimer); bufferingUiTimer = null; }
+}
+function stopWatchdog() {
+  if (watchdog) { clearInterval(watchdog); watchdog = null; }
+}
+function startWatchdog() {
+  stopWatchdog();
+  if (!audio) return;
+  lastTime = audio.currentTime;
+  lastTimeAt = Date.now();
+  watchdog = setInterval(() => {
+    if (!audio || audio.paused || reconnectTimer) return;
+    if (audio.currentTime !== lastTime) {
+      lastTime = audio.currentTime;
+      lastTimeAt = Date.now();
+      return;
+    }
+    if (Date.now() - lastTimeAt > FROZEN_MS) {
+      console.warn("[HitRadio] watchdog : position figée");
+      reconnectNow("watchdog");
+    }
+  }, 2000);
+}
+
+/* Reconnexion « dure » : nouvelle socket côté serveur. Coûteuse (0,8 s à 2,6 s
+   de TTFB mesurés sur cast5, plus le re-remplissage du tampon) → réservée aux
+   vraies coupures, jamais aux hoquets réseau passagers. */
+function reconnectNow(reason) {
+  if (reconnectTimer || !wantPlay() || !audio) return;
+  if (reconnectAttempt >= MAX_RECONNECT) {
+    stopWatchdog();
+    clearHiccupTimers();
+    store.set(STORAGE.playing, "0");
+    setPlayingUI(false, "Flux indisponible — appuie sur lecture");
+    toast("Le flux ne répond plus. Appuie sur ▶ pour réessayer.", "warn");
+    return;
+  }
+  reconnectAttempt++;
+  // Backoff exponentiel plafonné + gigue : quand le serveur lâche, il lâche
+  // pour tout le monde ; sans gigue, tous les auditeurs reviennent à la même
+  // seconde et saturent la reprise.
+  const base = Math.min(12_000, 400 * 2 ** (reconnectAttempt - 1));
+  const delay = Math.round(base * (0.75 + Math.random() * 0.5));
+  setPlayingUI(false, `Reconnexion… (${reconnectAttempt})`);
+  pauseSessionClock();
+  console.info(`[HitRadio] reconnexion (${reason}) dans ${delay} ms`);
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    if (!wantPlay() || !audio) return;
+    try {
+      audio.src = `${STREAM_URL}?_=${Date.now()}`;
+      audio.load();
+      await audio.play();
+    } catch {
+      reconnectNow("échec-tentative");
+    }
+  }, delay);
+}
+
 /* ----- Playback ----- */
 export async function startPlayback() {
   ensureAudio();
   if (!audio) return;
+  // Un geste utilisateur prime sur toute reconnexion programmée : sinon le
+  // timer en attente recharge la source quelques secondes plus tard et coupe
+  // le flux que l'utilisateur vient de relancer.
+  cancelReconnect();
+  clearHiccupTimers();
   if (!audio.paused) return;
   try {
     setPlayingUI(false, "Connexion au direct…");
@@ -169,6 +260,9 @@ export async function startPlayback() {
 
 export function pausePlayback() {
   if (!audio) return;
+  cancelReconnect();
+  clearHiccupTimers();
+  stopWatchdog();
   audio.pause();
   setPlayingUI(false, "En pause");
   store.set(STORAGE.playing, "0");
@@ -189,90 +283,73 @@ export function bindAudioEvents() {
   if (!audio || audio.dataset.bound === "1") return;
   audio.dataset.bound = "1";
 
-  let reconnectTimer = null;
-  let reconnectAttempt = 0;
-  let lastTime = 0;
-  let lastTimeAt = Date.now();
-  let watchdog = null;
-
-  const wantPlay = () => store.get(STORAGE.playing, "0") === "1";
-
-  function scheduleReconnect(reason) {
-    if (reconnectTimer) return;
-    if (!wantPlay()) return;
-    reconnectAttempt++;
-    const delay = Math.min(15000, 1000 * Math.pow(2, reconnectAttempt - 1));
-    setPlayingUI(false, `Reconnexion… (${reconnectAttempt})`);
-    pauseSessionClock();
-    console.info(`[HitRadio] reconnect (${reason}) in ${delay}ms`);
-    reconnectTimer = setTimeout(async () => {
-      reconnectTimer = null;
-      if (!wantPlay()) return;
-      try {
-        audio.src = `${STREAM_URL}?_=${Date.now()}`;
-        audio.load();
-        await audio.play();
-      } catch {
-        scheduleReconnect("retry-failed");
-      }
-    }, delay);
-  }
-  function cancelReconnect() {
-    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-    reconnectAttempt = 0;
-  }
-  function startWatchdog() {
-    stopWatchdog();
-    lastTime = audio.currentTime;
-    lastTimeAt = Date.now();
-    watchdog = setInterval(() => {
-      if (audio.paused) return;
-      if (audio.currentTime !== lastTime) {
-        lastTime = audio.currentTime;
-        lastTimeAt = Date.now();
-      } else if (Date.now() - lastTimeAt > 10000) {
-        console.warn("[HitRadio] watchdog: stream stalled");
-        scheduleReconnect("watchdog");
-      }
-    }, 3000);
-  }
-  function stopWatchdog() {
-    if (watchdog) { clearInterval(watchdog); watchdog = null; }
-  }
-
   audio.addEventListener("waiting", () => {
-    setPlayingUI(false, "Mise en mémoire tampon…");
-    // Buffering/reconnexion = pas de son réel → on gèle le compteur d'écoute
-    // pour ne pas surcompter le temps pendant les coupures.
-    pauseSessionClock();
+    // `waiting` = le tampon est réellement vide. Sur un direct, un hoquet de
+    // moins d'une seconde est banal : on ne touche pas à l'affichage tout de
+    // suite, sinon le player clignote « Mise en mémoire tampon… » plusieurs
+    // fois par minute alors que le son ne s'est jamais interrompu.
+    if (!bufferingUiTimer) {
+      bufferingUiTimer = setTimeout(() => {
+        bufferingUiTimer = null;
+        setPlayingUI(false, "Mise en mémoire tampon…");
+        // Pas de son réel → on gèle le compteur d'écoute pour ne pas
+        // surcompter le temps pendant les coupures.
+        pauseSessionClock();
+      }, BUFFERING_UI_MS);
+    }
+    // Au-delà de STARVATION_MS le navigateur ne s'en sortira pas seul : la
+    // source ne réalimente plus. Une socket neuve repart généralement propre.
+    if (!starvationTimer) {
+      hiccupAtTime = audio.currentTime;
+      starvationTimer = setTimeout(() => {
+        starvationTimer = null;
+        if (audio && !audio.paused) reconnectNow("tampon vide");
+      }, STARVATION_MS);
+    }
   });
   audio.addEventListener("playing", () => {
-    setPlayingUI(true, "En direct");
+    clearHiccupTimers();
     cancelReconnect();
+    setPlayingUI(true, "En direct");
     startWatchdog();
     startSessionClock();
+  });
+  audio.addEventListener("timeupdate", () => {
+    // On désamorce la reconnexion seulement si la position a réellement
+    // AVANCÉ depuis le hoquet : certains navigateurs émettent un timeupdate
+    // juste après `waiting`, à la même position, et s'y fier annulerait la
+    // reprise d'un flux réellement bloqué.
+    if (!starvationTimer && !bufferingUiTimer) return;
+    if (audio.currentTime > hiccupAtTime) clearHiccupTimers();
   });
   audio.addEventListener("pause", () => {
     setPlayingUI(false, "En pause");
     stopWatchdog();
     pauseSessionClock();
   });
-  audio.addEventListener("stalled", () => scheduleReconnect("stalled"));
-  audio.addEventListener("ended", () => scheduleReconnect("ended"));
+  // `stalled` NE déclenche PAS de reconnexion. Le navigateur l'émet dès que la
+  // socket reste ~3 s sans octet, ce qui arrive en permanence sur ce flux :
+  // il cesse de lire quand son tampon est plein, et cast5 présente des trous
+  // de livraison de 1 à 3,5 s (mesurés). Reconnecter là-dessus détruisait un
+  // flux parfaitement sain et provoquait la coupure qu'on croyait subir.
+  audio.addEventListener("stalled", () => console.info("[HitRadio] stalled (ignoré)"));
+  audio.addEventListener("ended", () => reconnectNow("flux terminé"));
   audio.addEventListener("error", () => {
     setPlayingUI(false, "Connexion perdue — reconnexion…");
-    scheduleReconnect("error");
+    reconnectNow("erreur");
   });
   audio.addEventListener("volumechange", () => {
     for (const ui of playerUIs) ui.syncVolume(audio.volume, audio.muted);
   });
 
   window.addEventListener("online", () => {
-    if (!wantPlay()) return;
-    console.info("[HitRadio] network back online → resume");
+    if (!wantPlay() || !audio) return;
+    // Le réseau revient : si la lecture tourne déjà avec du tampon d'avance,
+    // elle a survécu à la coupure — la relancer ne ferait que la couper.
+    if (!audio.paused && audio.readyState >= 3) return;
+    console.info("[HitRadio] réseau rétabli → reprise");
     cancelReconnect();
-    reconnectAttempt = 0;
-    scheduleReconnect("online");
+    reconnectNow("réseau rétabli");
   });
   window.addEventListener("offline", () => {
     if (!audio.paused) {

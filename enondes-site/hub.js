@@ -23,6 +23,9 @@ const state = {
   reconnectTimer: null,
   reconnectAttempt: 0,
   watchdog: null,
+  starvationTimer: null,  // tampon vide depuis trop longtemps → reconnexion
+  bufferingTimer: null,   // n'affiche « Mise en mémoire… » que si ça dure
+  hiccupAt: 0,            // position au moment où le tampon s'est vidé
   lastPos: 0,
   lastTrackKey: "",
   track: null, // {artist,title} courant
@@ -378,10 +381,17 @@ function selectStation(st, autoplay) {
 function setLoadingUI(on) {
   for (const id of ["pPlay", "sheetPlay"]) byId(id)?.classList.toggle("is-loading", on);
 }
-async function startPlayback() {
+/* userInitiated = false uniquement pour l'appel issu du timer de reconnexion :
+   sinon stopReconnect() y remettrait le compteur à zéro et le backoff (comme
+   le plafond de tentatives) ne s'appliquerait jamais. */
+async function startPlayback(userInitiated = true) {
   state.intent = true;
   store(LS.playing, "1"); // mémorise l'intention d'écoute pour la reprise de session (QW-3)
   hideResumePrompt();
+  // Un geste utilisateur annule la reconnexion en attente : sans ça, le timer
+  // se déclenche après coup et coupe le flux qu'on vient de relancer.
+  if (userInitiated) stopReconnect();
+  clearHiccupTimers();
   setLoadingUI(true);
   try {
     if (!audio.src && state.current) audio.src = state.current.stream;
@@ -389,7 +399,13 @@ async function startPlayback() {
   } catch (e) { setPlayingUI(false); console.warn("[hub] lecture refusée", e?.message || e); }
   finally { setLoadingUI(false); }
 }
-function pausePlayback() { state.intent = false; store(LS.playing, "0"); audio.pause(); }
+function pausePlayback() {
+  state.intent = false;
+  store(LS.playing, "0");
+  stopReconnect();
+  clearHiccupTimers();
+  audio.pause();
+}
 function togglePlay() { audio.paused ? startPlayback() : pausePlayback(); }
 
 function setPlayingUI(on, label) {
@@ -539,27 +555,66 @@ function scheduleReconnect(reason) {
     state.reconnectTimer = null;
     if (!state.current) return;
     audio.src = `${state.current.stream}${state.current.stream.includes("?") ? "&" : "?"}_=${Date.now()}`;
-    startPlayback();
+    startPlayback(false);
   }, delay);
 }
 function stopReconnect() {
   if (state.reconnectTimer) { clearTimeout(state.reconnectTimer); state.reconnectTimer = null; }
   state.reconnectAttempt = 0;
 }
+function clearHiccupTimers() {
+  if (state.starvationTimer) { clearTimeout(state.starvationTimer); state.starvationTimer = null; }
+  if (state.bufferingTimer) { clearTimeout(state.bufferingTimer); state.bufferingTimer = null; }
+}
 function wireAudio() {
-  audio.addEventListener("playing", () => { stopReconnect(); setPlayingUI(true); });
+  audio.addEventListener("playing", () => { clearHiccupTimers(); stopReconnect(); setPlayingUI(true); });
   audio.addEventListener("pause", () => { if (!state.reconnectTimer) setPlayingUI(false); });
-  audio.addEventListener("stalled", () => { if (!audio.paused) scheduleReconnect("stalled"); });
+  // `stalled` NE déclenche PAS de reconnexion : le navigateur l'émet dès que la
+  // socket reste ~3 s sans octet, ce qui est le régime normal d'un direct (il
+  // cesse de lire quand son tampon est plein, et les serveurs Shoutcast ont des
+  // trous de livraison de plusieurs secondes). Reconnecter là-dessus détruisait
+  // un flux sain — c'était la coupure elle-même, pas son symptôme.
+  audio.addEventListener("stalled", () => console.info("[hub] stalled (ignoré)"));
   audio.addEventListener("ended", () => scheduleReconnect("ended"));
   audio.addEventListener("error", () => { if (state.current) scheduleReconnect("error"); });
-  audio.addEventListener("waiting", () => setPlayingUI(state.playing, "Mise en mémoire…"));
+  audio.addEventListener("waiting", () => {
+    // Hoquet court (< 1,2 s) : le son ne s'interrompt pas vraiment, on ne
+    // fait pas clignoter le player. Au-delà de 5 s le navigateur ne s'en
+    // sortira pas seul → socket neuve.
+    if (!state.bufferingTimer) {
+      state.bufferingTimer = setTimeout(() => {
+        state.bufferingTimer = null;
+        setPlayingUI(state.playing, "Mise en mémoire…");
+      }, 1200);
+    }
+    if (!state.starvationTimer) {
+      state.hiccupAt = audio.currentTime;
+      state.starvationTimer = setTimeout(() => {
+        state.starvationTimer = null;
+        if (!audio.paused) scheduleReconnect("tampon vide");
+      }, 5000);
+    }
+  });
+  // On ne désamorce que si la position a réellement AVANCÉ depuis le hoquet :
+  // un timeupdate à la même position (émis juste après `waiting` par certains
+  // navigateurs) annulerait la reprise d'un flux réellement bloqué.
+  audio.addEventListener("timeupdate", () => {
+    if (!state.starvationTimer && !state.bufferingTimer) return;
+    if (audio.currentTime > state.hiccupAt) clearHiccupTimers();
+  });
   clearInterval(state.watchdog);
   state.watchdog = setInterval(() => {
     if (audio.paused || state.reconnectTimer) { state.lastPos = audio.currentTime; return; }
     if (audio.currentTime > 0 && audio.currentTime === state.lastPos) scheduleReconnect("watchdog");
     state.lastPos = audio.currentTime;
   }, 12000);
-  window.addEventListener("online", () => { if (state.current && !audio.paused) scheduleReconnect("online"); });
+  window.addEventListener("online", () => {
+    if (!state.current || audio.paused) return;
+    // Si la lecture tourne avec du tampon d'avance, elle a survécu à la
+    // coupure réseau : la relancer ne ferait que la couper pour de bon.
+    if (audio.readyState >= 3) return;
+    scheduleReconnect("réseau rétabli");
+  });
 }
 
 /* ───────────────── Réseau (bannière hors-ligne) ───────────────── */
