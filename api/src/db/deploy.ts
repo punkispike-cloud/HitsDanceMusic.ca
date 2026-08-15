@@ -8,10 +8,25 @@
 
 import { execFileSync } from "node:child_process";
 
+/* Runtime API utilise DATABASE_URL (= enondes_app une fois basculé).
+   Migrate + seed ont besoin du rôle owner (DDL / bypass RLS) :
+   poser MIGRATE_DATABASE_URL sur l'URL postgres owner. Absent → DATABASE_URL. */
+const migrateUrl = (process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL || "").trim();
+if (!migrateUrl) {
+  console.error("[deploy] ❌ DATABASE_URL (ou MIGRATE_DATABASE_URL) manquant");
+  process.exit(1);
+}
+if (process.env.MIGRATE_DATABASE_URL) {
+  console.log("[deploy] migrate/seed via MIGRATE_DATABASE_URL (owner)");
+}
+
 function run(script: string): void {
   console.log(`[deploy] → ${script}`);
   // process.execPath = chemin absolu du binaire node courant (robuste).
-  execFileSync(process.execPath, [script], { stdio: "inherit" });
+  execFileSync(process.execPath, [script], {
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: migrateUrl },
+  });
 }
 
 try {

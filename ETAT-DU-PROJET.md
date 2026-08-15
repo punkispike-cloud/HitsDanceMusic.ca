@@ -13,11 +13,10 @@
 | API prod `patient-endurance` | UP — migrations jusqu’à **0027**, RLS ALS runtime |
 | Admin prod | UP — Sentry gated (`NEXT_PUBLIC_SENTRY_DSN`) |
 | Staging Railway | UP — API/admin/site/hub domaines `*-staging.up.railway.app` |
-| Postgres staging | **`Postgres-2fkU`** (dédié, TCP proxy actif). Ancien `Postgres` : volume déjà supprimé, service FAILED à retirer au dashboard |
-| Presence staging | Domaine + `ALLOWED_ORIGINS` (site/hub staging + prod) |
-| RLS | **`test:rls` vert** sur staging avec rôle `enondes_app` (`node scripts/setup-rls-role.mjs <DATABASE_PUBLIC_URL>`) |
-| CI | jobs unit/smoke/nginx-deny + smoke-staging best-effort ; 1 review sur `main` |
-| Hub En Ondes | Prod + staging via `railway up enondes-site --path-as-root` ; **pas encore** branché GitHub |
+| Postgres staging | **`Postgres-2fkU`** (TCP proxy). Orphelin `Postgres` **supprimé** |
+| Presence staging | Domaine + `ALLOWED_ORIGINS` OK |
+| RLS | `test:rls` vert ; bascule runtime `enondes_app` via `MIGRATE_DATABASE_URL` + `activate-enondes-app-staging.mjs` |
+| Hub En Ondes | GitHub branché, root `enondes-site/` (prod + staging) |
 
 ### URLs staging
 
@@ -36,10 +35,8 @@ npm run check:nginx-deny
 ### Reste ops (humain)
 
 1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin
-2. Brancher `enondes-hub` sur GitHub, root `enondes-site/`
-3. Supprimer le service staging `Postgres` orphelin (dashboard)
-4. Pointer `DATABASE_URL` api staging → `enondes_app` (RLS déjà validée), puis prod après 2 semaines
-5. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
+2. Après merge Vague 3.1 code : `node scripts/activate-enondes-app-staging.mjs` puis 2 semaines stables avant prod
+3. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
 
 ---
 
