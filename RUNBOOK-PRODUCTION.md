@@ -52,11 +52,17 @@ Ou UI : Settings → Branches → main → Require approvals = 1.
 **Créé (2026-08-15)** : environnement `staging` (duplication de `production`)
 dans le projet `independent-perception` (id `7d622214-1b02-4d3d-bc28-bfbd65f40a8a`).
 
+> **Pas encore sûr** : la duplication copie les mêmes secrets et très
+> probablement la **même** `DATABASE_URL` que la prod. Ne pas écrire dessus tant
+> qu’un Postgres staging dédié n’est pas branché et que `JWT_SECRET` / `SEED_*`
+> n’ont pas été rotés.
+
 À faire ensuite dans le dashboard Railway :
-1. Générer des domaines staging distincts (api/admin) — **pas** hitsdancemusic.ca.
-2. Remplacer `JWT_SECRET` / `SEED_*` staging (ne pas partager la prod).
-3. Désactiver Stripe live / webhooks prod sur staging.
-4. Workflow : PR → CI → smoke staging manuel → merge `main` → prod.
+1. Ajouter un Postgres **staging** dédié → repointer `DATABASE_URL`.
+2. Générer des domaines staging distincts (api/admin) — **pas** hitsdancemusic.ca.
+3. Remplacer `JWT_SECRET` / `SEED_*` staging (ne pas partager la prod).
+4. Pas de Stripe live / webhooks prod sur staging.
+5. Workflow : PR → CI → smoke staging manuel → merge `main` → prod.
 
 ### Railway staging (création)
 
