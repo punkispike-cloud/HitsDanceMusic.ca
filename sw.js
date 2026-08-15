@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-8a484f600216";
+const CACHE = "hitradio-bdf92d23e83a";
 /* SHELL — liste des ressources précachées pour l'offline.
    ⚠ Maintenance manuelle : ce tableau est la source unique du précache.
    build-sw.mjs en rehash le contenu (→ bump auto de CACHE) et avertit si un
@@ -72,6 +72,7 @@ const SHELL = [
   "./js/favorites.js",
   "./js/stats.js",
   "./js/contact-form.js",
+  "./js/polls.js",
   "./js/connectivity.js",
   "./js/seo.js",
   "./js/countdown.js",
