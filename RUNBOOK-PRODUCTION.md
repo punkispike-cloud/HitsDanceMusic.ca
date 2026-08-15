@@ -115,15 +115,17 @@ Sans besoin produit immédiat : **ne pas** activer (uploads restent `503 s3_unco
 
 Prérequis code : middleware `bindRequestDb` + ALS déjà en place.
 
-1. Sur Postgres (owner) :
+**Fait (2026-08-15)** : sur staging `Postgres-2fkU` (TCP proxy `kodama.proxy.rlwy.net`),  
+`node scripts/setup-rls-role.mjs <DATABASE_PUBLIC_URL>` → **test:rls vert** (isolation confirmée).
+
+1. Sur Postgres (owner) — ou via le script ci-dessus :
    ```sql
    ALTER ROLE enondes_app WITH PASSWORD '<fort>';
    ```
-2. Base **jetable** (pas Hits Dance prod) :
+2. Base **jetable / staging** (pas Hits Dance prod) :
    ```bash
-   DATABASE_URL="postgres://owner..." \
-   RLS_TEST_URL="postgres://enondes_app..." \
-   cd api && npm run test:rls
+   # Préfère le script (crée le rôle + lance api/scripts/test-rls.mjs) :
+   node scripts/setup-rls-role.mjs "$DATABASE_PUBLIC_URL"
    ```
 3. Si vert : pointer `DATABASE_URL` du service api **staging** puis prod sur `enondes_app`.
 4. Ne pas fusionner un 2e tenant sur la base Hits Dance avant 2 semaines stables.
