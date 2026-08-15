@@ -160,22 +160,57 @@ et envoie des **données d'audience** (analytics) que l'admin affiche en temps r
 
 ## 2. Services déployés (Railway)
 
-Projet Railway unique, 5 services. **Chaque service = un sous-dossier avec son Dockerfile + `railway.json`.**
+Inventaire vérifié le **2026-08-15** via `railway status --json`.
 
-| Service Railway | Dossier repo | Rôle | Domaine public |
-|---|---|---|---|
-| `patient-endurance` | `api/` | API backend (port 8082) | `patient-endurance-production-21c8.up.railway.app` |
-| `zucchini-charisma` | `admin/` | Console admin Next.js (port 3000) | `zucchini-charisma-production-3a67.up.railway.app` |
-| `Postgres` | — (plugin) | Base de données | privé (`postgres.railway.internal`) |
-| `HitsDanceMusic.ca` | `presence/` | Compteur WebSocket | `hitsdancemusicca-production.up.railway.app` |
-| `hitdanceradio.ca` | `/` (racine) | Site statique (nginx) | `hitsdancemusic.ca` / `hitdancemusic.ca` |
+Compte `punkispike-cloud's Projects`, projet **`independent-perception`** (env `production`),
+6 services. Deux familles y cohabitent : la **plateforme En Ondes** (mutualisée entre
+toutes les radios clientes) et **Hits Dance Music** (client #0).
 
-> ⚠️ Les noms de services Railway (`patient-endurance`, `zucchini-charisma`) sont
-> auto-générés et ne reflètent pas leur rôle — voir la colonne « Rôle ».
+| Service Railway | Famille | Dossier repo | Rôle réel | Domaine public |
+|---|---|---|---|---|
+| `patient-endurance` | En Ondes | `api/` | API backend (port 8082) | `patient-endurance-production-21c8.up.railway.app` |
+| `zucchini-charisma` | En Ondes | `admin/` | Console admin Next.js (port 3000) | `zucchini-charisma-production-3a67.up.railway.app` |
+| `Postgres` | En Ondes | — (image) | Base managée + bucket `Postgres-PITR` | privé (`postgres.railway.internal`) |
+| `enondes-hub` | En Ondes | `enondes-site/` | Hub d'écoute multi-stations | `enondes-hub-production.up.railway.app` |
+| `hitdanceradio.ca` | Hits Dance | `/` (racine) | **Site public** (nginx) | **`hitsdancemusic.ca`** + `www` |
+| `HitsDanceMusic.ca` | Hits Dance | `presence/` | **Compteur WebSocket** (presence) | `hitsdancemusicca-production.up.railway.app` |
+
+> ⚠️ **Piège de nommage — les deux derniers noms sont trompeurs.**
+> `HitsDanceMusic.ca` **n'est pas le site** : c'est le service *presence*.
+> Le site public, c'est `hitdanceradio.ca`, et c'est lui qui porte le domaine
+> `hitsdancemusic.ca`. Les noms `patient-endurance` / `zucchini-charisma` sont
+> auto-générés par Railway. **Toujours se fier à la colonne « Rôle réel »**,
+> jamais au nom, avant toute action destructive.
 
 **Déploiement** : `git push origin main` → Railway rebuild et redéploie automatiquement
 les services concernés. L'API applique **migrations + seed automatiquement** avant
 de démarrer (`preDeployCommand` → `node dist/db/deploy.js`).
+
+> ⚠️ **`enondes-hub` n'est pas connecté à GitHub** : il se déploie à la main et
+> dérive donc silencieusement du dépôt (constaté le 2026-08-15 : 5 semaines de
+> commits hub jamais mis en ligne). Tant qu'il n'est pas branché sur le dépôt
+> avec racine `enondes-site/`, il faut le déployer explicitement :
+>
+> ```bash
+> # depuis la RACINE du dépôt — le flag --path-as-root est obligatoire
+> railway up enondes-site --path-as-root --service enondes-hub --ci
+> ```
+>
+> Sans `--path-as-root`, `railway up` prend la **racine du dépôt Git** comme
+> contexte de build (pas le dossier courant) : le hub se retrouve alors à servir
+> le site Hits Dance. Erreur commise et corrigée le 2026-08-15.
+
+### Autres projets du compte
+
+| Projet | Contenu | Statut |
+|---|---|---|
+| `castly` | `castly-web` (app web « Castly »), `castly-media` (API JSON), `Postgres` | En Ondes — déploiements **manuels** (même risque de dérive que le hub) |
+| `evalust` | `frontend` + `backend` (dépôt `punkispike-cloud/ai-companion`), `Postgres-Y5Nm` | Hors périmètre radio |
+| `Carlogix Crm` | — | Hors périmètre radio |
+
+`en-ondes-test` (instance jetable de validation multi-tenant, juin 2026) a été
+**supprimée le 2026-08-15** : 4 services (`api`, `admin`, `db`, `probe` jamais déployé),
+inactive depuis le 2026-06-23.
 
 ---
 
