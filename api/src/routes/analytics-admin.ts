@@ -6,6 +6,8 @@
 import { Hono } from "hono";
 import { sql, eq, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
+import { runWithRequestDb } from "../db/client.js";
+import { acquireRequestDb, releaseRequestDb } from "../db/tenant-guc.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
@@ -115,12 +117,27 @@ analyticsAdminRoutes.get("/stream", async (c) => {
   };
 
   const snapshot = async (): Promise<string> => {
-    const [overview, geo, sessions] = await Promise.all([
-      fetchOverview(radioId),
-      fetchGeo(radioId),
-      includeSessions ? fetchSessions(radioId, 200) : Promise.resolve(null),
-    ]);
-    return JSON.stringify({ overview, geo, sessions, ts: Date.now() });
+    // RLS par snapshot (A3/Phase 2.2) : le SSE est « longue durée » → le middleware
+    // tenant ne pose PAS de client request-scoped (isLongLivedPath) pour ne pas
+    // retenir une connexion du pool pendant toute la durée du flux. On acquiert
+    // donc un client dédié, on pose la GUC app.radio_id (→ RLS active), on exécute
+    // les 3 lectures, puis on relâche le client. Entre deux snapshots, aucune
+    // connexion n'est retenue ; chaque snapshot est court (3 requêtes). En
+    // l'absence de ce bloc, les fetch* utiliseraient le pool global (GUC vide) et
+    // l'isolation reposerait sur le seul WHERE radio_id applicatif.
+    const { db: reqDb, client } = await acquireRequestDb(radioId);
+    try {
+      return await runWithRequestDb(reqDb, async () => {
+        const [overview, geo, sessions] = await Promise.all([
+          fetchOverview(radioId),
+          fetchGeo(radioId),
+          includeSessions ? fetchSessions(radioId, 200) : Promise.resolve(null),
+        ]);
+        return JSON.stringify({ overview, geo, sessions, ts: Date.now() });
+      });
+    } finally {
+      await releaseRequestDb(client);
+    }
   };
 
   const stream = new ReadableStream<Uint8Array>({

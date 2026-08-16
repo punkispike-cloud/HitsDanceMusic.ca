@@ -67,6 +67,22 @@ if (ALLOWED_ORIGINS.includes("*")) {
   console.warn("[api] ⚠️  ALLOWED_ORIGINS contient '*' — à NE PAS utiliser en production.");
 }
 
+// Cookie refresh SameSite : pilotable pour le passage aux domaines custom.
+// Vide = défaut (prod="None" cross-site railway, dev="Lax"). Sinon on valide
+// parmi "Lax"/"None"/"Strict" (fail-fast plutôt que de booter avec un cookie mal configuré).
+const REFRESH_COOKIE_SAMESITE = (() => {
+  const v = optional("REFRESH_COOKIE_SAMESITE", "").trim();
+  if (v === "") return ""; // sentinelle → auth.ts applique le défaut prod/dev
+  const allowed = ["Lax", "None", "Strict"];
+  if (!allowed.includes(v)) {
+    console.error(
+      `[api] ❌ REFRESH_COOKIE_SAMESITE='${v}' invalide. Valeurs acceptées : ${allowed.join(", ")} (ou vide pour le défaut prod/dev).`,
+    );
+    process.exit(1);
+  }
+  return v;
+})();
+
 export const env = {
   NODE_ENV,
   isProd,
@@ -111,12 +127,26 @@ export const env = {
   // Rétention analytics (Loi 25) : purge des sessions/écoutes plus vieilles que N jours.
   ANALYTICS_RETENTION_DAYS: intOpt("ANALYTICS_RETENTION_DAYS", 180),
 
+  // Géo-IP locale (A5) : chemin vers une base MaxMind GeoLite2-City.mmdb auto-hébergée.
+  // Vide (défaut) → AUCUNE résolution géo (et donc aucune fuite d'IP vers un tiers).
+  // Pour ré-activer la carte audience sans fuite : `npm i maxmind` dans api/ + poser
+  // cette variable vers le .mmdb (monté dans le conteneur, jamais commité).
+  GEOIP_DB_PATH: optional("GEOIP_DB_PATH", ""),
+
   // Surveillance du flux (dead-air / injoignable). Le monitor met toujours à jour
   // l'état de santé ; les ALERTES (courriel) ne partent que si Resend est configuré.
   MONITOR_ENABLED: optional("MONITOR_ENABLED", "true"),
   MONITOR_INTERVAL_MS: intOpt("MONITOR_INTERVAL_MS", 120_000), // 2 min
   STREAM_SILENCE_MIN: intOpt("STREAM_SILENCE_MIN", 30), // titre inchangé > N min ⇒ dead-air suspecté
   ALERT_DEBOUNCE_MIN: intOpt("ALERT_DEBOUNCE_MIN", 60), // pas de ré-alerte avant N min
+
+  // Cookie refresh SameSite. En prod sur *.up.railway.app (admin et api sur des
+  // domaines distincts = cross-site) : "None" requis pour transmettre le cookie.
+  // Une fois les domaines custom posés (api.<domaine> + admin.<domaine> = même
+  // parent), repasser à "Lax" (plus strict, bloque le cookie sur les requêtes
+  // cross-site non-navigées). Override via cette variable ; vide = comportement
+  // par défaut (prod="None", dev="Lax").
+  REFRESH_COOKIE_SAMESITE: REFRESH_COOKIE_SAMESITE,
 
   // Sentry (monitoring d'erreurs) — inactif tant que le DSN n'est pas fourni.
   SENTRY_DSN: optional("SENTRY_DSN", ""),

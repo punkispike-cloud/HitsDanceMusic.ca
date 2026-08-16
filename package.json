@@ -13,6 +13,7 @@
     "test:smoke": "playwright test --config=tests/smoke/playwright.config.mjs",
     "verify:prod": "node scripts/verify-deploy.mjs https://patient-endurance-production-21c8.up.railway.app",
     "verify:staging": "node scripts/verify-deploy.mjs https://patient-endurance-staging.up.railway.app",
+    "verify:stripe": "node scripts/verify-stripe.mjs https://patient-endurance-production-21c8.up.railway.app",
     "check:nginx-deny": "node scripts/check-nginx-deny.mjs",
     "setup:rls": "node scripts/setup-rls-role.mjs",
     "test:visual": "playwright test --config=tests/visual/playwright.config.mjs",

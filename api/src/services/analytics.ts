@@ -5,6 +5,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
+import { resolveGeo } from "./geoip.js";
 
 // Bornes anti-abus : un beacon ne peut pas ajouter plus que l'intervalle prévu.
 const MAX_SECONDS_PER_BEACON = 60;
@@ -13,64 +14,15 @@ const MAX_SECONDS_PER_BEACON = 60;
    « aujourd'hui » doit vouloir dire la même chose à l'écriture et à la lecture. */
 const RADIO_TZ = "America/Toronto";
 
-// Géo-IP best-effort : une seule tentative par visiteur et par process.
+// Géo-IP : une seule tentative par visiteur et par process. La résolution est
+// désormais LOCALE (MaxMind via services/geoip.ts) — plus d'appel à un tiers.
 const _geoAttempted = new Set<string>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
-
-/** Un appel HTTP géo borné dans le temps ; renvoie le JSON ou null (best-effort). */
-async function fetchGeoJson(url: string): Promise<Record<string, unknown> | null> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 4000);
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    if (!r.ok) return null;
-    return (await r.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-type GeoResult = { city?: string; country?: string; lat?: number; lon?: number };
-
-function toNum(v: unknown): number | undefined {
-  const n = typeof v === "string" ? parseFloat(v) : typeof v === "number" ? v : NaN;
-  return Number.isFinite(n) ? n : undefined;
-}
-
-/** Résout { ville, pays, lat, lon } via des fournisseurs gratuits HTTPS sans clé.
-    geojs.io en premier, freeipapi.com en repli.
-    (ipwho.is a fermé son offre gratuite → 403 "CORS not supported on Free plan".) */
-async function lookupGeo(ip: string): Promise<GeoResult | null> {
-  const enc = encodeURIComponent(ip);
-  // 1) geojs.io → { city, country, latitude, longitude } (chaînes)
-  const g = await fetchGeoJson(`https://get.geojs.io/v1/ip/geo/${enc}.json`);
-  if (g && (g.city || g.country)) {
-    return {
-      city: g.city as string | undefined,
-      country: g.country as string | undefined,
-      lat: toNum(g.latitude),
-      lon: toNum(g.longitude),
-    };
-  }
-  // 2) repli : freeipapi.com → { cityName, countryName, latitude, longitude } (nombres)
-  const f = await fetchGeoJson(`https://freeipapi.com/api/json/${enc}`);
-  if (f && (f.cityName || f.countryName)) {
-    return {
-      city: f.cityName as string | undefined,
-      country: f.countryName as string | undefined,
-      lat: toNum(f.latitude),
-      lon: toNum(f.longitude),
-    };
-  }
-  return null;
-}
 
 async function resolveCountry(ip: string, clientId: string, radioId: string): Promise<void> {
   if (!ip || PRIVATE_IP.test(ip)) return;
   try {
-    const geo = await lookupGeo(ip);
+    const geo = await resolveGeo(ip);
     if (!geo) return;
     const parts = [geo.city, geo.country].filter(
       (s): s is string => typeof s === "string" && !!s,

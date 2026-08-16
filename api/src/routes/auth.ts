@@ -39,7 +39,9 @@ function setRefreshCookie(c: Parameters<typeof setCookie>[0], token: string): vo
     // En prod, l'admin et l'api sont sur des domaines distincts
     // (*.up.railway.app = cross-site) → le cookie doit être SameSite=None
     // pour être transmis. En dev local (http, même host), Lax suffit.
-    sameSite: env.isProd ? "None" : "Lax",
+    // Une fois les domaines custom posés (même parent), ops pose
+    // REFRESH_COOKIE_SAMESITE=Lax (plus strict) — voir env.ts.
+    sameSite: (env.REFRESH_COOKIE_SAMESITE || (env.isProd ? "None" : "Lax")) as "Lax" | "None" | "Strict",
     path: "/auth",
     maxAge: env.REFRESH_TOKEN_TTL,
   });
