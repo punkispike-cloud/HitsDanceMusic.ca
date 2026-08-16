@@ -17,13 +17,27 @@ Code déjà gated : `api/src/services/monitoring.ts`, `admin/components/sentry-i
 
 ---
 
+## Incident 2026-08-15 — suppression Postgres cross-env
+
+`railway serviceDelete` / GraphQL `serviceDelete` sur le service **`Postgres`**
+supprime le service **dans tous les environnements** (pas seulement staging).
+
+Conséquence : API prod → 503 (DB down). Volume `postgres-volume` (~1.7 Go) était
+intact (détaché). Remède appliqué : recreer service `Postgres`, rattacher le
+volume, realigner le mot de passe, reposer `DATABASE_URL` sur l’API.
+
+**Règle** : ne jamais `serviceDelete` un service partagé prod/staging ; pour un
+orphelin staging, préférer détacher/supprimer le **volume** ou renommer, et
+vérifier qu’aucune instance prod n’y est liée.
+
+---
+
 ## Vague 1.5 — Brancher `enondes-hub` sur GitHub
 
-1. Railway → service `enondes-hub` → Settings → Source.
-2. Connecter le repo `HitsDanceMusic.ca`, branche `main`.
-3. **Root Directory = `enondes-site`** (obligatoire).
-4. Builder Dockerfile (fichier `enondes-site/Dockerfile`).
-5. Déployer ; vérifier `https://enondes-hub-production.up.railway.app/`.
+**Fait (2026-08-15)** : repo `punkispike-cloud/HitsDanceMusic.ca` branché,  
+`rootDirectory = enondes-site` (prod + staging). Builder Railway = RAILPACK
+(détecte le Dockerfile du sous-dossier). Vérifier
+`https://enondes-hub-production.up.railway.app/` (titre En Ondes, pas Hits Dance).
 
 Ne **jamais** `railway up` depuis la racine du monorepo sans `--path-as-root` —
 sinon le hub sert le site Hits Dance.
@@ -128,6 +142,10 @@ Prérequis code : middleware `bindRequestDb` + ALS déjà en place.
    node scripts/setup-rls-role.mjs "$DATABASE_PUBLIC_URL"
    ```
 3. Si vert : pointer `DATABASE_URL` du service api **staging** puis prod sur `enondes_app`.
+   - Poser aussi `MIGRATE_DATABASE_URL` = URL **owner** (`postgres`) — utilisé uniquement
+     par `node dist/db/deploy.js` (migrate + seed). Sans ça, le preDeploy échoue (DDL).
+   - Staging one-shot (après merge du code `MIGRATE_DATABASE_URL`) :
+     `node scripts/activate-enondes-app-staging.mjs` puis `npm run verify:staging`.
 4. Ne pas fusionner un 2e tenant sur la base Hits Dance avant 2 semaines stables.
 
 ---
