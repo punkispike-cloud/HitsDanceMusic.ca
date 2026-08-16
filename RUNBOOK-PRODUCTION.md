@@ -120,8 +120,12 @@ Sans besoin produit immédiat : **ne pas** activer (uploads restent `503 s3_unco
 3. Variables :
    - api : `ALLOWED_ORIGINS` (site + admin + hub), `ADMIN_BASE_URL`, `PUBLIC_SITE_URL`
    - admin : `NEXT_PUBLIC_API_URL=https://api.hitsdancemusic.ca` → **rebuild**
-4. Site : CSP `connect-src` dans `nginx.conf` (URL API) + rebuild web.
-5. Ensuite : cookie refresh peut repasser en `SameSite=Lax` (même parent) dans `api/src/routes/auth.ts`.
+4. Site : CSP `connect-src` dans `nginx.conf` (URL API) + rebuild web. L'URL API
+   est templatisée par `scripts/build-brand.mjs` (champ `urls.api` du
+   `brand/<slug>.json`) — mettre à jour le brand json + rebuild.
+5. Ensuite : cookie refresh peut repasser en `SameSite=Lax` (même parent) dans
+   `api/src/routes/auth.ts` — via la variable `REFRESH_COOKIE_SAMESITE=Lax`
+   (voir `api/src/env.ts`). Vide = défaut (prod `None`, dev `Lax`).
 
 ---
 
@@ -172,6 +176,17 @@ STRIPE_PRICE_PRO_ID=price_...
 Webhook Stripe → `https://<api>/v1/webhooks/stripe` (events `customer.subscription.*`).
 
 Test mode d'abord : Checkout → ligne `subscriptions` ; cancel → radio `paused`.
+
+Vérification du plombage webhook (signature + idempotence, sans écriture
+métier) — à lancer une fois `STRIPE_WEBHOOK_SECRET` posé :
+
+```bash
+STRIPE_WEBHOOK_SECRET=whsec_... npm run verify:stripe   # prod par défaut
+# ou : STRIPE_WEBHOOK_SECRET=whsec_... node scripts/verify-stripe.mjs https://<api>
+```
+
+Le parcours complet Checkout → abonnement → cascade radio reste un test
+manuel en mode test Stripe (token admin + radio réelle + paiement test).
 
 ---
 

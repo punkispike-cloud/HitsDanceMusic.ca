@@ -39,7 +39,23 @@ npm run check:nginx-deny
 1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin
 2. Après ~2 semaines staging RLS stable : basculer prod `DATABASE_URL` → `enondes_app` (garder `MIGRATE_DATABASE_URL`)
 3. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
-4. Domaines custom `api.` / `admin.` (Vague 2.4) — cookies SameSite=Lax
+4. Domaines custom `api.` / `admin.` (Vague 2.4) — cookies SameSite=Lax via `REFRESH_COOKIE_SAMESITE`
+
+### Remédiation audit prod (2026-08-16) — livrables code
+
+- **A3** : garde anti-pollution des beacons `POST /v1/track` (cap création de
+  sessions par IP/min, in-memory borné) — `api/src/routes/track.ts`.
+- **A5** : géo-IP locale (`api/src/services/geoip.ts`) — plus de fuite d'IP vers
+  un tiers ; MaxMind GeoLite2 via `GEOIP_DB_PATH` (défaut : aucune résolution).
+- **A4** : déjà en place (bannière `js/consent.js` + gate `main.js` +
+  `confidentialite.html` Loi 25).
+- **Phase 2.2** : SSE `/v1/admin/analytics/stream` durci (GUC `app.radio_id`
+  par snapshot → RLS active, pas seulement `WHERE radio_id`).
+- **Phase 2.3** : tests HTTP `analytics-admin` (8) — `/sessions` + `/export`
+  (IP) restreints à superadmin+owner ; `it` exclu.
+- **Phase 4.1** : `REFRESH_COOKIE_SAMESITE` (env) pour repasser en Lax après
+  domaines custom.
+- **Phase 4.2** : `npm run verify:stripe` — vérif webhook (signature + idempotence).
 
 ---
 
