@@ -36,7 +36,9 @@ function refreshTicker() {
 function injectTicker() {
   if (document.getElementById("hrTicker")) return;
   const header = document.querySelector(".site-header");
-  if (!header) return;
+  // Sans .site-header la ligne rouge « EN DIRECT » ne peut pas s'ancrer
+  // (offset CSS du header). On n'injecte pas en orphelin.
+  if (!header?.parentElement) return;
   const t = document.createElement("div");
   t.id = "hrTicker";
   t.className = "hr-ticker";
@@ -45,7 +47,8 @@ function injectTicker() {
     <span class="hr-ticker-dot" aria-hidden="true"></span>
     <span class="hr-ticker-text">EN DIRECT — ${BRAND.name} · La radio</span>
   </div>`;
-  header.parentElement.insertBefore(t, header.nextSibling);
+  // Avant le header : empilement ticker (z-index 60) + header décalé de --hr-ticker-h.
+  header.parentElement.insertBefore(t, header);
   refreshTicker();
   setInterval(refreshTicker, 15_000);
 }

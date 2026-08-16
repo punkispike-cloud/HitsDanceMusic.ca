@@ -57,16 +57,17 @@ const htmlFiles = all.filter((f) => f.endsWith(".html") && !f.startsWith("_"));
 // politique elle-même (lien circulaire) et la 404 (page d'erreur, hors parcours).
 const BANNER_EXCLUDE = new Set(["confidentialite.html", "404.html"]);
 const BANNER_MARKER = '<!--#include name="audience-banner"--><!--#endinclude-->';
-const BODY_RE = /<body([^>]*)>/;
 
 /** Injecte le marker du banner audience juste après <body> s'il n'est pas déjà
- *  présent (idempotent). Le contenu est ensuite résolu depuis le partial par
- * processHtml (mise à jour centralisée si le partial change). */
+ *  présent (idempotent). Ne touche QUE la balise <body> — ne jamais remplacer
+ *  le skip-link / site-header / nav (régression 2026-08-16 : injection manuelle
+ *  avait effacé le header → ticker EN DIRECT absent). */
 function ensureBannerMarker(content, filename) {
   if (BANNER_EXCLUDE.has(filename)) return content;
-  if (!BODY_RE.test(content)) return content; // pas de <body> (ex. fragment)
   if (content.includes('<!--#include name="audience-banner"-->')) return content;
-  return content.replace(BODY_RE, `<body$1>\n${BANNER_MARKER}`);
+  // Remplace uniquement la balise d'ouverture <body ...> (pas de flag g).
+  if (!/<body[^>]*>/.test(content)) return content;
+  return content.replace(/<body([^>]*)>/, `<body$1>\n${BANNER_MARKER}`);
 }
 
 let diffs = 0;
