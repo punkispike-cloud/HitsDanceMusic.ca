@@ -52,12 +52,29 @@ console.log(`[build-html] ${partials.size} partials chargés : ${[...partials.ke
 
 const all = await readdir(root);
 const htmlFiles = all.filter((f) => f.endsWith(".html") && !f.startsWith("_"));
+
+// Pages exclues de l'auto-injection du banner mesure d'audience : la page de
+// politique elle-même (lien circulaire) et la 404 (page d'erreur, hors parcours).
+const BANNER_EXCLUDE = new Set(["confidentialite.html", "404.html"]);
+const BANNER_MARKER = '<!--#include name="audience-banner"--><!--#endinclude-->';
+const BODY_RE = /<body([^>]*)>/;
+
+/** Injecte le marker du banner audience juste après <body> s'il n'est pas déjà
+ *  présent (idempotent). Le contenu est ensuite résolu depuis le partial par
+ * processHtml (mise à jour centralisée si le partial change). */
+function ensureBannerMarker(content, filename) {
+  if (BANNER_EXCLUDE.has(filename)) return content;
+  if (!BODY_RE.test(content)) return content; // pas de <body> (ex. fragment)
+  if (content.includes('<!--#include name="audience-banner"-->')) return content;
+  return content.replace(BODY_RE, `<body$1>\n${BANNER_MARKER}`);
+}
+
 let diffs = 0;
 
 for (const f of htmlFiles) {
   const path = join(root, f);
   const before = await readFile(path, "utf-8");
-  const after = processHtml(before, partials, f);
+  const after = processHtml(ensureBannerMarker(before, f), partials, f);
   if (before !== after) {
     diffs++;
     if (checkMode) {

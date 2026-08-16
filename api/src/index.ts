@@ -26,6 +26,7 @@ import { shareRoutes } from "./routes/share.js";
 import { pushRoutes } from "./routes/push.js";
 import { pushAdminRoutes } from "./routes/push-admin.js";
 import { auditAdminRoutes } from "./routes/audit-admin.js";
+import { healthAdminRoutes } from "./routes/health-admin.js";
 import { nowPlayingRoutes } from "./routes/now-playing.js";
 import { ownerRoutes } from "./routes/owner.js";
 import { auditMiddleware } from "./middleware/audit.js";
@@ -94,6 +95,7 @@ app.route("/v1/admin", adminRoutes);
 app.route("/v1/admin/uploads", uploadRoutes);
 app.route("/v1/admin/analytics", analyticsAdminRoutes);
 app.route("/v1/admin/audit", auditAdminRoutes);
+app.route("/v1/admin/health", healthAdminRoutes);
 app.route("/v1/admin/push", pushAdminRoutes);
 app.route("/v1/admin/tracks", nowPlayingRoutes);
 

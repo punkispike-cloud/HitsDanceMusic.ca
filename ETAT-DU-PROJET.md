@@ -36,10 +36,17 @@ npm run check:nginx-deny
 
 ### Reste ops (humain)
 
-1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin
-2. Après ~2 semaines staging RLS stable : basculer prod `DATABASE_URL` → `enondes_app` (garder `MIGRATE_DATABASE_URL`)
-3. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
-4. Domaines custom `api.` / `admin.` (Vague 2.4) — cookies SameSite=Lax
+1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin.
+   Vérif : `POST /v1/admin/health/sentry-test` → événement Sentry sous ~1 min.
+2. **Activer les backups Postgres auto** Railway prod (le drill de restauration est
+   testé — RTO ~4 s — mais la planification auto reste à activer).
+3. **Vérifier les variables Railway prod** : `MIGRATE_DATABASE_URL` (owner) posé,
+   `DATABASE_URL` encore owner (bascule au point 5), `ALLOWED_ORIGINS` liste
+   site+admin+hub, `S3_*` vides (pas d'écriture R2 prod).
+4. Après ~2 semaines staging RLS stable : basculer prod `DATABASE_URL` → `enondes_app`
+   (garder `MIGRATE_DATABASE_URL`) — `test:rls` + `verify:staging` verts, puis `verify:prod`.
+5. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3.
+6. Domaines custom `api.` / `admin.` (Vague 2.4) — cookies SameSite=Lax.
 
 ---
 

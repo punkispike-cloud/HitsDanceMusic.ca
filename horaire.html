@@ -38,21 +38,30 @@
 <!--#endinclude-->
   </head>
   <body>
-    <a class="skip-link" href="#page-main">Aller au contenu</a>
-    <header class="site-header solid" id="top">
-      <a class="brand" href="index.html" aria-label="Hits Dance Music — La radio">
-        <img class="brand-mark brand-mark--final" src="assets/logo-final.webp" alt="Hits Dance Music — La radio" width="64" height="64" decoding="async" fetchpriority="high" />
-      </a>
-      <nav class="main-nav" id="primary-nav" aria-label="Navigation principale">
-        <a href="index.html">Accueil</a>
-        <a href="index.html#animateurs">Animateurs</a>
-        <a class="active" href="index.html#horaire">Horaire</a>
-        <a href="index.html#emissions">Émissions</a>
-        <a href="podcasts.html">Podcasts</a>
-        <a href="animateurs.html">Équipe</a>
-      </nav>
-      <!--#include name="presence-badge"-->
-<!-- presence-badge retiré du visuel (compteur masqué) -->
+<!--#include name="audience-banner"-->
+<!-- audience-banner : mention mesure d'audience (Loi 25) à l'endroit de la
+     collecte. Dismissible, persistée en localStorage. Ne gate PAS les beacons
+     (mesure anonyme, conforme à confidentialite.html). Auto-injectée par
+     build-html.mjs après <body> sur toutes les pages sauf confidentialite/404. -->
+<div id="audience-banner" hidden>
+  <p>Nous mesurons l'audience de façon anonyme pour améliorer la radio. <a href="/confidentialite.html">En savoir plus</a>.</p>
+  <button type="button" id="audience-banner-close" aria-label="Fermer la mention">&times;</button>
+</div>
+<style>
+  #audience-banner{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:.75rem;padding:.65rem 1rem;background:#1b1b22;color:#e8e8ee;font:14px/1.4 system-ui,-apple-system,sans-serif;box-shadow:0 -2px 12px rgba(0,0,0,.4)}
+  #audience-banner p{margin:0;text-align:center}
+  #audience-banner a{color:#7fd0ff}
+  #audience-banner-close{background:transparent;border:0;color:inherit;font-size:1.5rem;line-height:1;cursor:pointer;padding:0 .25rem}
+</style>
+<script>
+  (function(){
+    var b=document.getElementById('audience-banner'); if(!b)return;
+    try{ if(localStorage.getItem('audience-ack')){ b.remove(); return; } }catch(e){}
+    b.removeAttribute('hidden');
+    var c=document.getElementById('audience-banner-close');
+    if(c)c.addEventListener('click',function(){try{localStorage.setItem('audience-ack','1')}catch(e){}b.remove();});
+  })();
+</script>
 <!--#endinclude-->
       <!--#include name="header-tools"-->
       <div class="header-tools">
