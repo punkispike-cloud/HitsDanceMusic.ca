@@ -1,4 +1,4 @@
-/* UX extras : ticker, back-to-top, scroll-reveal, skeletons, vinyl cursor.
+/* UX extras : ticker, back-to-top, scroll-reveal, skeletons. */
    + initPhase2UX (swipe mini, double-tap mute, open now-drawer). */
 
 import { $, $$ } from "./util.js";
@@ -109,19 +109,11 @@ function applyMetaSkeletons() {
   });
 }
 
-function applyVinylCursor() {
-  const cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="%23131218" stroke="%23dc1430" stroke-width="2"/><circle cx="16" cy="16" r="9" fill="none" stroke="%23dc1430" stroke-width="0.5" opacity="0.6"/><circle cx="16" cy="16" r="6" fill="none" stroke="%23dc1430" stroke-width="0.5" opacity="0.6"/><circle cx="16" cy="16" r="3" fill="%23dc1430"/><circle cx="16" cy="16" r="1" fill="%23131218"/></svg>') 16 16, pointer`;
-  document.querySelectorAll("#playToggle, #miniPlay, .btn-play, .player-play").forEach((b) => {
-    b.style.cursor = cursor;
-  });
-}
-
 export function initUiExtras() {
   injectTicker();
   injectBackToTop();
   extendScrollReveal();
   applyMetaSkeletons();
-  applyVinylCursor();
 }
 
 /* ----- Phase 2 UX : swipe mini-player + double-tap mute ----- */

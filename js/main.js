@@ -264,7 +264,7 @@ function initIdle() {
     if (state.currentCover) void applyDynamicAccent(state.currentCover);
   }, 1000);
 
-  // UX extras (ticker, back-to-top, scroll-reveal, skeletons, vinyl cursor)
+  // UX extras (ticker, back-to-top, scroll-reveal, skeletons)
   initUiExtras();
   initPhase2UX();
 
