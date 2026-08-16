@@ -117,7 +117,7 @@ analyticsAdminRoutes.get("/stream", async (c) => {
   };
 
   const snapshot = async (): Promise<string> => {
-    // RLS par snapshot (A3/Phase 2.2) : le SSE est « longue durée » → le middleware
+    // RLS par snapshot (Phase 2.2) : le SSE est « longue durée » → le middleware
     // tenant ne pose PAS de client request-scoped (isLongLivedPath) pour ne pas
     // retenir une connexion du pool pendant toute la durée du flux. On acquiert
     // donc un client dédié, on pose la GUC app.radio_id (→ RLS active), on exécute

@@ -22,6 +22,8 @@
  *   STRIPE_WEBHOOK_SECRET=whsec_... node scripts/verify-stripe.mjs https://<api-url>
  */
 
+import crypto from "node:crypto";
+
 const base = (process.argv[2] || "").replace(/\/$/, "");
 if (!/^https?:\/\//.test(base)) {
   console.error("Usage : STRIPE_WEBHOOK_SECRET=whsec_... node scripts/verify-stripe.mjs https://<api-url>");
@@ -34,7 +36,6 @@ if (!webhookSecret) {
 }
 
 const TIMEOUT = 12_000;
-import crypto from "node:crypto";
 
 async function postWebhook(body, signature) {
   const ctrl = new AbortController();

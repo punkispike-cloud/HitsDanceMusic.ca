@@ -56,6 +56,12 @@ function buildApp(user: AuthUser): Hono<AppBindings> {
   app.onError(onError);
   app.use("*", fakeAuth(user));
   app.use("*", adminTenant);
+  // Expose le radioId résolu (après adminTenant, avant le handler) pour
+  // asserter le scoping sans dépendre de la DB.
+  app.use("*", async (c, next) => {
+    c.header("x-test-radio", c.get("radioId") ?? "");
+    await next();
+  });
   app.route("/v1/admin/analytics", analyticsAdminRoutes);
   return app;
 }
@@ -64,7 +70,7 @@ async function call(
   app: Hono<AppBindings>,
   path: string,
   headers: Record<string, string> = {},
-): Promise<{ status: number; body: unknown }> {
+): Promise<{ status: number; body: unknown; radioId: string | null }> {
   const res = await app.request(path, { headers });
   let body: unknown = null;
   try {
@@ -72,7 +78,7 @@ async function call(
   } catch {
     /* corps non-JSON */
   }
-  return { status: res.status, body };
+  return { status: res.status, body, radioId: res.headers.get("x-test-radio") };
 }
 
 beforeEach(() => setRadioCacheForTests(RADIOS));
@@ -130,4 +136,35 @@ test("/export : animateur -> 403 ; lecteur -> 403", async () => {
 test("/export : superadmin -> la garde laisse passer (pas 403)", async () => {
   const r = await call(buildApp(suA), "/v1/admin/analytics/export?type=shows");
   assert.notEqual(r.status, 403, "superadmin doit passer la garde RBAC (même export shows)");
+});
+
+/* ───────────────── Filtrage radio_id par route (Phase 2.3) ─────────────────
+   Un superadmin scopé à radio-a ne peut PAS forger X-Radio-Id=radio-b.
+   Un owner (cross-radio) peut cibler radio-b explicitement. */
+
+const SCOPED_PATHS = [
+  "/v1/admin/analytics/overview",
+  "/v1/admin/analytics/shows",
+  "/v1/admin/analytics/top-tracks",
+  "/v1/admin/analytics/timeseries",
+  "/v1/admin/analytics/geo",
+  "/v1/admin/analytics/breakdown",
+  "/v1/admin/analytics/sessions",
+  "/v1/admin/analytics/export",
+];
+
+test("superadmin : toutes les routes analytics sont pinnées à sa radio (X-Radio-Id ignoré)", async () => {
+  const app = buildApp(suA);
+  for (const path of SCOPED_PATHS) {
+    const r = await call(app, path, { "X-Radio-Id": "radio-b" });
+    assert.equal(r.radioId, "radio-a", `${path} : superadmin reste sur radio-a`);
+  }
+});
+
+test("owner : X-Radio-Id cible la radio demandée sur toutes les routes analytics", async () => {
+  const app = buildApp(owner);
+  for (const path of SCOPED_PATHS) {
+    const r = await call(app, path, { "X-Radio-Id": "radio-b" });
+    assert.equal(r.radioId, "radio-b", `${path} : owner cible radio-b`);
+  }
 });

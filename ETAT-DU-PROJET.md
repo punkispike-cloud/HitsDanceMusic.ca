@@ -51,8 +51,8 @@ npm run check:nginx-deny
   `confidentialite.html` Loi 25).
 - **Phase 2.2** : SSE `/v1/admin/analytics/stream` durci (GUC `app.radio_id`
   par snapshot → RLS active, pas seulement `WHERE radio_id`).
-- **Phase 2.3** : tests HTTP `analytics-admin` (8) — `/sessions` + `/export`
-  (IP) restreints à superadmin+owner ; `it` exclu.
+- **Phase 2.3** : tests HTTP `analytics-admin` (RBAC IP + scoping `radio_id`
+  sur 8 routes) + isolation SQL PGlite (2 radios) + garde beacons + geoip.
 - **Phase 4.1** : `REFRESH_COOKIE_SAMESITE` (env) pour repasser en Lax après
   domaines custom.
 - **Phase 4.2** : `npm run verify:stripe` — vérif webhook (signature + idempotence).

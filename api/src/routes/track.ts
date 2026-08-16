@@ -59,8 +59,8 @@ const _sweep = setInterval(() => {
 _sweep.unref?.();
 
 /** Renvoie true si le beacon doit être accepté (session connue ou quota
- *  de nouvelles sessions non dépassé pour cette IP). */
-function beaconAllowed(ip: string, clientId: string): boolean {
+ *  de nouvelles sessions non dépassé pour cette IP). Exporté pour les tests. */
+export function beaconAllowed(ip: string, clientId: string): boolean {
   const key = `${ip}\0${clientId}`;
   if (_knownSessions.has(key)) return true; // session établie → toujours ok
 
