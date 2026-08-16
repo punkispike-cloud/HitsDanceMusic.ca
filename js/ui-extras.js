@@ -1,4 +1,4 @@
-/* UX extras : ticker, back-to-top, scroll-reveal, skeletons. */
+/* UX extras : ticker, back-to-top, scroll-reveal, skeletons.
    + initPhase2UX (swipe mini, double-tap mute, open now-drawer). */
 
 import { $, $$ } from "./util.js";
