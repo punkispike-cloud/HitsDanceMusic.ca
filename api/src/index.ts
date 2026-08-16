@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { bodyLimit } from "hono/body-limit";
+import { secureHeaders } from "hono/secure-headers";
 import { env } from "./env.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { onError, notFoundHandler } from "./middleware/error.js";
@@ -48,6 +49,15 @@ app.onError(onError);
 app.notFound(notFoundHandler);
 
 // Sécurité transverse
+app.use("*", secureHeaders({
+  // API JSON : pas de CSP HTML stricte (casseait les clients). Headers anti-clickjacking /
+  // MIME / referrer suffisent ; HSTS géré par le reverse-proxy Railway.
+  xFrameOptions: "DENY",
+  xContentTypeOptions: "nosniff",
+  referrerPolicy: "no-referrer",
+  crossOriginOpenerPolicy: "same-origin",
+  crossOriginResourcePolicy: "cross-origin", // CORS public + admin cross-subdomain
+}));
 app.use("*", corsMiddleware);
 app.use("*", bodyLimit({ maxSize: env.MAX_BODY_BYTES, onError: (c) => c.json({ error: { code: "payload_too_large", message: "Corps de requête trop volumineux" } }, 413) }));
 app.use("*", globalRateLimit(env.RATE_LIMIT_RPM));

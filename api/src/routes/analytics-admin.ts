@@ -219,7 +219,7 @@ analyticsAdminRoutes.get("/top-tracks", async (c) => {
         WHERE radio_id = ${radioId}
           AND played_at >= now() - (${days} || ' days')::interval
       )
-      SELECT min(w.id) AS "trackId",
+      SELECT (array_agg(w.id ORDER BY w.id))[1] AS "trackId",
              w.artist AS "artist",
              w.title AS "title",
              count(DISTINCT w.id)::int AS "playCount",

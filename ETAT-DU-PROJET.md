@@ -16,8 +16,9 @@
 | Postgres staging | **`Postgres-2fkU`** (TCP proxy). Orphelin `Postgres` **supprimé** |
 | Postgres prod | Recréé + volume `postgres-volume` rattache (incident 2026-08-15 — voir RUNBOOK) |
 | Presence staging | Domaine + `ALLOWED_ORIGINS` OK |
-| RLS | `test:rls` vert ; bascule runtime `enondes_app` **après** merge `MIGRATE_DATABASE_URL` |
-| Hub En Ondes | GitHub branché, root `enondes-site/` (prod + staging) — titre En Ondes OK |
+| RLS | **Staging runtime = `enondes_app`** (MIGRATE_DATABASE_URL owner). Prod : MIGRATE posé, runtime encore owner — bascule après 2 sem. stables |
+| Hub En Ondes | GitHub branché, root `enondes-site/` — titre En Ondes OK |
+| Headers | Site HSTS/XFO OK ; API `secureHeaders` (Hono) |
 
 ### URLs staging
 
@@ -36,8 +37,9 @@ npm run check:nginx-deny
 ### Reste ops (humain)
 
 1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin
-2. Après merge Vague 3.1 code : `node scripts/activate-enondes-app-staging.mjs` puis 2 semaines stables avant prod
+2. Après ~2 semaines staging RLS stable : basculer prod `DATABASE_URL` → `enondes_app` (garder `MIGRATE_DATABASE_URL`)
 3. Stripe live / avocat / 1er client — voir RUNBOOK Vague 3
+4. Domaines custom `api.` / `admin.` (Vague 2.4) — cookies SameSite=Lax
 
 ---
 

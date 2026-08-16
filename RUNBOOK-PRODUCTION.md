@@ -144,8 +144,15 @@ Prérequis code : middleware `bindRequestDb` + ALS déjà en place.
 3. Si vert : pointer `DATABASE_URL` du service api **staging** puis prod sur `enondes_app`.
    - Poser aussi `MIGRATE_DATABASE_URL` = URL **owner** (`postgres`) — utilisé uniquement
      par `node dist/db/deploy.js` (migrate + seed). Sans ça, le preDeploy échoue (DDL).
-   - Staging one-shot (après merge du code `MIGRATE_DATABASE_URL`) :
+   - Staging one-shot :
      `node scripts/activate-enondes-app-staging.mjs` puis `npm run verify:staging`.
+
+**Fait staging (2026-08-15)** : runtime API = `enondes_app`, migrate/seed via
+`MIGRATE_DATABASE_URL`, `verify:staging` vert.
+
+**Prod** : `MIGRATE_DATABASE_URL` déjà posé ; **ne pas** basculer `DATABASE_URL`
+avant ~2 semaines stables sur staging.
+
 4. Ne pas fusionner un 2e tenant sur la base Hits Dance avant 2 semaines stables.
 
 ---
