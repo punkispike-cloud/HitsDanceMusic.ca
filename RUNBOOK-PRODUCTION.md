@@ -11,9 +11,14 @@
 1. Créer **deux** projets Sentry (api / admin), DSN distincts.
 2. Service Railway `patient-endurance` (api) → variable `SENTRY_DSN=<dsn-api>`.
 3. Service `zucchini-charisma` (admin) → `NEXT_PUBLIC_SENTRY_DSN=<dsn-admin>` (**rebuild** : variable inlinée au build Next).
-4. Vérif : provoquer une erreur test → événement visible dans Sentry sous 1 min.
+4. Vérif : `POST /v1/admin/health/sentry-test` (auth admin) → renvoie
+   `{ ok:true, sentry:true }` puis un événement « sentry-test: vérification
+   manuelle du DSN » apparaît dans Sentry sous ~1 min. `sentry:false` = DSN absent.
+   Côté admin (Next.js), déclencher une erreur client (ex. bouton test) → événement
+   navigateur.
 
 Code déjà gated : `api/src/services/monitoring.ts`, `admin/components/sentry-init.tsx`.
+Endpoint de test : `api/src/routes/health-admin.ts` (monté sous `/v1/admin/health`).
 
 ---
 
@@ -150,8 +155,21 @@ Prérequis code : middleware `bindRequestDb` + ALS déjà en place.
 **Fait staging (2026-08-15)** : runtime API = `enondes_app`, migrate/seed via
 `MIGRATE_DATABASE_URL`, `verify:staging` vert.
 
-**Prod** : `MIGRATE_DATABASE_URL` déjà posé ; **ne pas** basculer `DATABASE_URL`
-avant ~2 semaines stables sur staging.
+**Prod** : `MIGRATE_DATABASE_URL` + `DATABASE_URL` owner alignés.
+Deploy API débloqué (2026-08-16) après rotation mdp Postgres (désynchro
+post-incident). Runtime encore **owner** — bascule `enondes_app` après
+~2 semaines staging stables. Vérif : `npm run verify:system`.
+
+Porte de readiness (read-only, orchestre les vérif HTTP + affiche la checklist
+humaine et la séquence de cutover exacte) :
+```bash
+npm run verify:rls-cutover
+```
+Puis, une fois la checklist 100 % verte (snapshot posé, `test:rls` vert avec
+`RLS_TEST_URL=enondes_app`, fenêtre de maintenance) : `railway environment link
+production`, poser `DATABASE_URL` = URL `enondes_app` (hostname interne Railway),
+redeploy `patient-endurance`, `npm run verify:prod`. Rollback = reposer l'URL
+owner sauvegardée + redeploy (la 0027 est additive, pas de DROP à inverser).
 
 4. Ne pas fusionner un 2e tenant sur la base Hits Dance avant 2 semaines stables.
 
@@ -172,6 +190,9 @@ STRIPE_PRICE_PRO_ID=price_...
 Webhook Stripe → `https://<api>/v1/webhooks/stripe` (events `customer.subscription.*`).
 
 Test mode d'abord : Checkout → ligne `subscriptions` ; cancel → radio `paused`.
+Vérif plomberie webhook (signature + idempotence + anti-désordre) :
+`STRIPE_WEBHOOK_SECRET=whsec_... npm run verify:stripe` (l'API cible est en dur sur
+l'URL prod ; pour staging, lancer `node scripts/verify-stripe.mjs <url-staging>`).
 
 ---
 
