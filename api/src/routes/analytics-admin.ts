@@ -5,7 +5,8 @@
 
 import { Hono } from "hono";
 import { sql, eq, desc } from "drizzle-orm";
-import { db } from "../db/client.js";
+import { db, runWithRequestDb } from "../db/client.js";
+import { acquireRequestDb, releaseRequestDb } from "../db/tenant-guc.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
 import { requireRole } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
@@ -115,12 +116,23 @@ analyticsAdminRoutes.get("/stream", async (c) => {
   };
 
   const snapshot = async (): Promise<string> => {
-    const [overview, geo, sessions] = await Promise.all([
-      fetchOverview(radioId),
-      fetchGeo(radioId),
-      includeSessions ? fetchSessions(radioId, 200) : Promise.resolve(null),
-    ]);
-    return JSON.stringify({ overview, geo, sessions, ts: Date.now() });
+    // Chaque snapshot s'exécute sur un client du pool dédié + GUC app.radio_id
+    // posée (RLS enforced). Le stream lui-même ne retient pas de client entre
+    // snapshots : on acquiert/libère par snapshot (durée courte) plutôt que pour
+    // toute la vie de la connexion SSE — sinon le pool (max 10) s'épuiserait.
+    const { db: reqDb, client } = await acquireRequestDb(radioId);
+    try {
+      return await runWithRequestDb(reqDb, async () => {
+        const [overview, geo, sessions] = await Promise.all([
+          fetchOverview(radioId),
+          fetchGeo(radioId),
+          includeSessions ? fetchSessions(radioId, 200) : Promise.resolve(null),
+        ]);
+        return JSON.stringify({ overview, geo, sessions, ts: Date.now() });
+      });
+    } finally {
+      await releaseRequestDb(client);
+    }
   };
 
   const stream = new ReadableStream<Uint8Array>({

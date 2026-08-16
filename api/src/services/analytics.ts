@@ -5,6 +5,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
+import { env, isGeoipConfigured } from "../env.js";
 
 // Bornes anti-abus : un beacon ne peut pas ajouter plus que l'intervalle prévu.
 const MAX_SECONDS_PER_BEACON = 60;
@@ -13,58 +14,56 @@ const MAX_SECONDS_PER_BEACON = 60;
    « aujourd'hui » doit vouloir dire la même chose à l'écriture et à la lecture. */
 const RADIO_TZ = "America/Toronto";
 
-// Géo-IP best-effort : une seule tentative par visiteur et par process.
+// Géo-IP : une tentative par visiteur et par process. Résolution LOCALE via
+// MaxMind GeoLite2 (fichier .mmdb) quand GEOIP_DB_PATH est posé — zéro appel
+// réseau, zéro fuite d'IP vers un tiers (audit A5 : geojs.io/freeipapi.com
+// recevaient les IP visiteurs sans consentement). Inactif sinon : geo null,
+// AUCUN appel réseau. Même posture « gated » que S3/Sentry/Stripe.
 const _geoAttempted = new Set<string>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
 
-/** Un appel HTTP géo borné dans le temps ; renvoie le JSON ou null (best-effort). */
-async function fetchGeoJson(url: string): Promise<Record<string, unknown> | null> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 4000);
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    if (!r.ok) return null;
-    return (await r.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
 type GeoResult = { city?: string; country?: string; lat?: number; lon?: number };
 
-function toNum(v: unknown): number | undefined {
-  const n = typeof v === "string" ? parseFloat(v) : typeof v === "number" ? v : NaN;
-  return Number.isFinite(n) ? n : undefined;
+// Reader MaxMind en cache (singleton, chargé paresseusement). Null si la config
+// est absente ou l'ouverture échoue.
+type GeoReader = { get(ip: string): unknown } | null;
+let geoReader: GeoReader | null | undefined;
+
+async function getGeoReader(): Promise<GeoReader | null> {
+  if (geoReader !== undefined) return geoReader;
+  if (!isGeoipConfigured()) {
+    geoReader = null;
+    return null;
+  }
+  try {
+    const { default: maxmind } = await import("maxmind");
+    geoReader = (await maxmind.open(env.GEOIP_DB_PATH)) as GeoReader;
+  } catch (err) {
+    console.error("[analytics] échec ouverture GEOIP_DB_PATH — géo désactivée", err);
+    geoReader = null;
+  }
+  return geoReader;
 }
 
-/** Résout { ville, pays, lat, lon } via des fournisseurs gratuits HTTPS sans clé.
-    geojs.io en premier, freeipapi.com en repli.
-    (ipwho.is a fermé son offre gratuite → 403 "CORS not supported on Free plan".) */
+/** Résout { ville, pays, lat, lon } via la base locale MaxMind. Null si
+ *  inactif ou IP introuvable. Aucun appel réseau (lookup fichier local). */
 async function lookupGeo(ip: string): Promise<GeoResult | null> {
-  const enc = encodeURIComponent(ip);
-  // 1) geojs.io → { city, country, latitude, longitude } (chaînes)
-  const g = await fetchGeoJson(`https://get.geojs.io/v1/ip/geo/${enc}.json`);
-  if (g && (g.city || g.country)) {
-    return {
-      city: g.city as string | undefined,
-      country: g.country as string | undefined,
-      lat: toNum(g.latitude),
-      lon: toNum(g.longitude),
-    };
-  }
-  // 2) repli : freeipapi.com → { cityName, countryName, latitude, longitude } (nombres)
-  const f = await fetchGeoJson(`https://freeipapi.com/api/json/${enc}`);
-  if (f && (f.cityName || f.countryName)) {
-    return {
-      city: f.cityName as string | undefined,
-      country: f.countryName as string | undefined,
-      lat: toNum(f.latitude),
-      lon: toNum(f.longitude),
-    };
-  }
-  return null;
+  const reader = await getGeoReader();
+  if (!reader) return null;
+  const g = reader.get(ip) as
+    | {
+        country?: { names?: { en?: string } };
+        city?: { names?: { en?: string } };
+        location?: { latitude?: number; longitude?: number };
+      }
+    | null;
+  if (!g) return null;
+  return {
+    city: g.city?.names?.en,
+    country: g.country?.names?.en,
+    lat: g.location?.latitude,
+    lon: g.location?.longitude,
+  };
 }
 
 async function resolveCountry(ip: string, clientId: string, radioId: string): Promise<void> {

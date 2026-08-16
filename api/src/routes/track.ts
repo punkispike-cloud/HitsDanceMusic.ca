@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ingestTrack } from "../services/analytics.js";
 import { emitAnalyticsBeacon } from "../services/analytics-bus.js";
+import { beaconAllowed } from "../services/beacon-limit.js";
 import type { AppBindings } from "../types.js";
 
 export const trackRoutes = new Hono<AppBindings>();
@@ -36,6 +37,12 @@ trackRoutes.post("/track", async (c) => {
 
   const radioId = c.get("radioId");
   if (!radioId) return c.body(null, 204); // hôte non rattaché à une radio → on ignore
+
+  // Anti-abus (audit A3) : plafond par clientId sur 60 s. Un bot réutilisant un
+  // même clientId pour injecter de fausses secondes est droppé silencieusement.
+  // Un bot générant un clientId neuf à chaque coup reste limité par l'IP (rateLimit
+  // global). On répond 204 (léger, ne révèle rien au visiteur).
+  if (!beaconAllowed(parsed.data.clientId)) return c.body(null, 204);
 
   try {
     await ingestTrack({

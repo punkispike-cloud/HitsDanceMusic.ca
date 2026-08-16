@@ -126,7 +126,19 @@ Sans besoin produit immédiat : **ne pas** activer (uploads restent `503 s3_unco
    - api : `ALLOWED_ORIGINS` (site + admin + hub), `ADMIN_BASE_URL`, `PUBLIC_SITE_URL`
    - admin : `NEXT_PUBLIC_API_URL=https://api.hitsdancemusic.ca` → **rebuild**
 4. Site : CSP `connect-src` dans `nginx.conf` (URL API) + rebuild web.
-5. Ensuite : cookie refresh peut repasser en `SameSite=Lax` (même parent) dans `api/src/routes/auth.ts`.
+5. Ensuite : sur l’api, poser `COOKIE_SAMESITE=Lax` (même parent → plus besoin
+   de `SameSite=None`). Défaut actuel sans variable : `None` en prod (cross-site
+   `*.up.railway.app`), `Lax` en dev. Valeurs : `None` | `Lax` | `Strict`.
+
+### Géo-IP locale (optionnel, audit A5)
+
+Sans `GEOIP_DB_PATH`, l’API n’appelle **aucun** fournisseur tiers (ip_country
+reste null). Pour activer une géo locale MaxMind GeoLite2 :
+
+1. Télécharger `GeoLite2-City.mmdb` (licence MaxMind gratuite).
+2. Le monter dans le conteneur api (volume ou image) et poser
+   `GEOIP_DB_PATH=/chemin/vers/GeoLite2-City.mmdb`.
+3. Redeploy — les nouveaux beacons remplissent `ip_country` / lat / lon.
 
 ---
 

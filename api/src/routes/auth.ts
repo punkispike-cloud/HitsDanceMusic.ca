@@ -16,7 +16,7 @@ import {
   setPasswordSchema,
 } from "../lib/validation.js";
 import { badRequest, unauthorized } from "../lib/errors.js";
-import { env } from "../env.js";
+import { env, refreshCookieSameSite } from "../env.js";
 import { requireAuth } from "../middleware/auth.js";
 import {
   issueTokenPair,
@@ -39,7 +39,9 @@ function setRefreshCookie(c: Parameters<typeof setCookie>[0], token: string): vo
     // En prod, l'admin et l'api sont sur des domaines distincts
     // (*.up.railway.app = cross-site) → le cookie doit être SameSite=None
     // pour être transmis. En dev local (http, même host), Lax suffit.
-    sameSite: env.isProd ? "None" : "Lax",
+    // Une fois les domaines custom posés (même parent), ops pose
+    // COOKIE_SAMESITE=lax → SameSite=Lax (cf. refreshCookieSameSite).
+    sameSite: refreshCookieSameSite(),
     path: "/auth",
     maxAge: env.REFRESH_TOKEN_TTL,
   });

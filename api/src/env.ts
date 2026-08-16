@@ -79,6 +79,14 @@ export const env = {
   REFRESH_TOKEN_TTL: intOpt("REFRESH_TOKEN_TTL", 2_592_000), // 30 j
   BCRYPT_COST: intOpt("BCRYPT_COST", 12),
 
+  // SameSite du cookie refresh. En prod sur *.up.railway.app (api et admin sur
+  // des domaines distincts = cross-site) → "None" est requis pour que le
+  // cookie soit transmis. Une fois les domaines custom posés (api./admin. sur
+  // le même parent), ops pose COOKIE_SAMESITE=lax → cookie SameSite=Lax (plus
+  // robust, plus privé). Valeurs acceptées : "None" | "Lax" | "Strict".
+  // Cf. RUNBOOK-PRODUCTION.md §2.4.
+  COOKIE_SAMESITE: optional("COOKIE_SAMESITE", ""),
+
   MAX_BODY_BYTES: intOpt("MAX_BODY_BYTES", 1_048_576),
   RATE_LIMIT_RPM: intOpt("RATE_LIMIT_RPM", 120),
   AUTH_RATE_LIMIT_RPM: intOpt("AUTH_RATE_LIMIT_RPM", 10),
@@ -167,11 +175,32 @@ export const env = {
   // R2 préfère le path-style ; vide/"false" → virtual-hosted (AWS par défaut).
   S3_FORCE_PATH_STYLE: optional("S3_FORCE_PATH_STYLE", ""),
   MAX_AUDIO_BYTES: intOpt("MAX_AUDIO_BYTES", 524_288_000), // 500 Mo
+
+  // Géo-IP locale (MaxMind GeoLite2) — alternative auto-hébergée aux fournisseurs
+  // tiers (audit A5 : geojs.io/freeipapi.com reçoivent les IP visiteurs sans
+  // consentement). Poser GEOIP_DB_PATH = chemin vers un fichier .mmdb (à télécharger
+  // côté ops, licence MaxMind gratuite) → lookup local, zéro fuite vers un tiers.
+  // Vide → la géo n'est pas résolue (ip_country/ip_lat/ip_lon restent null) et
+  // AUCUN appel réseau n'est fait. Même posture « gated » que S3/Sentry/Stripe.
+  GEOIP_DB_PATH: optional("GEOIP_DB_PATH", ""),
 } as const;
 
 /** Le stockage S3 est-il configuré ? (gate les routes d'upload) */
 export function isS3Configured(): boolean {
   return Boolean(env.S3_REGION && env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
+}
+
+/** Géo-IP locale configurée ? (sinon, aucune résolution géo, aucun appel tiers). */
+export function isGeoipConfigured(): boolean {
+  return Boolean(env.GEOIP_DB_PATH);
+}
+
+/** Valeur SameSite du cookie refresh : COOKIE_SAMESITE si posé et valide,
+ *  sinon le défaut (None en prod cross-site, Lax en dev). */
+export function refreshCookieSameSite(): "None" | "Lax" | "Strict" {
+  const v = env.COOKIE_SAMESITE.trim();
+  if (v === "None" || v === "Lax" || v === "Strict") return v;
+  return env.isProd ? "None" : "Lax";
 }
 
 /** Sentry actif ? (sinon les erreurs restent en console — comportement actuel) */
