@@ -14,9 +14,10 @@
 | Admin prod | UP — Sentry gated (`NEXT_PUBLIC_SENTRY_DSN`) |
 | Staging Railway | UP — API/admin/site/hub domaines `*-staging.up.railway.app` |
 | Postgres staging | **`Postgres-2fkU`** (TCP proxy). Orphelin `Postgres` **supprimé** |
+| Postgres prod | Recréé + volume `postgres-volume` rattache (incident 2026-08-15 — voir RUNBOOK) |
 | Presence staging | Domaine + `ALLOWED_ORIGINS` OK |
-| RLS | `test:rls` vert ; bascule runtime `enondes_app` via `MIGRATE_DATABASE_URL` + `activate-enondes-app-staging.mjs` |
-| Hub En Ondes | GitHub branché, root `enondes-site/` (prod + staging) |
+| RLS | `test:rls` vert ; bascule runtime `enondes_app` **après** merge `MIGRATE_DATABASE_URL` |
+| Hub En Ondes | GitHub branché, root `enondes-site/` (prod + staging) — titre En Ondes OK |
 
 ### URLs staging
 

@@ -17,6 +17,21 @@ Code déjà gated : `api/src/services/monitoring.ts`, `admin/components/sentry-i
 
 ---
 
+## Incident 2026-08-15 — suppression Postgres cross-env
+
+`railway serviceDelete` / GraphQL `serviceDelete` sur le service **`Postgres`**
+supprime le service **dans tous les environnements** (pas seulement staging).
+
+Conséquence : API prod → 503 (DB down). Volume `postgres-volume` (~1.7 Go) était
+intact (détaché). Remède appliqué : recreer service `Postgres`, rattacher le
+volume, realigner le mot de passe, reposer `DATABASE_URL` sur l’API.
+
+**Règle** : ne jamais `serviceDelete` un service partagé prod/staging ; pour un
+orphelin staging, préférer détacher/supprimer le **volume** ou renommer, et
+vérifier qu’aucune instance prod n’y est liée.
+
+---
+
 ## Vague 1.5 — Brancher `enondes-hub` sur GitHub
 
 **Fait (2026-08-15)** : repo `punkispike-cloud/HitsDanceMusic.ca` branché,  
