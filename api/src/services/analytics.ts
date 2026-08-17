@@ -5,7 +5,8 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
-import { env, isGeoipConfigured } from "../env.js";
+import { isGeoipConfigured } from "../env.js";
+import { resolveGeoMmdbPath } from "../lib/geo-db.js";
 
 // Bornes anti-abus : un beacon ne peut pas ajouter plus que l'intervalle prévu.
 const MAX_SECONDS_PER_BEACON = 60;
@@ -14,11 +15,9 @@ const MAX_SECONDS_PER_BEACON = 60;
    « aujourd'hui » doit vouloir dire la même chose à l'écriture et à la lecture. */
 const RADIO_TZ = "America/Toronto";
 
-// Géo-IP : une tentative par visiteur et par process. Résolution LOCALE via
-// MaxMind GeoLite2 (fichier .mmdb) quand GEOIP_DB_PATH est posé — zéro appel
-// réseau, zéro fuite d'IP vers un tiers (audit A5 : geojs.io/freeipapi.com
-// recevaient les IP visiteurs sans consentement). Inactif sinon : geo null,
-// AUCUN appel réseau. Même posture « gated » que S3/Sentry/Stripe.
+// Géo-IP : une tentative par visiteur et par process. Lookup LOCAL via MMDB
+// (MaxMind ou DB-IP City Lite). Aucun IP visiteur n'est envoyé à un tiers
+// (audit A5). Désactiver : GEOIP_DISABLED=1.
 const _geoAttempted = new Set<string>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|inconnue)/i;
 
@@ -36,10 +35,15 @@ async function getGeoReader(): Promise<GeoReader | null> {
     return null;
   }
   try {
+    const path = await resolveGeoMmdbPath();
+    if (!path) {
+      geoReader = null;
+      return null;
+    }
     const { default: maxmind } = await import("maxmind");
-    geoReader = (await maxmind.open(env.GEOIP_DB_PATH)) as GeoReader;
+    geoReader = (await maxmind.open(path)) as GeoReader;
   } catch (err) {
-    console.error("[analytics] échec ouverture GEOIP_DB_PATH — géo désactivée", err);
+    console.error("[analytics] échec ouverture MMDB — géo désactivée", err);
     geoReader = null;
   }
   return geoReader;
@@ -52,15 +56,17 @@ async function lookupGeo(ip: string): Promise<GeoResult | null> {
   if (!reader) return null;
   const g = reader.get(ip) as
     | {
-        country?: { names?: { en?: string } };
-        city?: { names?: { en?: string } };
+        country?: { names?: { en?: string; fr?: string } } | string;
+        city?: { names?: { en?: string; fr?: string } } | string;
         location?: { latitude?: number; longitude?: number };
       }
     | null;
   if (!g) return null;
+  const nameOf = (v: { names?: { en?: string; fr?: string } } | string | undefined) =>
+    typeof v === "string" ? v : v?.names?.fr || v?.names?.en;
   return {
-    city: g.city?.names?.en,
-    country: g.country?.names?.en,
+    city: nameOf(g.city),
+    country: nameOf(g.country),
     lat: g.location?.latitude,
     lon: g.location?.longitude,
   };
