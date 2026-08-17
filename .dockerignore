@@ -26,3 +26,11 @@ tests
 *.ps1
 *.py
 .github
+
+# Secrets & données locales — ne JAMAIS entrer dans l'image (audit G7)
+.env
+.env.*
+_private
+operator
+test-results
+.preview-rock

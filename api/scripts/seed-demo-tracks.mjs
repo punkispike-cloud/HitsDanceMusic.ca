@@ -7,6 +7,7 @@
    ou avec DATABASE_URL (URL publique) exporté. */
 
 import pg from "pg";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 const DEMO = [
   { artist: "SoundHelix", title: "Deep Horizon", genre: "Électronique", dur: 372, n: 1 },
@@ -24,7 +25,7 @@ if (!url) { console.error("DATABASE_URL absent (lancer via railway run ou export
 
 const pool = new pg.Pool({
   connectionString: url,
-  ssl: /railway|amazonaws|proxy\.rlwy/i.test(url) ? { rejectUnauthorized: false } : undefined,
+  ssl: resolveDbSsl(url),
 });
 
 try {

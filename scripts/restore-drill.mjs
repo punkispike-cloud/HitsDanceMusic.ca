@@ -44,6 +44,22 @@ if (!sourceUrl || !adminUrl) {
   process.exit(2);
 }
 
+// Garde-fou anti-destruction (audit 2026-08-16, G8) : DRILL_DB_NAME ne doit
+// JAMAIS pointer la base métier (celle de SOURCE_DATABASE_URL) ni une base
+// système — le script fait DROP DATABASE IF EXISTS sur ce nom.
+const PROTECTED_DB_NAMES = new Set(["postgres", "template0", "template1", "railway"]);
+const sourceDbName = decodeURIComponent(new URL(sourceUrl).pathname.replace(/^\//, "").split("/")[0] || "");
+if (!drillDbName || drillDbName === sourceDbName || PROTECTED_DB_NAMES.has(drillDbName)) {
+  console.error(
+    `[restore-drill] REFUS : DRILL_DB_NAME="${drillDbName}" ${
+      drillDbName === sourceDbName
+        ? "est la base SOURCE (métier) — le drill la détruirait"
+        : "est un nom protégé (système ou vide)"
+    }. Choisis un nom jetable dédié (ex. restore_drill).`,
+  );
+  process.exit(2);
+}
+
 const log = (msg) => console.log(`[restore-drill] ${msg}`);
 const fail = (msg) => {
   console.error(`[restore-drill] ECHEC : ${msg}`);

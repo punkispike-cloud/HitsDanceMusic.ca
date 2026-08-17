@@ -28,6 +28,7 @@ import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 const execFileP = promisify(execFile);
 const AUDIO_EXT = new Set([".mp3", ".m4a", ".aac", ".ogg", ".wav", ".flac"]);
@@ -58,7 +59,7 @@ const s3 = DRY ? null : new S3Client({
 });
 const pool = new pg.Pool({
   connectionString: DATABASE_URL,
-  ssl: /railway|amazonaws|proxy\.rlwy/i.test(DATABASE_URL || "") ? { rejectUnauthorized: false } : undefined,
+  ssl: resolveDbSsl(DATABASE_URL),
 });
 
 async function walk(dir) {

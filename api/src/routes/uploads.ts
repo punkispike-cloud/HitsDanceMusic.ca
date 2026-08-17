@@ -102,6 +102,13 @@ uploadRoutes.post("/confirm", requireRole("animateur", "superadmin", "owner"), a
   const head = await headObject(intent.objectKey);
   if (!head) throw badRequest("Objet absent sur S3 — upload incomplet ?");
   if (head.size > intent.maxBytes) throw badRequest("Taille réelle dépasse la limite");
+  // Vérif du Content-Type RÉEL stocké vs celui déclaré à l'intention (défense en
+  // profondeur : la signature présignée lie déjà le type, mais on ne fait pas
+  // confiance au stockage). On compare sans les paramètres éventuels (; charset…).
+  const actualType = head.contentType.split(";")[0]?.trim().toLowerCase();
+  if (actualType !== intent.contentType.toLowerCase()) {
+    throw badRequest("Le type réel du fichier ne correspond pas à l'upload déclaré");
+  }
 
   await db
     .update(uploadIntents)

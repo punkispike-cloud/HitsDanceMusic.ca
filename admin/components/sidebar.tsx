@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useRadio } from "@/lib/radio";
-import { isEditorialAdmin, isCrossRadio, ROLE_LABEL, type Role } from "@/lib/types";
+import { isEditorialAdmin, isCrossRadio, isOnAir, ROLE_LABEL, type Role } from "@/lib/types";
 
 /* Visibilité du menu par AXES de capacité (éditorial vs cross-radio) plutôt que
    par rang linéaire — sinon `it` (rang 4) passerait les anciens `minRole`.
@@ -23,8 +23,8 @@ const LINKS: { href: string; label: string; canSee: (role: Role) => boolean }[] 
   { href: "/mixes", label: "Mixes", canSee: (r) => r !== "it" },
   { href: "/pistes", label: "Pistes", canSee: (r) => r !== "it" },
   { href: "/studio", label: "Studio DJ", canSee: (r) => r !== "it" },
-  { href: "/demandes", label: "Demandes", canSee: (r) => r !== "it" },
-  { href: "/sondages", label: "Sondages", canSee: (r) => r !== "it" },
+  { href: "/demandes", label: "Demandes", canSee: isOnAir },
+  { href: "/sondages", label: "Sondages", canSee: isOnAir },
   { href: "/notifications", label: "Notifications", canSee: (r) => isCrossRadio(r) || r === "superadmin" },
   { href: "/utilisateurs", label: "Utilisateurs", canSee: isEditorialAdmin },
   { href: "/journal", label: "Journal d'audit", canSee: (r) => isCrossRadio(r) || r === "superadmin" },

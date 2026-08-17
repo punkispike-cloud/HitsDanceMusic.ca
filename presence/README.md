@@ -45,11 +45,15 @@ Pour tester depuis ton site en local, mets temporairement :
 | Var | Défaut | Description |
 |---|---|---|
 | `PORT` | 8081 | Port d'écoute (Railway le surcharge) |
-| `ALLOWED_ORIGINS` | `*` | Origines autorisées, virgules. **Mets une whitelist en prod.** |
+| `ALLOWED_ORIGINS` | `https://hitsdancemusic.ca,https://www.hitsdancemusic.ca` | Origines autorisées, virgules. **Whitelist par défaut** — `*` en dev seulement (avertissement au boot). |
+| `ALLOW_NO_ORIGIN` | _(refusé)_ | `1` = accepte les connexions sans en-tête Origin (dev local / tests uniquement). |
+| `MAX_CONNECTIONS` | 5000 | Plafond global de connexions simultanées (503 au-delà). |
+| `MAX_PER_IP` | 20 | Plafond de connexions par IP (429 au-delà) — l'Origin étant forgeable hors navigateur, la borne est aussi côté réseau. |
 
 ## Sécurité
 
-- Vérifie l'`Origin` HTTP des connexions (`ALLOWED_ORIGINS`)
+- Vérifie l'`Origin` HTTP des connexions (`ALLOWED_ORIGINS`, whitelist par défaut)
+- Plafond global de connexions (`MAX_CONNECTIONS`) **et par IP** (`MAX_PER_IP`)
 - Rate-limit 10 messages/s par client (anti-flood)
 - Limite payload à 256 octets
 - Heartbeat 25 s + terminaison auto des connexions zombies

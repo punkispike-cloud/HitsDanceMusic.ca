@@ -1,10 +1,11 @@
 "use client";
 
 /* Sondages en direct : l'animateur pose une question à l'antenne, les auditeurs
-   votent depuis le site public (POST /v1/polls/:id/vote). Création/fermeture =
-   animateur + superadmin/owner (`it` exclu, pas à l'antenne ; lecteur en lecture
-   seule). Les résultats se rafraîchissent toutes les 5 s (temps-réel). Les
-   mutations sont tracées par auditMiddleware (entity = "polls"). */
+   votent depuis le site public (POST /v1/polls/:id/vote). Accès (lecture incluse)
+   = animateur + superadmin/owner — `it` et `lecteur` exclus (résultats agrégés
+   de votes d'auditeurs, audit 2026-08-16 G5). Les résultats se rafraîchissent
+   toutes les 5 s (temps-réel). Les mutations sont tracées par auditMiddleware
+   (entity = "polls"). */
 
 import { useState } from "react";
 import { mutate as globalMutate } from "swr";
@@ -188,8 +189,9 @@ export default function SondagesPage() {
   const canManage = user?.role === "animateur" || isEditorialAdmin(user?.role);
   const loadError = error ? "Impossible de charger les sondages." : null;
 
-  // `it` (technique, pas à l'antenne) n'a pas accès aux sondages.
-  if (user?.role === "it") {
+  // `it` (technique) et `lecteur` n'ont pas accès aux sondages : les résultats
+  // agrègent des votes d'auditeurs (G5).
+  if (user?.role === "it" || user?.role === "lecteur") {
     return (
       <div>
         <div className="page-head">
@@ -197,7 +199,7 @@ export default function SondagesPage() {
         </div>
         <Forbidden
           label="Réservé aux animateurs et gestionnaires."
-          hint="Les sondages en direct ne sont pas accessibles à l'équipe IT (technique, pas à l'antenne)."
+          hint="Les sondages en direct agrègent des votes d'auditeurs : accès limité à l'antenne et à la gestion."
         />
       </div>
     );

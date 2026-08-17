@@ -22,6 +22,13 @@ export function isCrossRadio(role: Role | undefined | null): boolean {
   return role === "owner" || role === "it";
 }
 
+/** Axe ANTENNE : animateur + admins éditoriaux (superadmin + owner). EXCLUT
+    `it` (technique) et `lecteur` — miroir des requireRole API sur les
+    demandes/sondages (données d'auditeurs, audit 2026-08-16 G5). */
+export function isOnAir(role: Role | undefined | null): boolean {
+  return role === "animateur" || role === "superadmin" || role === "owner";
+}
+
 /** Libellés affichés (la valeur DB reste `superadmin`/`owner`/`it`). */
 export const ROLE_LABEL: Record<Role, string> = {
   owner: "En Ondes",

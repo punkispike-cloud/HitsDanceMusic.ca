@@ -22,6 +22,7 @@
  */
 
 import pg from "pg";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 const setupUrl = process.env.DATABASE_URL || "";
 const testUrl = process.env.RLS_TEST_URL || setupUrl;
@@ -37,9 +38,8 @@ if (testUrl === setupUrl) {
   console.warn("             Pour valider vraiment : pointer RLS_TEST_URL sur le rôle enondes_app.");
 }
 
-const ssl = (u) => (/railway|amazonaws|proxy\.rlwy/i.test(u) ? { rejectUnauthorized: false } : undefined);
-const setupPool = new pg.Pool({ connectionString: setupUrl, ssl: ssl(setupUrl) });
-const testPool = new pg.Pool({ connectionString: testUrl, ssl: ssl(testUrl) });
+const setupPool = new pg.Pool({ connectionString: setupUrl, ssl: resolveDbSsl(setupUrl) });
+const testPool = new pg.Pool({ connectionString: testUrl, ssl: resolveDbSsl(testUrl) });
 
 const SLUG_A = "rls-test-a";
 const SLUG_B = "rls-test-b";

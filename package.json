@@ -22,6 +22,7 @@
     "snap:baseline": "playwright test --config=tests/visual/playwright.config.mjs --update-snapshots",
     "snap:check": "playwright test --config=tests/visual/playwright.config.mjs",
     "restore-drill": "node scripts/restore-drill.mjs",
+    "backup:db": "node api/scripts/backup-db.mjs",
     "sync-registry": "node scripts/sync-registry.mjs",
     "provision": "node scripts/provision.mjs",
     "add-to-registry": "node scripts/add-to-registry.mjs",

@@ -792,17 +792,18 @@ adminRoutes.delete("/users/:id", requireEditorialAdmin, async (c) => {
 
 /* ═══════════════════════ SONG REQUESTS (demandes / dédicaces) ═══════════════════════
    File temps-réel des demandes d'auditeurs (POST /v1/requests côté public). La
-   lecture est ouverte à tout authentifié (l'animateur voit sa file en direct) ;
-   le traitement (PATCH statut) est réservé à l'animateur + aux admins éditoriaux
-   (superadmin/owner) — `it` (technique, pas à l'antenne) et `lecteur` sont exclus.
-   Toute mutation est tracée par auditMiddleware (entity = "requests"). */
+   lecture est réservée à l'animateur (sa file en direct) + aux admins éditoriaux
+   (superadmin/owner) : les demandes contiennent des données d'auditeurs
+   (clientId, titres) — `it` (technique, pas à l'antenne) et `lecteur` sont exclus
+   (audit 2026-08-16, G5). Toute mutation est tracée par auditMiddleware
+   (entity = "requests"). */
 
 const REQUEST_STATUSES = ["new", "read", "queued", "played", "ignored"] as const;
 const requestPatch = z.object({
   status: z.enum(REQUEST_STATUSES),
 });
 
-adminRoutes.get("/requests", async (c) => {
+adminRoutes.get("/requests", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const statusParam = c.req.query("status");
   const status =
@@ -864,10 +865,10 @@ adminRoutes.patch("/requests/:id", requireRole("animateur", "superadmin", "owner
 
 /* ═══════════════════════ POLLS (sondages en direct) ═══════════════════════
    Sondage temps-réel : l'animateur pose une question à l'antenne, les auditeurs
-   votent depuis le site public (POST /v1/polls/:id/vote). Création/fermeture =
-   animateur+/superadmin/owner (`it` exclu, pas à l'antenne). Lecture ouverte à
-   tout authentifié. Tout est scopé radio. Mutations tracées par auditMiddleware
-   (entity = "polls"). */
+   votent depuis le site public (POST /v1/polls/:id/vote). Lecture et
+   création/fermeture = animateur/superadmin/owner — `it` et `lecteur` exclus
+   (audit 2026-08-16, G5 : les résultats agrègent des votes d'auditeurs).
+   Tout est scopé radio. Mutations tracées par auditMiddleware (entity = "polls"). */
 
 const pollInput = z.object({
   question: z.string().trim().min(1).max(280),
@@ -876,7 +877,7 @@ const pollInput = z.object({
   slotId: z.string().uuid().nullish(),
 });
 
-adminRoutes.get("/polls", async (c) => {
+adminRoutes.get("/polls", requireRole("animateur", "superadmin", "owner"), async (c) => {
   const radioId = requireRadioId(c.get("radioId"));
   const statusParam = c.req.query("status");
   const status = statusParam === "active" || statusParam === "closed" ? statusParam : undefined;

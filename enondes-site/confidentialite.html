@@ -72,22 +72,27 @@
   <main>
     <div class="wrap">
       <h1>Politique de <span class="grad">confidentialité</span></h1>
-      <p class="updated">Dernière mise à jour : 2026-07-21</p>
+      <p class="updated">Dernière mise à jour : 2026-08-16</p>
 
-      <!-- AVIS : document modèle conforme à l'esprit de la Loi 25 (Québec, Loi modernisant
+      <!-- AVIS : document conforme à l'esprit de la Loi 25 (Québec, Loi modernisant
            des dispositions législatives en matière de protection des renseignements personnels).
-           Les valeurs entre crochets [TODO: …] doivent être complétées par En Ondes avant
-           publication. Ce n'est pas un avis juridique. -->
+           Il reste à compléter l'identité du responsable de la protection des renseignements
+           personnels (section 4, trois champs [TODO: …]). Ce n'est pas un avis juridique. -->
       <p class="note">Cette politique décrit comment En Ondes recueille, utilise et protège les
-        renseignements personnels, conformément à la Loi 25 du Québec. Les éléments à compléter
-        sont signalés par <span class="todo">[TODO: …]</span>.</p>
+        renseignements personnels, conformément à la Loi 25 du Québec. Les derniers éléments à
+        compléter (identité du responsable, section 4) sont signalés par
+        <span class="todo">[TODO: …]</span>.</p>
 
       <section class="block">
         <h2>1. Renseignements que nous recueillons</h2>
         <ul>
           <li>Coordonnées que tu nous transmets (nom, courriel, nom de la radio, message) lorsque tu nous écris ou réserves un appel.</li>
           <li>Données de navigation du site (pages vues, type d'appareil, statistiques d'écoute agrégées).</li>
-          <li><span class="todo">[TODO: autres catégories réellement collectées — ex. facturation, données d'audience des clients]</span></li>
+          <li>Comptes staff des radios clientes : nom, courriel, mot de passe (haché, jamais stocké en clair).</li>
+          <li>Données d'audience des stations hébergées : adresse IP, identifiant anonyme, sessions et durées d'écoute, demandes de titres et dédicaces des auditeurs.</li>
+          <li>Abonnements aux notifications de rappel d'émission (web push, avec consentement du navigateur).</li>
+          <li>Fichiers téléversés par les radios clientes (audio, images de pochette).</li>
+          <li>Données de facturation le cas échéant (traitées par Stripe — voir « Sous-traitants »).</li>
         </ul>
       </section>
 
@@ -97,15 +102,23 @@
           <li>Répondre à tes demandes et préparer une proposition de service.</li>
           <li>Créer, héberger et faire fonctionner ta radio en ligne.</li>
           <li>Produire les statistiques d'audience et améliorer le service.</li>
-          <li><span class="todo">[TODO: préciser toute autre finalité — ex. facturation, infolettre avec consentement]</span></li>
+          <li>Envoyer les courriels transactionnels nécessaires au service (invitations d'équipe, réinitialisation de mot de passe).</li>
+          <li>Envoyer les rappels d'émission par notification push aux auditeurs abonnés.</li>
+          <li>Facturation et gestion des abonnements, le cas échéant.</li>
         </ul>
       </section>
 
       <section class="block">
         <h2>3. Durée de conservation</h2>
         <p>Les renseignements sont conservés uniquement le temps nécessaire aux finalités ci-dessus,
-          puis détruits ou anonymisés.</p>
-        <p><span class="todo">[TODO: durées de conservation précises par catégorie de données]</span></p>
+          puis détruits ou anonymisés. Durées appliquées par la plateforme :</p>
+        <ul>
+          <li>Données d'audience détaillées (adresse IP, sessions et durées d'écoute) : <b>180 jours</b>, puis suppression automatique ; seules des mesures agrégées anonymes peuvent subsister.</li>
+          <li>Demandes de titres et dédicaces des auditeurs : <b>180 jours</b>, puis suppression automatique.</li>
+          <li>Journal d'audit des actions d'administration : <b>12 mois</b>.</li>
+          <li>Sessions de connexion (jetons) : supprimées dès l'expiration ; les jetons révoqués sont conservés <b>7 jours</b> à des fins de sécurité (détection de réutilisation).</li>
+          <li>Comptes staff : jusqu'à la suppression du compte ou la fin du contrat de la radio cliente.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -126,9 +139,11 @@
           certains renseignements pour notre compte :</p>
         <ul>
           <li><b>Apple / iTunes</b> — métadonnées et pochettes des titres diffusés.</li>
-          <li><b>Railway</b> — hébergement applicatif et infrastructure.</li>
+          <li><b>Railway</b> — hébergement applicatif et infrastructure (API, base de données, sites).</li>
           <li><b>AsuraHosting</b> — hébergement et diffusion du flux audio en direct.</li>
-          <li><span class="todo">[TODO: autres tiers réellement utilisés — ex. analytique, paiement, courriel]</span></li>
+          <li><b>Cloudflare (R2)</b> — stockage des fichiers téléversés (audio, pochettes), si activé pour la radio.</li>
+          <li><b>Resend</b> — envoi des courriels transactionnels (invitations, réinitialisation de mot de passe).</li>
+          <li><b>Stripe</b> — traitement des paiements et abonnements, si la facturation est activée.</li>
         </ul>
         <p>Certains de ces fournisseurs (Railway, AsuraHosting, Apple) exploitent des serveurs situés
           à l'extérieur du Québec, notamment aux États-Unis. Des renseignements peuvent donc y être

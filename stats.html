@@ -32,9 +32,12 @@
   <body>
 <!--#include name="audience-banner"-->
 <!-- audience-banner : mention mesure d'audience (Loi 25) à l'endroit de la
-     collecte. Dismissible, persistée en localStorage. Ne gate PAS les beacons
-     (mesure anonyme, conforme à confidentialite.html). Auto-injectée par
-     build-html.mjs après <body> sur toutes les pages sauf confidentialite/404. -->
+     collecte. Dismissible, persistée en localStorage. Mention d'information
+     SEULEMENT — la collecte (beacons) est gatée par le consentement
+     (js/consent.js), conformément à confidentialite.html. Auto-injectée par
+     build-html.mjs après <body> sur toutes les pages sauf confidentialite/404.
+     Le script est externalisé (js/audience-banner.js) : la CSP
+     (script-src 'self') bloque tout script inline. -->
 <div id="audience-banner" hidden>
   <p>Nous mesurons l'audience de façon anonyme pour améliorer la radio. <a href="/confidentialite.html">En savoir plus</a>.</p>
   <button type="button" id="audience-banner-close" aria-label="Fermer la mention">&times;</button>
@@ -45,15 +48,7 @@
   #audience-banner a{color:#7fd0ff}
   #audience-banner-close{background:transparent;border:0;color:inherit;font-size:1.5rem;line-height:1;cursor:pointer;padding:0 .25rem}
 </style>
-<script>
-  (function(){
-    var b=document.getElementById('audience-banner'); if(!b)return;
-    try{ if(localStorage.getItem('audience-ack')){ b.remove(); return; } }catch(e){}
-    b.removeAttribute('hidden');
-    var c=document.getElementById('audience-banner-close');
-    if(c)c.addEventListener('click',function(){try{localStorage.setItem('audience-ack','1')}catch(e){}b.remove();});
-  })();
-</script>
+<script src="/js/audience-banner.js" defer></script>
 <!--#endinclude-->
 
     <a class="skip-link" href="#main">Aller au contenu</a>

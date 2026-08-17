@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-dfe142d07456";
+const CACHE = "hitradio-a093c4b63f6a";
 /* SHELL — liste des ressources précachées pour l'offline.
    ⚠ Maintenance manuelle : ce tableau est la source unique du précache.
    build-sw.mjs en rehash le contenu (→ bump auto de CACHE) et avertit si un
@@ -31,6 +31,7 @@ const SHELL = [
   "./js/brand.generated.js",
   "./js/api-config.js",
   "./js/analytics.js",
+  "./js/audience-banner.js",
   "./js/content.js",
   "./js/podcasts-page.js",
   "./js/push-subscribe.js",
@@ -45,6 +46,7 @@ const SHELL = [
   "./js/a11y-modal.js",
   "./js/client-id.js",
   "./js/consent.js",
+  "./js/audience-banner.js",
   "./js/theme.js",
   "./js/schedule.js",
   "./js/now-playing.js",
@@ -170,8 +172,29 @@ self.addEventListener("fetch", (event) => {
     req.headers.get("range")
   ) return;
 
-  // Same-origin : stale-while-revalidate avec fallback offline
+  // Same-origin.
   if (url.origin === location.origin) {
+    // Navigations (pages HTML) : RÉSEAU D'ABORD (audit 2026-08-16 — le SWR
+    // servait un shell potentiellement périmé ; le hub En Ondes fait déjà
+    // réseau-d'abord). Fallback sur le cache si hors-ligne.
+    if (req.mode === "navigate") {
+      event.respondWith(
+        caches.open(CACHE).then(async (cache) => {
+          try {
+            const res = await fetch(req);
+            if (res && res.ok) cache.put(req, res.clone());
+            return res;
+          } catch {
+            const cached = await cache.match(req);
+            if (cached) return cached;
+            return (await cache.match("./index.html")) || (await cache.match("./404.html")) || Response.error();
+          }
+        })
+      );
+      return;
+    }
+
+    // Assets statiques : stale-while-revalidate avec fallback offline.
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const cached = await cache.match(req);
@@ -180,9 +203,6 @@ self.addEventListener("fetch", (event) => {
           return res;
         }).catch(async () => {
           if (cached) return cached;
-          if (req.mode === "navigate") {
-            return (await cache.match("./index.html")) || (await cache.match("./404.html"));
-          }
           return Response.error();
         });
         return cached || network;

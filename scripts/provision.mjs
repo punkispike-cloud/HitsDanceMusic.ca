@@ -25,6 +25,7 @@
 
 import pg from "pg";
 import { spawn } from "node:child_process";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 import { readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,10 +66,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(2);
 }
 
-const ssl = /railway|amazonaws|proxy\.rlwy/i.test(process.env.DATABASE_URL)
-  ? { rejectUnauthorized: false }
-  : undefined;
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl });
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: resolveDbSsl(process.env.DATABASE_URL) });
 
 const checklist = [];
 const note = (step, status, detail = "") =>
