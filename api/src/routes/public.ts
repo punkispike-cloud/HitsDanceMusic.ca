@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { eq, asc, desc, and, sql, gt } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { artists, shows, episodes, mixes, trackHistory, trackLikes, songRequests, polls, pollVotes } from "../db/schema.js";
+import { artists, shows, episodes, mixes, trackHistory, trackLikes, songRequests, polls, pollVotes, featuredItems } from "../db/schema.js";
 import { notFound, badRequest, tooMany } from "../lib/errors.js";
 import { isStripeConfigured } from "../env.js";
 import { constructWebhookEvent, handleStripeEvent } from "../services/stripe.js";
@@ -95,16 +95,46 @@ publicRoutes.get("/artists/:slug", async (c) => {
     ),
   });
   if (!row) throw notFound("Animateur introuvable");
-  // Fiche enrichie : ses émissions + ses prochains passages, via les FK réelles.
-  const [artistShows, upcoming] = await Promise.all([
+  // Fiche enrichie : émissions, prochains passages, podcasts et mixes publiés.
+  const [artistShows, upcoming, artistEpisodes, artistMixes] = await Promise.all([
     db
       .select()
       .from(shows)
       .where(and(eq(shows.radioId, radioId), eq(shows.artistId, row.id), eq(shows.isPublished, true)))
       .orderBy(asc(shows.sortOrder), asc(shows.title)),
     getUpcomingSlotsForArtist(row.id, radioId),
+    db
+      .select({
+        slug: episodes.slug,
+        title: episodes.title,
+        description: episodes.description,
+        coverUrl: episodes.coverUrl,
+        durationSec: episodes.durationSec,
+        publishedAt: episodes.publishedAt,
+        audioUrl: episodes.audioUrl,
+      })
+      .from(episodes)
+      .where(and(eq(episodes.radioId, radioId), eq(episodes.artistId, row.id), eq(episodes.status, "published")))
+      .orderBy(desc(episodes.publishedAt))
+      .limit(12),
+    db
+      .select({
+        slug: mixes.slug,
+        title: mixes.title,
+        description: mixes.description,
+        coverUrl: mixes.coverUrl,
+        genre: mixes.genre,
+        durationSec: mixes.durationSec,
+        publishedAt: mixes.publishedAt,
+        audioUrl: mixes.audioUrl,
+      })
+      .from(mixes)
+      .where(and(eq(mixes.radioId, radioId), eq(mixes.artistId, row.id), eq(mixes.status, "published")))
+      .orderBy(desc(mixes.publishedAt))
+      .limit(12),
   ]);
-  return c.json({ ...row, shows: artistShows, upcoming });
+  c.header("Cache-Control", "public, max-age=60");
+  return c.json({ ...row, shows: artistShows, upcoming, episodes: artistEpisodes, mixes: artistMixes });
 });
 
 /* GET /v1/shows — émissions publiées. */
@@ -297,6 +327,64 @@ publicRoutes.post("/requests", async (c) => {
     })
     .returning();
   return c.json({ ok: true, id: row?.id ?? null }, 201);
+});
+
+/* GET /v1/requests/mine?clientId= — liste les demandes de l'auditeur (suivi). */
+publicRoutes.get("/requests/mine", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const clientId = readClientId(c);
+  const rows = await db
+    .select({
+      id: songRequests.id,
+      artist: songRequests.artist,
+      title: songRequests.title,
+      dedication: songRequests.dedication,
+      status: songRequests.status,
+      createdAt: songRequests.createdAt,
+      handledAt: songRequests.handledAt,
+    })
+    .from(songRequests)
+    .where(and(eq(songRequests.radioId, radioId), eq(songRequests.clientId, clientId)))
+    .orderBy(desc(songRequests.createdAt))
+    .limit(50);
+  c.header("Cache-Control", "private, no-store");
+  return c.json(rows);
+});
+
+/* GET /v1/requests/:id?clientId= — détail d'une demande (propriétaire uniquement). */
+publicRoutes.get("/requests/:id", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  if (!UUID_RE.test(id)) throw notFound("Demande introuvable");
+  const clientId = readClientId(c);
+  const row = await db.query.songRequests.findFirst({
+    where: and(eq(songRequests.id, id), eq(songRequests.radioId, radioId), eq(songRequests.clientId, clientId)),
+  });
+  if (!row) throw notFound("Demande introuvable");
+  c.header("Cache-Control", "private, no-store");
+  return c.json({
+    id: row.id,
+    artist: row.artist,
+    title: row.title,
+    dedication: row.dedication,
+    status: row.status,
+    createdAt: row.createdAt,
+    handledAt: row.handledAt,
+  });
+});
+
+/* GET /v1/featured?kind=homepage|rail — contenu éditorial « À la une ». */
+publicRoutes.get("/featured", async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const kindParam = c.req.query("kind")?.trim() || "homepage";
+  const kind = kindParam === "rail" ? "rail" : "homepage";
+  const rows = await db
+    .select()
+    .from(featuredItems)
+    .where(and(eq(featuredItems.radioId, radioId), eq(featuredItems.kind, kind), eq(featuredItems.isPublished, true)))
+    .orderBy(asc(featuredItems.sortOrder), asc(featuredItems.title));
+  c.header("Cache-Control", "public, max-age=120");
+  return c.json(rows);
 });
 
 /* ───────────────────────── polls (sondages en direct) ─────────────────────────

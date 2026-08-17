@@ -1,12 +1,6 @@
 "use client";
 
-/* Boîte de réception des demandes de titres / dédicaces — file temps-réel
-   (polling 5 s via useRequests). Les auditeurs déposent depuis le site public
-   (POST /v1/requests) ; l'animateur traite ici : marquer lu / en file / jouée /
-   ignorée. Accès réservé à l'antenne (animateur + superadmin/owner) : `it`
-   (technique) et `lecteur` sont exclus — les demandes contiennent des données
-   d'auditeurs (audit 2026-08-16, G5). La mutation est tracée par
-   auditMiddleware (entity = "requests"). */
+/* Boîte de réception des demandes — table desktop + cartes mobile. */
 
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
@@ -49,6 +43,44 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)} j`;
 }
 
+function ActionButtons({
+  r,
+  busy,
+  canHandle,
+  onStatus,
+}: {
+  r: SongRequest;
+  busy: string | null;
+  canHandle: boolean;
+  onStatus: (id: string, status: RequestStatus) => void;
+}) {
+  if (!canHandle) return null;
+  return (
+    <div className="req-actions">
+      {r.status !== "read" && (
+        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "read")}>
+          Lu
+        </button>
+      )}
+      {r.status !== "queued" && (
+        <button className="btn btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "queued")}>
+          En file
+        </button>
+      )}
+      {r.status !== "played" && (
+        <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "played")}>
+          Jouée
+        </button>
+      )}
+      {r.status !== "ignored" && (
+        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "ignored")}>
+          Ignorer
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function DemandesPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -59,8 +91,6 @@ export default function DemandesPage() {
   const canHandle = user?.role === "animateur" || isEditorialAdmin(user?.role);
   const loadError = error ? "Impossible de charger la file de demandes." : null;
 
-  // `it` (technique) et `lecteur` (lecture publique seulement) n'ont pas accès
-  // à la file : les demandes contiennent des données d'auditeurs (G5).
   if (user?.role === "it" || user?.role === "lecteur") {
     return (
       <div>
@@ -89,7 +119,7 @@ export default function DemandesPage() {
   };
 
   return (
-    <div>
+    <div className="demandes-page">
       <div className="page-head">
         <h1>Demandes &amp; dédicaces</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -130,85 +160,80 @@ export default function DemandesPage() {
           hint="Les nouvelles demandes des auditeurs apparaîtront ici automatiquement."
         />
       ) : (
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th scope="col">Titre</th>
-                <th scope="col">Dédicace</th>
-                <th scope="col">De</th>
-                <th scope="col">Reçue</th>
-                <th scope="col">Statut</th>
-                {canHandle && <th scope="col">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((r: SongRequest) => (
-                <tr key={r.id}>
-                  <td>
-                    <div style={{ fontWeight: 700 }}>{r.title}</div>
-                    <div className="muted" style={{ fontSize: "0.78rem" }}>
-                      {r.artist || "—"}
-                    </div>
-                  </td>
-                  <td className="muted" style={{ maxWidth: 280 }}>
-                    {r.dedication || "—"}
-                  </td>
-                  <td className="muted">{r.requesterName || "Anonyme"}</td>
-                  <td className="muted" title={new Date(r.createdAt).toLocaleString("fr-CA")}>
-                    {timeAgo(r.createdAt)}
-                  </td>
-                  <td>
-                    <span style={{ color: STATUS_COLOR[r.status], fontWeight: 700 }}>
-                      {STATUS_LABEL[r.status]}
-                    </span>
-                  </td>
-                  {canHandle && (
+        <>
+          <div className="table-wrap demandes-table">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Titre</th>
+                  <th scope="col">Dédicace</th>
+                  <th scope="col">De</th>
+                  <th scope="col">Reçue</th>
+                  <th scope="col">Statut</th>
+                  {canHandle && <th scope="col">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((r: SongRequest) => (
+                  <tr key={r.id}>
                     <td>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {r.status !== "read" && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            disabled={busy === r.id}
-                            onClick={() => void setStatus(r.id, "read")}
-                          >
-                            Lu
-                          </button>
-                        )}
-                        {r.status !== "queued" && (
-                          <button
-                            className="btn btn-sm"
-                            disabled={busy === r.id}
-                            onClick={() => void setStatus(r.id, "queued")}
-                          >
-                            En file
-                          </button>
-                        )}
-                        {r.status !== "played" && (
-                          <button
-                            className="btn btn-primary btn-sm"
-                            disabled={busy === r.id}
-                            onClick={() => void setStatus(r.id, "played")}
-                          >
-                            Jouée
-                          </button>
-                        )}
-                        {r.status !== "ignored" && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            disabled={busy === r.id}
-                            onClick={() => void setStatus(r.id, "ignored")}
-                          >
-                            Ignorer
-                          </button>
-                        )}
+                      <div style={{ fontWeight: 700 }}>{r.title}</div>
+                      <div className="muted" style={{ fontSize: "0.78rem" }}>
+                        {r.artist || "—"}
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <td className="muted" style={{ maxWidth: 280 }}>
+                      {r.dedication || "—"}
+                    </td>
+                    <td className="muted">{r.requesterName || "Anonyme"}</td>
+                    <td className="muted" title={new Date(r.createdAt).toLocaleString("fr-CA")}>
+                      {timeAgo(r.createdAt)}
+                    </td>
+                    <td>
+                      <span style={{ color: STATUS_COLOR[r.status], fontWeight: 700 }}>
+                        {STATUS_LABEL[r.status]}
+                      </span>
+                    </td>
+                    {canHandle && (
+                      <td>
+                        <ActionButtons r={r} busy={busy} canHandle={canHandle} onStatus={setStatus} />
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="demandes-cards" aria-label="Demandes (vue mobile)">
+            {data.map((r: SongRequest) => (
+              <article key={r.id} className="card demande-card">
+                <header className="demande-card-head">
+                  <div>
+                    <strong>{r.title}</strong>
+                    <div className="muted" style={{ fontSize: "0.78rem" }}>{r.artist || "—"}</div>
+                  </div>
+                  <span style={{ color: STATUS_COLOR[r.status], fontWeight: 700, fontSize: "0.82rem" }}>
+                    {STATUS_LABEL[r.status]}
+                  </span>
+                </header>
+                {r.dedication && <p className="muted" style={{ fontSize: "0.85rem", margin: "8px 0" }}>{r.dedication}</p>}
+                <p className="muted" style={{ fontSize: "0.78rem", margin: 0 }}>
+                  {r.requesterName || "Anonyme"} · {timeAgo(r.createdAt)}
+                </p>
+                <ActionButtons r={r} busy={busy} canHandle={canHandle} onStatus={setStatus} />
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+
+      {canHandle && data && data.length > 0 && (
+        <div className="demandes-sticky-bar" role="toolbar" aria-label="Actions rapides">
+          <span className="muted" style={{ fontSize: "0.82rem" }}>{data.length} demande(s) affichée(s)</span>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => void mutate()}>
+            Actualiser
+          </button>
         </div>
       )}
     </div>

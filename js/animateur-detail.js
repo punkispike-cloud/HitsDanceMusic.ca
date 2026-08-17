@@ -77,6 +77,17 @@ function render(detail) {
         .join("")}</ul>`
     : `<p class="adetail-empty">Aucun passage planifié cette semaine.</p>`;
 
+  const episodes = Array.isArray(detail.episodes) ? detail.episodes : [];
+  const mixes = Array.isArray(detail.mixes) ? detail.mixes : [];
+  const odItem = (item, kind) => {
+    const href = `podcasts.html#${encodeURIComponent(item.slug)}`;
+    const sub = kind === "mix" ? (item.genre || "Mix") : "Podcast";
+    return `<li><a href="${escapeHtml(href)}">${escapeHtml(item.title)}</a> <span class="adetail-od-sub">${escapeHtml(sub)}</span></li>`;
+  };
+  const podcastsHtml = episodes.length || mixes.length
+    ? `<ul class="adetail-list adetail-od">${episodes.map((e) => odItem(e, "episode")).join("")}${mixes.map((m) => odItem(m, "mix")).join("")}</ul>`
+    : `<p class="adetail-empty">Aucun replay publié pour l'instant.</p>`;
+
   return `
     <div class="adetail" role="dialog" aria-modal="true" aria-label="Profil de ${escapeHtml(detail.name)}">
       <button class="adetail-close" aria-label="Fermer" title="Fermer">×</button>
@@ -92,6 +103,7 @@ function render(detail) {
       ${socials}
       <div class="adetail-section"><h3>Émissions</h3>${showsHtml}</div>
       <div class="adetail-section"><h3>Prochains passages</h3>${upcomingHtml}</div>
+      <div class="adetail-section"><h3>Podcasts &amp; mixes</h3>${podcastsHtml}</div>
     </div>`;
 }
 

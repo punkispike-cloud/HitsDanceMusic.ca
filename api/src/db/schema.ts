@@ -290,6 +290,36 @@ export const mixes = pgTable(
   }),
 );
 
+/* ───────────────────────── featured_items (éditorial « À la une ») ─────────────────────────
+   Cartes homepage + items du rail news. Éditables depuis l'admin ; le site public
+   lit GET /v1/featured (homepage) et kind=rail pour le rail. */
+
+export const featuredKind = pgEnum("featured_kind", ["homepage", "rail"]);
+
+export const featuredItems = pgTable(
+  "featured_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    kind: featuredKind("kind").notNull().default("homepage"),
+    tag: text("tag"),
+    title: text("title").notNull(),
+    meta: text("meta"),
+    body: text("body"),
+    coverUrl: text("cover_url"),
+    emoji: text("emoji"),
+    linkUrl: text("link_url"),
+    variant: text("variant"), // drive | jumpoff | oksana | default
+    sortOrder: integer("sort_order").notNull().default(0),
+    isPublished: boolean("is_published").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => ({
+    radioKindIdx: index("featured_items_radio_kind_idx").on(t.radioId, t.kind, t.sortOrder),
+    radioIdx: index("featured_items_radio_idx").on(t.radioId),
+  }),
+);
+
 /* ───────────────────────── tracks (bibliothèque de pistes) ─────────────────────────
    Pistes libres de droits cataloguées pour le studio de mix (et plus tard la
    rotation AzuraCast). Audio stocké sur S3/R2. `source`/`license` = journal de
@@ -967,3 +997,5 @@ export type RequestStatus = (typeof requestStatus.enumValues)[number];
 export type Poll = typeof polls.$inferSelect;
 export type PollVote = typeof pollVotes.$inferSelect;
 export type PollStatus = (typeof pollStatus.enumValues)[number];
+export type FeaturedItem = typeof featuredItems.$inferSelect;
+export type FeaturedKind = (typeof featuredKind.enumValues)[number];

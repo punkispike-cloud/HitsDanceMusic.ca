@@ -22,6 +22,7 @@ import {
   pollVotes,
   mediaAssets,
   adRotations,
+  featuredItems,
 } from "../db/schema.js";
 import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
@@ -787,6 +788,67 @@ adminRoutes.delete("/users/:id", requireEditorialAdmin, async (c) => {
   assertSameRadioOrOwner(actor.role, target.radioId, radioId);
   assertCanManageUser(actor, target.role); // anti-escalade : pas de suppression d'un rang supérieur
   await db.delete(users).where(eq(users.id, id));
+  return c.json({ ok: true });
+});
+
+/* ═══════════════════════ FEATURED ITEMS (À la une) ═══════════════════════ */
+
+const featuredInput = z.object({
+  kind: z.enum(["homepage", "rail"]).optional(),
+  tag: z.string().trim().max(60).nullish(),
+  title: z.string().trim().min(1).max(200),
+  meta: z.string().trim().max(300).nullish(),
+  body: z.string().trim().max(2000).nullish(),
+  coverUrl: z.string().trim().max(500).nullish(),
+  emoji: z.string().trim().max(8).nullish(),
+  linkUrl: z.string().trim().max(500).nullish(),
+  variant: z.string().trim().max(40).nullish(),
+  sortOrder: z.number().int().optional(),
+  isPublished: z.boolean().optional(),
+});
+
+adminRoutes.get("/featured", requireEditorialAdmin, async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const kindParam = c.req.query("kind")?.trim();
+  const kind = kindParam === "rail" ? "rail" : kindParam === "homepage" ? "homepage" : undefined;
+  return c.json(
+    await db
+      .select()
+      .from(featuredItems)
+      .where(and(eq(featuredItems.radioId, radioId), kind ? eq(featuredItems.kind, kind) : undefined))
+      .orderBy(asc(featuredItems.kind), asc(featuredItems.sortOrder), asc(featuredItems.title))
+      .limit(listLimit(c))
+      .offset(listOffset(c)),
+  );
+});
+
+adminRoutes.post("/featured", requireEditorialAdmin, async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const body = featuredInput.parse(await c.req.json());
+  const [row] = await db.insert(featuredItems).values({ ...body, radioId }).returning();
+  return c.json(row, 201);
+});
+
+adminRoutes.patch("/featured/:id", requireEditorialAdmin, async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const id = c.req.param("id");
+  const body = featuredInput.partial().parse(await c.req.json());
+  const [row] = await db
+    .update(featuredItems)
+    .set({ ...body, updatedAt: new Date() })
+    .where(and(eq(featuredItems.id, id), eq(featuredItems.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Élément introuvable");
+  return c.json(row);
+});
+
+adminRoutes.delete("/featured/:id", requireEditorialAdmin, async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  const [row] = await db
+    .delete(featuredItems)
+    .where(and(eq(featuredItems.id, c.req.param("id")), eq(featuredItems.radioId, radioId)))
+    .returning();
+  if (!row) throw notFound("Élément introuvable");
   return c.json({ ok: true });
 });
 

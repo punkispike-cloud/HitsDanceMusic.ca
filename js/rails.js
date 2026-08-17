@@ -1,19 +1,14 @@
-/* Wave 4 — bandes scrollables : prochaines émissions, replays, à la une.
-   (Rail "webradios" supprimé Sprint 1 : c'était un faux choix.) */
+/* Wave 4 — bandes scrollables : prochaines émissions, replays, à la une. */
 
 import { $, $$, escapeHtml } from "./util.js";
+import { API_BASE } from "./api-config.js";
 import { SCHEDULE, SLOT_TAGS } from "./schedule.js";
 import { DAY_NAMES, getMontrealParts, toMinutes } from "./time.js";
 
-const NEWS_ITEMS = [
-  { tag: "DJ Set",  title: "DJ JÜMPOFF — JÜMPOFFproject", text: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️" },
+const NEWS_FALLBACK = [
+  { tag: "DJ Set", title: "DJ JÜMPOFF — JÜMPOFFproject", text: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️" },
   { tag: "Antenne", title: "Hommage Limelight Montréal", text: "DJ Pierre Jutras revient cette semaine avec quatre créneaux signatures.", emoji: "🎙" },
   { tag: "Émission", title: "Nouvelle saison de Hit Drive", text: "Du lundi au vendredi 16h–18h, l'antenne accélère pour la sortie des bureaux.", emoji: "🚗" },
-  { tag: "Nuit",    title: "BeatRadioWorld : Best DJ's internationaux", text: "Tous les soirs 22h–07h, mixes live d'Europe, Amérique, Asie.", emoji: "🌙" },
-  { tag: "Studio",  title: "Alain Perron en matinale", text: "Café-actu-musique chaque matin 7h–9h. Appelle au 418-261-2886.", emoji: "☕" },
-  { tag: "Mix",     title: "DJ OSKANA — Show européen", text: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧" },
-  { tag: "Latino",  title: "Latino Show samedi", text: "Reggaeton, urbano et latin house par les meilleurs DJs de Montréal.", emoji: "🌶️" },
-  { tag: "Live",    title: "Ibiza — Le Chiwawa beach club", text: "Captations live des soirées Chiwawa : vibes balearic, house solaire et coucher de soleil.", emoji: "🌅" },
 ];
 
 function rail(title, emoji, items, renderItem, opts = {}) {
@@ -46,6 +41,16 @@ function bindRailArrows() {
   });
 }
 
+async function fetchJson(path) {
+  try {
+    const r = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    if (!r.ok) return null;
+    return r.json();
+  } catch {
+    return null;
+  }
+}
+
 export function renderRailUpcoming() {
   const root = $("#rail-upcoming");
   if (!root) return;
@@ -69,7 +74,7 @@ export function renderRailUpcoming() {
     const tag = SLOT_TAGS[it.tag] || SLOT_TAGS.hitlist;
     const h = Math.floor(it.when / 60);
     const m = it.when % 60;
-    const when = h > 0 ? `dans ${h} h ${String(m).padStart(2,"0")}` : `dans ${m} min`;
+    const when = h > 0 ? `dans ${h} h ${String(m).padStart(2, "0")}` : `dans ${m} min`;
     return `<article class="rail-card upcoming-card" style="--card-accent:${tag.color}">
       <span class="rail-tag">${escapeHtml(tag.label)}</span>
       <h3>${escapeHtml(it.title)}</h3>
@@ -80,38 +85,86 @@ export function renderRailUpcoming() {
   }, { cta: { href: "horaire.html", label: "Voir la grille" } });
 }
 
-export function renderRailReplays() {
-  const root = $("#rail-replays");
-  if (!root) return;
+function scheduleFallbackItems() {
   const seen = new Set();
   const items = [];
   for (const day of Object.values(SCHEDULE)) {
     for (const [from, to, title, host, tag] of day) {
       if (seen.has(title)) continue;
       seen.add(title);
-      items.push({ title, host, tag, sample: `${from}–${to}` });
+      items.push({ title, host, tag, sample: `${from}–${to}`, href: `emissions.html?show=${title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-")}` });
       if (items.length >= 10) break;
     }
     if (items.length >= 10) break;
   }
-  root.hidden = false;
-  root.innerHTML = rail("Toutes les émissions", "🎙", items, (it) => {
-    const tag = SLOT_TAGS[it.tag] || SLOT_TAGS.hitlist;
-    const slug = it.title.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-");
-    return `<a class="rail-card replay-card" href="emissions.html?show=${slug}" style="--card-accent:${tag.color}">
-      <span class="rail-tag">${escapeHtml(tag.label)}</span>
-      <h3>${escapeHtml(it.title)}</h3>
-      <p class="rail-meta">${escapeHtml(it.host || "Programmation")}</p>
-      <p class="rail-when">Créneau type · ${it.sample}</p>
-    </a>`;
-  }, { cta: { href: "emissions.html", label: "Toutes les émissions" } });
+  return items;
 }
 
-export function renderRailNews() {
+export async function renderRailReplays() {
+  const root = $("#rail-replays");
+  if (!root) return;
+  const [episodes, mixes] = await Promise.all([
+    fetchJson("/v1/episodes"),
+    fetchJson("/v1/mixes"),
+  ]);
+  let items = [];
+  if (Array.isArray(episodes)) {
+    for (const e of episodes.slice(0, 8)) {
+      items.push({
+        title: e.title,
+        host: "Podcast",
+        tag: "special",
+        sample: e.durationSec ? `${Math.floor(e.durationSec / 60)} min` : "À réécouter",
+        href: `podcasts.html#${encodeURIComponent(e.slug)}`,
+        kind: "episode",
+      });
+    }
+  }
+  if (Array.isArray(mixes)) {
+    for (const m of mixes.slice(0, 6)) {
+      items.push({
+        title: m.title,
+        host: m.genre || "Mix",
+        tag: "night",
+        sample: m.durationSec ? `${Math.floor(m.durationSec / 60)} min` : "DJ set",
+        href: `podcasts.html#${encodeURIComponent(m.slug)}`,
+        kind: "mix",
+      });
+    }
+  }
+  if (!items.length) items = scheduleFallbackItems();
+  root.hidden = false;
+  root.innerHTML = rail("Replays & podcasts", "🎙", items, (it) => {
+    const tag = SLOT_TAGS[it.tag] || SLOT_TAGS.hitlist;
+    return `<a class="rail-card replay-card" href="${escapeHtml(it.href)}" style="--card-accent:${tag.color}">
+      <span class="rail-tag">${escapeHtml(it.kind === "mix" ? "Mix" : "Replay")}</span>
+      <h3>${escapeHtml(it.title)}</h3>
+      <p class="rail-meta">${escapeHtml(it.host || "Programmation")}</p>
+      <p class="rail-when">${escapeHtml(it.sample)}</p>
+    </a>`;
+  }, { cta: { href: "podcasts.html", label: "Tous les replays" } });
+}
+
+export async function renderRailNews() {
   const root = $("#rail-news");
   if (!root) return;
+  let newsItems = NEWS_FALLBACK;
+  try {
+    const r = await fetch(`${API_BASE}/v1/featured?kind=rail`, { cache: "no-store" });
+    if (r.ok) {
+      const rows = await r.json();
+      if (Array.isArray(rows) && rows.length) {
+        newsItems = rows.map((it) => ({
+          tag: it.tag || "Info",
+          title: it.title,
+          text: it.body || it.meta || "",
+          emoji: it.emoji || "✨",
+        }));
+      }
+    }
+  } catch { /* fallback */ }
   root.hidden = false;
-  root.innerHTML = rail("À la une", "✨", NEWS_ITEMS, (it) => {
+  root.innerHTML = rail("À la une", "✨", newsItems, (it) => {
     return `<article class="rail-card news-card">
       <span class="rail-emoji" aria-hidden="true">${it.emoji}</span>
       <span class="rail-tag">${escapeHtml(it.tag)}</span>
@@ -123,7 +176,7 @@ export function renderRailNews() {
 
 export function renderAllRails() {
   renderRailUpcoming();
-  renderRailReplays();
-  renderRailNews();
+  void renderRailReplays();
+  void renderRailNews();
   bindRailArrows();
 }

@@ -168,7 +168,7 @@
             </label>
             <label class="autocomplete-wrap">
               Demande de titre (recherche iTunes)
-              <input id="trackQuery" name="track" type="text" placeholder="Artiste — titre" autocomplete="off" />
+              <input id="trackQuery" name="track" type="text" placeholder="Artiste — titre" autocomplete="off" aria-autocomplete="list" aria-controls="trackSuggest" aria-expanded="false" />
               <ul id="trackSuggest" class="suggest-list" hidden role="listbox"></ul>
             </label>
             <label>
@@ -181,6 +181,19 @@
             </label>
             <button class="button primary" type="submit">📧 Ouvrir le courriel</button>
           </form>
+        </div>
+      </section>
+
+      <section class="section contact-layout" id="myRequestsPanel">
+        <div class="contact-card">
+          <div class="section-heading" style="margin-bottom:12px">
+            <div>
+              <p class="eyebrow"><span></span> Suivi</p>
+              <h2>Mes demandes</h2>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="myRequestsRefresh">Actualiser</button>
+          </div>
+          <div id="myRequestsList" class="req-list" aria-live="polite" aria-label="Statut de tes demandes de titres"></div>
         </div>
       </section>
 

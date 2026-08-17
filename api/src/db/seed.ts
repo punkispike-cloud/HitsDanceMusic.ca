@@ -19,12 +19,22 @@ import {
   pushSubscriptions,
   auditLog,
   uploadIntents,
+  featuredItems,
 } from "./schema.js";
 import { hashPassword } from "../lib/password.js";
 import { toMinutes } from "../lib/validation.js";
 import { env } from "../env.js";
 import type { SeedArtist, SeedShow, ScheduleRow } from "./seed-data.js";
 import { loadSeedBundle } from "./seeds.js";
+
+/* Opt-in (SEED_SYNC_PASSWORDS=1) : réécrit le hash depuis SEED_*_PASSWORD.
+   Utile après restauration d'un backup plus ancien que le mot de passe actuel.
+   Désactivé par défaut — un re-déploiement ne doit pas écraser un mdp changé dans l'admin. */
+async function maybeSyncPassword(userId: string, password: string, email: string): Promise<void> {
+  if (process.env.SEED_SYNC_PASSWORDS !== "1") return;
+  await db.update(users).set({ passwordHash: await hashPassword(password), updatedAt: new Date() }).where(eq(users.id, userId));
+  console.log(`[seed] mot de passe resynchronisé : ${email}`);
+}
 
 async function seedSuperadmin(radioId: string) {
   if (!env.SEED_ADMIN_EMAIL || !env.SEED_ADMIN_PASSWORD) {
@@ -35,6 +45,7 @@ async function seedSuperadmin(radioId: string) {
     where: eq(users.email, env.SEED_ADMIN_EMAIL),
   });
   if (existing) {
+    await maybeSyncPassword(existing.id, env.SEED_ADMIN_PASSWORD, env.SEED_ADMIN_EMAIL);
     console.log(`[seed] superadmin déjà présent : ${env.SEED_ADMIN_EMAIL}`);
     return;
   }
@@ -61,6 +72,7 @@ async function seedOwner() {
     where: eq(users.email, env.SEED_OWNER_EMAIL),
   });
   if (existing) {
+    await maybeSyncPassword(existing.id, env.SEED_OWNER_PASSWORD, env.SEED_OWNER_EMAIL);
     if (existing.role !== "owner") {
       await db.update(users).set({ role: "owner", updatedAt: new Date() }).where(eq(users.id, existing.id));
       console.log(`[seed] compte promu owner : ${env.SEED_OWNER_EMAIL}`);
@@ -92,6 +104,7 @@ async function seedIt() {
       console.log(`[seed] compte owner existant pour ${env.SEED_IT_EMAIL} — laissé owner.`);
       return;
     }
+    await maybeSyncPassword(existing.id, env.SEED_IT_PASSWORD, env.SEED_IT_EMAIL);
     if (existing.role !== "it") {
       await db.update(users).set({ role: "it", updatedAt: new Date() }).where(eq(users.id, existing.id));
       console.log(`[seed] compte promu it : ${env.SEED_IT_EMAIL}`);
@@ -263,6 +276,59 @@ async function seedSchedule(
   console.log(`[seed] ${count} créneaux insérés.`);
 }
 
+/** Seed « À la une » depuis le contenu hardcodé du site (idempotent : skip si déjà peuplé). */
+async function seedFeaturedItems(radioId: string) {
+  const existing = await db.select({ id: featuredItems.id }).from(featuredItems).limit(1);
+  if (existing.length > 0) {
+    console.log("[seed] featured_items déjà présents — skip.");
+    return;
+  }
+  const homepage = [
+    {
+      kind: "homepage" as const,
+      tag: "DRIVE",
+      title: "Le Hit Drive (live)",
+      meta: "Lun–Ven · 16h00–18h00 · avec Alain Perron",
+      body: "Deux heures non-stop de hits dance et house pour rentrer du boulot — la signature de l'après-midi.",
+      coverUrl: null,
+      variant: "drive",
+      sortOrder: 0,
+    },
+    {
+      kind: "homepage" as const,
+      tag: "DJ SET",
+      title: "DJ JÜMPOFF — JÜMPOFFproject",
+      meta: "Mer., jeu., ven., sam., dim.",
+      body: "Mixes club et soirées signés JÜMPOFFproject — énergie dance et transitions léchées.",
+      coverUrl: "assets/jumpoff.webp",
+      variant: "jumpoff",
+      sortOrder: 1,
+    },
+    {
+      kind: "homepage" as const,
+      tag: "EUROPE",
+      title: "DJ OSKANA",
+      meta: "Jeu. 21h · Sam. 21h",
+      body: "Sélection house & dance orientée Europe — ambiance club international.",
+      coverUrl: "assets/dj-red-headphones.webp",
+      variant: "oksana",
+      sortOrder: 2,
+    },
+  ];
+  const rail = [
+    { kind: "rail" as const, tag: "DJ Set", title: "DJ JÜMPOFF — JÜMPOFFproject", body: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️", sortOrder: 0 },
+    { kind: "rail" as const, tag: "Antenne", title: "Hommage Limelight Montréal", body: "DJ Pierre Jutras revient cette semaine avec quatre créneaux signatures.", emoji: "🎙", sortOrder: 1 },
+    { kind: "rail" as const, tag: "Émission", title: "Nouvelle saison de Hit Drive", body: "Du lundi au vendredi 16h–18h, l'antenne accélère pour la sortie des bureaux.", emoji: "🚗", sortOrder: 2 },
+    { kind: "rail" as const, tag: "Nuit", title: "BeatRadioWorld : Best DJ's internationaux", body: "Tous les soirs 22h–07h, mixes live d'Europe, Amérique, Asie.", emoji: "🌙", sortOrder: 3 },
+    { kind: "rail" as const, tag: "Studio", title: "Alain Perron en matinale", body: "Café-actu-musique chaque matin 7h–9h. Appelle au 418-261-2886.", emoji: "☕", sortOrder: 4 },
+    { kind: "rail" as const, tag: "Mix", title: "DJ OSKANA — Show européen", body: "Jeudi 21h et samedi 21h pour la house continentale.", emoji: "🎧", sortOrder: 5 },
+  ];
+  for (const item of [...homepage, ...rail]) {
+    await db.insert(featuredItems).values({ ...item, radioId, isPublished: true });
+  }
+  console.log(`[seed] ${homepage.length + rail.length} éléments « À la une » insérés.`);
+}
+
 // Slug local (évite d'importer la version générique pour rester explicite ici).
 function slugifyTitle(input: string): string {
   return input
@@ -311,6 +377,9 @@ async function main() {
 
   // Rattache toute ligne orpheline (prod existante) à la radio de cette instance.
   await backfillRadioId(radioId);
+
+  // « À la une » : seed idempotent (skip si déjà peuplé).
+  await seedFeaturedItems(radioId);
 
   console.log("[seed] terminé ✓");
   await pool.end();

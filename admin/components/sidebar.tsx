@@ -19,6 +19,7 @@ const LINKS: { href: string; label: string; canSee: (role: Role) => boolean }[] 
   { href: "/grille", label: "Grille horaire", canSee: (r) => r !== "it" },
   { href: "/animateurs", label: "Animateurs", canSee: (r) => r !== "it" },
   { href: "/emissions", label: "Émissions", canSee: (r) => r !== "it" },
+  { href: "/featured", label: "À la une", canSee: isEditorialAdmin },
   { href: "/podcasts", label: "Podcasts", canSee: (r) => r !== "it" },
   { href: "/mixes", label: "Mixes", canSee: (r) => r !== "it" },
   { href: "/pistes", label: "Pistes", canSee: (r) => r !== "it" },
