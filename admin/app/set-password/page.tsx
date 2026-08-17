@@ -3,7 +3,7 @@
 /* Page publique (hors layout admin) : définir / réinitialiser le mot de passe
    à partir d'un jeton reçu par email (invitation ou « mot de passe oublié »). */
 
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -12,7 +12,14 @@ import { PasswordField } from "@/components/ui";
 function SetPasswordForm() {
   const params = useSearchParams();
   const router = useRouter();
-  const token = params.get("token") ?? "";
+  // Jeton capturé au 1er rendu puis retiré de l'URL (audit 2026-08-16) : dans
+  // la query string, il fuite via l'historique navigateur et l'en-tête Referer.
+  const tokenRef = useRef<string | null>(null);
+  if (tokenRef.current === null) tokenRef.current = params.get("token") ?? "";
+  const token = tokenRef.current;
+  useEffect(() => {
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");

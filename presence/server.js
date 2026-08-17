@@ -154,6 +154,17 @@ function broadcastStats() {
   }
 }
 
+// Diffusion immédiate à la réception d'un hello/listening, mais coalescée :
+// sans ça, N messages valides = N broadcasts complets (amplification CPU sous
+// flood — audit 2026-08-16). La boucle BROADCAST_MS assure la fraîcheur.
+let lastImmediateBroadcast = 0;
+function broadcastStatsThrottled() {
+  const now = Date.now();
+  if (now - lastImmediateBroadcast < 1000) return;
+  lastImmediateBroadcast = now;
+  broadcastStats();
+}
+
 function isValidClientId(id) {
   return typeof id === "string"
     && id.length >= 8 && id.length <= 64
@@ -181,7 +192,14 @@ wss.on("connection", (ws, req) => {
       ws.msgInWindow = 0;
     }
     ws.msgInWindow++;
-    if (ws.msgInWindow > RATE_LIMIT_MSG_PER_SEC) return;
+    if (ws.msgInWindow > RATE_LIMIT_MSG_PER_SEC) {
+      // Flood soutenu = on ferme la connexion (audit 2026-08-16 : le simple
+      // « return » laissait la socket ouverte à spammer indéfiniment).
+      if (ws.msgInWindow > RATE_LIMIT_MSG_PER_SEC * 5) {
+        try { ws.close(1008, "rate limit"); } catch { /* noop */ }
+      }
+      return;
+    }
 
     if (raw.length > 256) return; // payload trop gros = ignoré
     let msg;
@@ -191,11 +209,11 @@ wss.on("connection", (ws, req) => {
     if (msg.type === "hello") {
       if (isValidClientId(msg.clientId)) {
         ws.clientId = msg.clientId;
-        broadcastStats();
+        broadcastStatsThrottled();
       }
     } else if (msg.type === "listening") {
       ws.isListening = msg.on === true;
-      broadcastStats();
+      broadcastStatsThrottled();
     } else if (msg.type === "ping") {
       try { ws.send(JSON.stringify({ type: "pong" })); } catch { /* noop */ }
     }

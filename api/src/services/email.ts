@@ -10,9 +10,17 @@ interface MailInput {
   html: string;
 }
 
+/* Masque le destinataire dans les logs (PII — audit 2026-08-16) :
+   « c***@exemple.ca ». L'adresse complète reste utilisée pour l'envoi. */
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return "***";
+  return `${email.slice(0, 1)}***@${email.slice(at + 1)}`;
+}
+
 export async function sendEmail({ to, subject, html }: MailInput): Promise<boolean> {
   if (!isResendConfigured()) {
-    console.warn(`[email] Resend non configuré — email "${subject}" vers ${to} NON envoyé.`);
+    console.warn(`[email] Resend non configuré — email "${subject}" vers ${maskEmail(to)} NON envoyé.`);
     return false;
   }
   try {
