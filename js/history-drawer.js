@@ -49,7 +49,10 @@ export function renderHistory() {
   empty.hidden = true;
   list.innerHTML = items.map((it) => {
     const time = new Date(it.at).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
-    const cover = it.cover ? `<img src="${it.cover}" alt="" loading="lazy" decoding="async" width="44" height="44" />` : `<span class="history-cover-fallback" aria-hidden="true">♪</span>`;
+    // it.cover vient de métadonnées tierces (iTunes) stockées en historique :
+    // on n'accepte que du http(s) (bloque javascript:) et on échappe l'attribut.
+    const coverUrl = typeof it.cover === "string" && /^https:\/\//i.test(it.cover) ? escapeHtml(it.cover) : "";
+    const cover = coverUrl ? `<img src="${coverUrl}" alt="" loading="lazy" decoding="async" width="44" height="44" />` : `<span class="history-cover-fallback" aria-hidden="true">♪</span>`;
     const label = it.artist ? `${escapeHtml(it.artist)} — ${escapeHtml(it.title)}` : escapeHtml(it.title);
     const search = encodeURIComponent(`${it.artist || ""} ${it.title}`.trim());
     return `<li>

@@ -20,6 +20,7 @@
 
 import pg from "pg";
 import { readFile, readdir } from "node:fs/promises";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 import { lookup as dnsLookup } from "node:dns/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -90,8 +91,7 @@ try {
 const dbUrl = process.env.DATABASE_URL;
 let pool = null;
 if (dbUrl) {
-  const ssl = /railway|amazonaws|proxy\.rlwy/i.test(dbUrl) ? { rejectUnauthorized: false } : undefined;
-  pool = new pg.Pool({ connectionString: dbUrl, ssl });
+  pool = new pg.Pool({ connectionString: dbUrl, ssl: resolveDbSsl(dbUrl) });
   try {
     const { rows } = await pool.query("SELECT id, name, status, license_confirmed FROM radios WHERE slug=$1 LIMIT 1", [slug]);
     const radio = rows[0];

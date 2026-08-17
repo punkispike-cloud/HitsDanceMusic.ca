@@ -7,6 +7,7 @@
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 function railway(args, opts = {}) {
   const r = spawnSync("railway", args, {
@@ -53,7 +54,7 @@ const ownerUrl = ownerPublic.toString();
 const pwd = randomBytes(24).toString("base64url");
 const pool = new pg.Pool({
   connectionString: ownerUrl,
-  ssl: { rejectUnauthorized: false },
+  ssl: resolveDbSsl(ownerUrl),
 });
 const client = await pool.connect();
 try {

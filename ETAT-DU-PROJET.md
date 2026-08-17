@@ -38,8 +38,13 @@ npm run check:nginx-deny
 
 1. Poser `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin) — rebuild admin.
    Vérif : `POST /v1/admin/health/sentry-test` → événement Sentry sous ~1 min.
-2. **Activer les backups Postgres auto** Railway prod (le drill de restauration est
-   testé — RTO ~4 s — mais la planification auto reste à activer).
+2. **Activer les backups Postgres auto** : le système est construit
+   (`api/scripts/backup-db.mjs` + workflow planifié `.github/workflows/backup.yml`,
+   quotidien 03:17 ET, rétention 30 j, archive validée par `pg_restore --list`).
+   Reste à poser les secrets GitHub (`BACKUP_DATABASE_URL`, `S3_ENDPOINT`,
+   `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — voir en-tête du
+   workflow) puis lancer un `workflow_dispatch` de validation. Le drill de
+   restauration reste testé (RTO ~4 s).
 3. **Vérifier les variables Railway prod** : `MIGRATE_DATABASE_URL` (owner) posé,
    `DATABASE_URL` encore owner (bascule au point 5), `ALLOWED_ORIGINS` liste
    site+admin+hub, `S3_*` vides (pas d'écriture R2 prod).

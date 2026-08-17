@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const url = process.argv[2];
@@ -18,7 +19,7 @@ if (!url || !/^postgres(ql)?:\/\//.test(url)) {
 }
 
 const pwd = randomBytes(24).toString("base64url");
-const pool = new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
+const pool = new pg.Pool({ connectionString: url, ssl: resolveDbSsl(url) });
 const client = await pool.connect();
 try {
   await client.query(`

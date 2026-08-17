@@ -11,17 +11,18 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { env } from "../env.js";
+import { resolveDbSsl } from "../lib/db-ssl.js";
 import * as schema from "./schema.js";
 
 const { Pool } = pg;
 
 // SSL : Railway expose la DB via une URL privée (pas de SSL requis en interne).
-// Sur une URL publique ou un provider externe, activer SSL si nécessaire.
-const needsSsl = /[?&]sslmode=require/.test(env.DATABASE_URL);
-
+// Sur URL publique (sslmode=require) : vérification stricte du certificat,
+// pinning via DATABASE_CA_CERT si fourni, opt-out explicite DB_SSL_INSECURE=1
+// (voir lib/db-ssl.ts).
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  ssl: resolveDbSsl(env.DATABASE_URL),
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,

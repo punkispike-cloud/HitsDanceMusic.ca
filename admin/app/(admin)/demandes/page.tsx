@@ -3,8 +3,9 @@
 /* Boîte de réception des demandes de titres / dédicaces — file temps-réel
    (polling 5 s via useRequests). Les auditeurs déposent depuis le site public
    (POST /v1/requests) ; l'animateur traite ici : marquer lu / en file / jouée /
-   ignorée. Lecture ouverte à tout authentifié (lecteur = lecture seule) ; `it`
-   (technique, pas à l'antenne) est exclu. La mutation est tracée par
+   ignorée. Accès réservé à l'antenne (animateur + superadmin/owner) : `it`
+   (technique) et `lecteur` sont exclus — les demandes contiennent des données
+   d'auditeurs (audit 2026-08-16, G5). La mutation est tracée par
    auditMiddleware (entity = "requests"). */
 
 import { useState } from "react";
@@ -58,8 +59,9 @@ export default function DemandesPage() {
   const canHandle = user?.role === "animateur" || isEditorialAdmin(user?.role);
   const loadError = error ? "Impossible de charger la file de demandes." : null;
 
-  // `it` (technique, pas à l'antenne) n'a pas accès à la file.
-  if (user?.role === "it") {
+  // `it` (technique) et `lecteur` (lecture publique seulement) n'ont pas accès
+  // à la file : les demandes contiennent des données d'auditeurs (G5).
+  if (user?.role === "it" || user?.role === "lecteur") {
     return (
       <div>
         <div className="page-head">
@@ -67,7 +69,7 @@ export default function DemandesPage() {
         </div>
         <Forbidden
           label="Réservé aux animateurs et gestionnaires."
-          hint="La file de demandes n'est pas accessible à l'équipe IT (technique, pas à l'antenne)."
+          hint="La file de demandes contient des données d'auditeurs : accès limité à l'antenne et à la gestion."
         />
       </div>
     );

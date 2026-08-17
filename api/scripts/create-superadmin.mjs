@@ -14,6 +14,7 @@
 
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 
 const email = (process.env.NEW_ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.env.NEW_ADMIN_PASSWORD || "";
@@ -32,9 +33,7 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: /railway|amazonaws|proxy\.rlwy/i.test(process.env.DATABASE_URL)
-    ? { rejectUnauthorized: false }
-    : undefined,
+  ssl: resolveDbSsl(process.env.DATABASE_URL),
 });
 
 try {

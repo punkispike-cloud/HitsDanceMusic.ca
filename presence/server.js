@@ -33,6 +33,32 @@ const ALLOW_NO_ORIGIN = process.env.ALLOW_NO_ORIGIN === "1";
 // Plafond global anti-saturation triviale.
 const MAX_CONNECTIONS = parseInt(process.env.MAX_CONNECTIONS || "5000", 10);
 
+// Plafond PAR IP (audit 2026-08-16, G3) : l'Origin est forgeable par un client
+// non-navigateur, donc on borne aussi côté réseau. Derrière le proxy Railway,
+// l'IP cliente est dans x-forwarded-for (1re valeur).
+const MAX_PER_IP = parseInt(process.env.MAX_PER_IP || "20", 10);
+
+/** @type {Map<string, number>} connexions actives par IP */
+const connectionsByIp = new Map();
+
+function ipOf(req) {
+  const xff = req.headers["x-forwarded-for"];
+  const ip = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim()
+    || req.socket.remoteAddress
+    || "unknown";
+  return ip;
+}
+
+function trackIp(ip) {
+  connectionsByIp.set(ip, (connectionsByIp.get(ip) || 0) + 1);
+}
+
+function untrackIp(ip) {
+  const n = (connectionsByIp.get(ip) || 0) - 1;
+  if (n <= 0) connectionsByIp.delete(ip);
+  else connectionsByIp.set(ip, n);
+}
+
 if (ALLOWED_ORIGINS.includes("*")) {
   console.warn(
     "[presence] ⚠️  ALLOWED_ORIGINS contient '*' — toutes les origines sont acceptées. "
@@ -44,7 +70,7 @@ if (ALLOWED_ORIGINS.includes("*")) {
 if (ALLOW_NO_ORIGIN) {
   console.warn("[presence] ⚠️  ALLOW_NO_ORIGIN=1 — connexions sans Origin acceptées (dev only).");
 }
-console.log(`[presence] MAX_CONNECTIONS = ${MAX_CONNECTIONS}`);
+console.log(`[presence] MAX_CONNECTIONS = ${MAX_CONNECTIONS}, MAX_PER_IP = ${MAX_PER_IP}`);
 
 const HEARTBEAT_MS = 25_000;     // ping aux clients toutes les 25 s
 const BROADCAST_MS = 2_000;      // diffusion stats toutes les 2 s
@@ -67,15 +93,28 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({
   server,
   path: "/ws/presence",
-  // Vérification d'origine stricte par défaut.
-  verifyClient: ({ origin }, cb) => {
+  // Vérification d'origine stricte par défaut + borne par IP.
+  verifyClient: ({ origin, req }, cb) => {
     if (clients.size >= MAX_CONNECTIONS) return cb(false, 503, "Service overloaded");
-    if (ALLOWED_ORIGINS.includes("*")) return cb(true);
+    const ip = ipOf(req);
+    if ((connectionsByIp.get(ip) || 0) >= MAX_PER_IP) {
+      return cb(false, 429, "Too many connections from this IP");
+    }
+    if (ALLOWED_ORIGINS.includes("*")) {
+      trackIp(ip);
+      return cb(true);
+    }
     if (!origin) {
-      if (ALLOW_NO_ORIGIN) return cb(true);
+      if (ALLOW_NO_ORIGIN) {
+        trackIp(ip);
+        return cb(true);
+      }
       return cb(false, 403, "Origin required");
     }
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(true);
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      trackIp(ip);
+      return cb(true);
+    }
     cb(false, 403, "Forbidden origin");
   },
 });
@@ -121,12 +160,15 @@ function isValidClientId(id) {
     && /^[A-Za-z0-9_-]+$/.test(id);
 }
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
   ws.isAlive = true;
   ws.isListening = false;
   ws.clientId = null;
   ws.msgWindowStart = Date.now();
   ws.msgInWindow = 0;
+  // IP comptée dans verifyClient — on la retire au close (une seule fois).
+  ws._ip = ipOf(req);
+  ws._ipTracked = true;
   clients.add(ws);
 
   ws.on("pong", () => { ws.isAlive = true; });
@@ -161,10 +203,18 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     clients.delete(ws);
+    if (ws._ipTracked) {
+      ws._ipTracked = false;
+      untrackIp(ws._ip);
+    }
   });
 
   ws.on("error", () => {
     clients.delete(ws);
+    if (ws._ipTracked) {
+      ws._ipTracked = false;
+      untrackIp(ws._ip);
+    }
     try { ws.terminate(); } catch { /* noop */ }
   });
 

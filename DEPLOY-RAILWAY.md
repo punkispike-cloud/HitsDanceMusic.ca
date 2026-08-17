@@ -15,7 +15,8 @@ Railway (monorepo, 1 service = 1 sous-dossier avec son Dockerfile).
 
 Chaque service a son `railway.json` (builder Dockerfile + healthcheck + restart).
 L'`api` lance ses **migrations automatiquement** avant chaque déploiement
-(`preDeployCommand: node dist/db/migrate.js`).
+(`preDeployCommand: node dist/db/deploy.js` — migrate + seed idempotent, via
+`MIGRATE_DATABASE_URL` si posé, sinon `DATABASE_URL`).
 
 ---
 

@@ -17,6 +17,7 @@
 
 import pg from "pg";
 import { readFile, writeFile } from "node:fs/promises";
+import { resolveDbSsl } from "./lib/db-ssl.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,10 +29,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(2);
 }
 
-const ssl = /railway|amazonaws|proxy\.rlwy/i.test(process.env.DATABASE_URL)
-  ? { rejectUnauthorized: false }
-  : undefined;
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl });
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: resolveDbSsl(process.env.DATABASE_URL) });
 
 /** Charge le registre existant (clients.json privé, repli sur l'exemple public). */
 async function loadRegistry() {
