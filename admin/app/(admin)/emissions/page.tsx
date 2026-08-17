@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth";
 import { useArtists } from "@/lib/hooks";
 import { Spinner, ErrorState } from "@/components/ui";
 import { SLOT_TAGS, tagColor, isEditorialAdmin, type Show } from "@/lib/types";
+import { useToast } from "@/components/toast";
+
+const API_PUBLIC = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
 
 const columns: Column<Show>[] = [
   { key: "title", label: "Titre" },
@@ -36,6 +39,7 @@ const columns: Column<Show>[] = [
 
 export default function EmissionsPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const { data: artists, error, mutate } = useArtists();
 
   if (error)
@@ -95,6 +99,24 @@ export default function EmissionsPage() {
         sortOrder: r.sortOrder,
         isPublished: r.isPublished,
       })}
+      extraActions={(row) => {
+        const rssUrl = `${API_PUBLIC}/v1/rss/${encodeURIComponent(row.slug)}`;
+        return (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            title={rssUrl}
+            onClick={() => {
+              void navigator.clipboard.writeText(rssUrl).then(
+                () => toast("URL RSS copiée ✓", "ok"),
+                () => toast("Copie impossible", "error"),
+              );
+            }}
+          >
+            RSS
+          </button>
+        );
+      }}
     />
   );
 }

@@ -86,12 +86,15 @@ function talentCardHtml(a) {
 
 function showCardHtml(s, nameById) {
   const meta = s.artistId && nameById.get(s.artistId) ? nameById.get(s.artistId) : "Programmation";
+  const rssUrl = `${API_BASE}/v1/rss/${encodeURIComponent(s.slug)}`;
   return `<article class="show-detail">
       ${s.badge ? `<span class="badge">${escapeHtml(s.badge)}</span>` : ""}
       <h3>${escapeHtml(s.title)}</h3>
       ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
       <span class="meta">${escapeHtml(meta)}</span>
       ${s.scheduleText ? `<span class="next"><strong>${escapeHtml(s.scheduleText)}</strong></span>` : ""}
+      <p class="show-rss"><a class="text-link rss-link" href="${escapeHtml(rssUrl)}" target="_blank" rel="noopener">Flux RSS podcast</a>
+        <button type="button" class="btn-copy-rss" data-rss="${escapeHtml(rssUrl)}" aria-label="Copier l'URL RSS">📋</button></p>
     </article>`;
 }
 
@@ -124,6 +127,15 @@ export async function loadContentFromApi() {
   if (showGrid && Array.isArray(shows) && shows.length) {
     const nameById = new Map((Array.isArray(artists) ? artists : []).map((a) => [a.id, a.name]));
     showGrid.innerHTML = shows.map((s) => showCardHtml(s, nameById)).join("");
+    showGrid.querySelectorAll(".btn-copy-rss").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const url = btn.getAttribute("data-rss");
+        if (!url) return;
+        navigator.clipboard?.writeText(url).catch(() => {});
+        btn.textContent = "✓";
+        setTimeout(() => { btn.textContent = "📋"; }, 1500);
+      });
+    });
     revealOnScroll(showGrid.querySelectorAll(".show-detail"));
   }
 

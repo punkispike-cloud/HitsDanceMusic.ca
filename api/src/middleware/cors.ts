@@ -12,7 +12,7 @@ export const corsMiddleware = cors({
     return env.ALLOWED_ORIGINS.includes(origin) ? origin : undefined;
   },
   allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization"],
+  allowHeaders: ["Content-Type", "Authorization", "X-Radio-Id"],
   credentials: true,
   maxAge: 86_400,
 });

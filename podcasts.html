@@ -117,6 +117,20 @@
         <div class="schedule-actions">
           <button type="button" id="pushOptIn" class="push-optin" hidden>🔔 Recevoir les rappels d'émission</button>
         </div>
+        <div class="pod-filters" id="podFilters">
+          <label>
+            Type
+            <select id="podFilterKind" aria-label="Filtrer par type">
+              <option value="all">Tout</option>
+              <option value="episode">Podcasts</option>
+              <option value="mix">Mixes</option>
+            </select>
+          </label>
+          <label>
+            Recherche
+            <input type="search" id="podFilterSearch" placeholder="Titre, genre…" aria-label="Rechercher un podcast ou mix" />
+          </label>
+        </div>
       </section>
 
       <section class="section">

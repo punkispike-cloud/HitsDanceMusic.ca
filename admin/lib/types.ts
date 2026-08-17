@@ -171,6 +171,25 @@ export interface Show {
   isPublished: boolean;
 }
 
+export type FeaturedKind = "homepage" | "rail";
+
+export interface FeaturedItem {
+  id: string;
+  kind: FeaturedKind;
+  tag: string | null;
+  title: string;
+  meta: string | null;
+  body: string | null;
+  coverUrl: string | null;
+  emoji: string | null;
+  linkUrl: string | null;
+  variant: string | null;
+  sortOrder: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ScheduleSlot {
   id: string;
   dayOfWeek: number;

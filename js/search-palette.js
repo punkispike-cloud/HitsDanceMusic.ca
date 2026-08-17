@@ -1,6 +1,7 @@
-/* Palette de recherche rapide (Ctrl+K). Pages / shows / animateurs / actions. */
+/* Palette de recherche rapide (Ctrl+K). Pages / shows / animateurs / épisodes / actions. */
 
 import { $, $$, escapeHtml } from "./util.js";
+import { API_BASE } from "./api-config.js";
 import { startPlayback, pausePlayback, toggleMute } from "./player.js";
 import { toggleSleepMenu } from "./sleep.js";
 import { toggleHistory, exportHistory } from "./history-drawer.js";
@@ -8,39 +9,24 @@ import { shareCurrent } from "./share.js";
 import { triggerInstall } from "./install-pwa.js";
 import { downloadIcs } from "./schedule.js";
 
-// Hooks lazy (notifs, watch, lyrics, pip) injectés depuis main.js
 let _toggleNotif = () => {};
 let _openWatch = () => {};
 let _toggleLyrics = () => {};
 let _togglePip = () => {};
 export function setSearchHooks(h) {
-  if (h.toggleNotif)  _toggleNotif  = h.toggleNotif;
-  if (h.openWatch)    _openWatch    = h.openWatch;
+  if (h.toggleNotif) _toggleNotif = h.toggleNotif;
+  if (h.openWatch) _openWatch = h.openWatch;
   if (h.toggleLyrics) _toggleLyrics = h.toggleLyrics;
-  if (h.togglePip)    _togglePip    = h.togglePip;
+  if (h.togglePip) _togglePip = h.togglePip;
 }
 
-const SEARCH_INDEX = [
+const STATIC_INDEX = [
   { type: "page", label: "Accueil", url: "index.html" },
   { type: "page", label: "DJs & animateurs", url: "animateurs.html" },
   { type: "page", label: "Émissions", url: "emissions.html" },
+  { type: "page", label: "Podcasts & mixes", url: "podcasts.html" },
   { type: "page", label: "Horaire complet 2026", url: "horaire.html" },
   { type: "page", label: "Contact studio", url: "contact.html" },
-  { type: "team", label: "Alain Perron — Les matins d'Alain", url: "animateurs.html" },
-  { type: "team", label: "DJ Pierre Jutras — Hommage Limelight", url: "animateurs.html" },
-  { type: "team", label: "DJ JÜMPOFF — JÜMPOFFproject (mix club)", url: "animateurs.html" },
-  { type: "team", label: "DJ OSKANA — Show mix européen", url: "animateurs.html" },
-  { type: "team", label: "Pee Jee — Pee Jee Radio Show", url: "animateurs.html" },
-  { type: "show", label: "Les matins d'Alain (live)", url: "emissions.html" },
-  { type: "show", label: "Hit List", url: "emissions.html" },
-  { type: "show", label: "Le Hit Drive (live)", url: "emissions.html" },
-  { type: "show", label: "Hommage au Limelight Montréal", url: "emissions.html" },
-  { type: "show", label: "Nuits Best DJ's BeatRadioWorld", url: "emissions.html" },
-  { type: "show", label: "Disco Fever Experience", url: "emissions.html" },
-  { type: "show", label: "Latino Show", url: "emissions.html" },
-  { type: "show", label: "Hot Slow Show", url: "emissions.html" },
-  { type: "show", label: "Pee Jee Radio Show", url: "emissions.html" },
-  { type: "show", label: "DJ OSKANA Show mix européen", url: "emissions.html" },
   { type: "action", label: "▶ Écouter le direct", action: () => startPlayback() },
   { type: "action", label: "⏸ Mettre en pause", action: () => pausePlayback() },
   { type: "action", label: "🔇 Couper le son", action: () => toggleMute() },
@@ -53,12 +39,45 @@ const SEARCH_INDEX = [
   { type: "action", label: "⛶ Mode plein écran", action: () => _openWatch() },
   { type: "action", label: "🎤 Paroles", action: () => _toggleLyrics() },
   { type: "action", label: "🗔 Picture-in-Picture", action: () => _togglePip() },
-  { type: "action", label: "📊 Voir mes statistiques d'écoute", action: () => location.href = "stats.html" },
+  { type: "action", label: "📊 Voir mes statistiques d'écoute", action: () => { location.href = "stats.html"; } },
   { type: "action", label: "💾 Exporter l'historique (JSON)", action: () => exportHistory("json") },
   { type: "action", label: "💾 Exporter l'historique (CSV)", action: () => exportHistory("csv") },
   { type: "page", label: "Statistiques d'écoute", url: "stats.html" },
 ];
-const TYPE_LABEL = { page: "Page", team: "Équipe", show: "Émission", action: "Action" };
+
+let SEARCH_INDEX = [...STATIC_INDEX];
+const TYPE_LABEL = { page: "Page", team: "Équipe", show: "Émission", episode: "Podcast", action: "Action" };
+
+async function fetchJson(path) {
+  try {
+    const r = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Reconstruit l'index depuis l'API (animateurs, émissions, épisodes). */
+export async function buildSearchIndex() {
+  const [artists, shows, episodes] = await Promise.all([
+    fetchJson("/v1/artists"),
+    fetchJson("/v1/shows"),
+    fetchJson("/v1/episodes"),
+  ]);
+  const dynamic = [];
+  for (const a of artists) {
+    dynamic.push({ type: "team", label: a.showTitle ? `${a.name} — ${a.showTitle}` : a.name, url: `animateurs.html#${a.slug}` });
+  }
+  for (const s of shows) {
+    dynamic.push({ type: "show", label: s.title, url: `emissions.html?show=${encodeURIComponent(s.slug)}` });
+  }
+  for (const e of episodes.slice(0, 40)) {
+    dynamic.push({ type: "episode", label: e.title, url: `podcasts.html#${encodeURIComponent(e.slug)}` });
+  }
+  SEARCH_INDEX = [...STATIC_INDEX, ...dynamic];
+}
 
 function ensureSearchPalette() {
   if ($("#searchPalette")) return;
@@ -108,15 +127,13 @@ function ensureSearchPalette() {
 function renderSearchResults(q) {
   const list = $("#searchResults");
   if (!list) return;
-  const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const query = norm(q.trim());
-  const items = !query
-    ? SEARCH_INDEX
-    : SEARCH_INDEX.filter((it) => norm(it.label).includes(query));
+  const items = !query ? SEARCH_INDEX : SEARCH_INDEX.filter((it) => norm(it.label).includes(query));
   list.innerHTML = items.slice(0, 12).map((it) => {
     const idx = SEARCH_INDEX.indexOf(it);
     return `<li role="option" data-idx="${idx}" tabindex="-1">
-      <span class="search-type search-type--${it.type}">${TYPE_LABEL[it.type]}</span>
+      <span class="search-type search-type--${it.type}">${TYPE_LABEL[it.type] || it.type}</span>
       <span class="search-label">${escapeHtml(it.label)}</span>
     </li>`;
   }).join("") || `<li class="search-empty">Aucun résultat pour « ${escapeHtml(q)} »</li>`;

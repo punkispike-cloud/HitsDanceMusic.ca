@@ -1,47 +1,43 @@
 /* Historique public des titres joués + 🤘 j'aime. Module autonome : à brancher
    sur un conteneur via initTrackHistory("monConteneur"). Lit l'API En Ondes
    (scopée à la radio par l'hôte). Likes anonymes — client_id stable en
-   localStorage (le même que presence/analytics). Construit le DOM sans innerHTML
-   (les titres viennent du flux : on évite toute injection). */
+   localStorage (le même que presence/analytics). */
 
 import { API_BASE } from "./api-config.js";
-// Identifiant créé au moment du 🤘 seulement (action de la personne) : il sert à
-// dédoublonner les votes. L'affichage de l'historique n'en demande aucun.
 import { ensureClientId } from "./client-id.js";
 
 const LS_LIKES = "hr.trackLikes";
 
-function likedSet() {
+export function getLikedSet() {
   try {
     return new Set(JSON.parse(localStorage.getItem(LS_LIKES) || "[]"));
   } catch {
     return new Set();
   }
 }
-function saveLiked(set) {
+
+export function saveLikedSet(set) {
   try {
     localStorage.setItem(LS_LIKES, JSON.stringify([...set]));
-  } catch {
-    /* quota / mode privé → on ignore */
-  }
+  } catch { /* quota */ }
 }
 
-async function fetchRecent(limit) {
+export async function fetchRecentTracks(limit = 20) {
   const r = await fetch(`${API_BASE}/v1/tracks/recent?limit=${limit}`, { cache: "no-store" });
   if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
 
-async function toggleLike(trackId, liked) {
+export async function toggleTrackLike(trackId, liked) {
   const cid = encodeURIComponent(ensureClientId());
   const r = await fetch(`${API_BASE}/v1/tracks/${trackId}/like?clientId=${cid}`, {
     method: liked ? "DELETE" : "POST",
   });
   if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json(); // { liked, likes }
+  return r.json();
 }
 
-function fmtTime(iso) {
+export function fmtTrackTime(iso) {
   try {
     return new Date(iso).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
   } catch {
@@ -67,7 +63,7 @@ function injectStyleOnce() {
 }
 
 function render(container, tracks) {
-  const liked = likedSet();
+  const liked = getLikedSet();
   container.replaceChildren();
   const ul = document.createElement("ul");
   ul.className = "trk-list";
@@ -92,7 +88,7 @@ function render(container, tracks) {
     title.textContent = t.artist ? `${t.artist} — ${t.title}` : t.title;
     const sub = document.createElement("div");
     sub.className = "trk-sub";
-    sub.textContent = fmtTime(t.playedAt);
+    sub.textContent = fmtTrackTime(t.playedAt);
     meta.append(title, sub);
 
     const btn = document.createElement("button");
@@ -108,16 +104,14 @@ function render(container, tracks) {
       const currentlyLiked = btn.getAttribute("aria-pressed") === "true";
       btn.disabled = true;
       try {
-        const res = await toggleLike(t.id, currentlyLiked);
-        const set = likedSet();
+        const res = await toggleTrackLike(t.id, currentlyLiked);
+        const set = getLikedSet();
         if (res.liked) set.add(t.id);
         else set.delete(t.id);
-        saveLiked(set);
+        saveLikedSet(set);
         btn.setAttribute("aria-pressed", String(res.liked));
         count.textContent = String(res.likes ?? 0);
-      } catch {
-        /* réseau / rate-limit → on laisse l'état inchangé */
-      } finally {
+      } catch { /* réseau */ } finally {
         btn.disabled = false;
       }
     });
@@ -128,8 +122,7 @@ function render(container, tracks) {
   container.appendChild(ul);
 }
 
-/** Branche l'historique + likes dans un conteneur (id ou élément).
-    opts: { limit = 20, pollMs } — pollMs > 0 rafraîchit en continu. */
+/** Branche l'historique + likes dans un conteneur (id ou élément). */
 export async function initTrackHistory(containerId, opts = {}) {
   const container = typeof containerId === "string" ? document.getElementById(containerId) : containerId;
   if (!container) return;
@@ -137,10 +130,8 @@ export async function initTrackHistory(containerId, opts = {}) {
   injectStyleOnce();
   const refresh = async () => {
     try {
-      render(container, await fetchRecent(limit));
-    } catch {
-      /* hors-ligne / API absente → on laisse le conteneur tel quel */
-    }
+      render(container, await fetchRecentTracks(limit));
+    } catch { /* hors-ligne */ }
   };
   await refresh();
   if (opts.pollMs && opts.pollMs > 0) setInterval(refresh, opts.pollMs);

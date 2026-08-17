@@ -34,6 +34,8 @@ import { annotateTalentCards } from "./animateurs.js";
 import { loadContentFromApi } from "./content.js";
 import { initPodcastsPage } from "./podcasts-page.js";
 import { initPushOptIn } from "./push-subscribe.js";
+import { initFeaturedHomepage } from "./featured.js";
+import { initRequestTracker } from "./request-tracker.js";
 import { initLiveBadge } from "./live-badge.js";
 import { renderCountdown } from "./countdown.js";
 import { startStatsTracking, renderStatsPage } from "./stats.js";
@@ -54,7 +56,7 @@ import { initConsent, hasAnalyticsConsent, onConsentChange, clearConsent, getCon
 import { registerSW } from "./sw-register.js";
 
 import { bindKeyboard, setKeyboardHooks } from "./keyboard.js";
-import { openSearch, setSearchHooks } from "./search-palette.js";
+import { openSearch, setSearchHooks, buildSearchIndex } from "./search-palette.js";
 import { openWatch, injectWatchButton } from "./watch.js";
 import { toggleLyrics, tickLyrics } from "./lyrics.js";
 import { togglePip } from "./pip.js";
@@ -182,7 +184,7 @@ function initCritical() {
   });
   $("#downloadIcs")?.addEventListener("click", (e) => { e.preventDefault(); downloadIcs(); });
   $("#openHistoryBtn")?.addEventListener("click", (e) => { e.preventDefault(); toggleHistory(true); });
-  renderHistory();
+  void renderHistory();
 
   // Thème — verrouillé en sombre (bootstrap déjà fait par theme-init.js)
   applyTheme();
@@ -218,18 +220,19 @@ function initIdle() {
   annotateTalentCards();
   // Branche animateurs/émissions sur l'API (visuel identique, fallback HTML).
   // Re-rend puis ré-annote les cartes animateurs avec leur prochain passage.
-  void loadContentFromApi().then((touchedTalent) => {
+  void loadContentFromApi().then(async (touchedTalent) => {
     if (touchedTalent) {
       annotateTalentCards();
-      // Le re-rendu du contenu API a remplacé les cartes → ré-injecter les cœurs
-      // de favoris (sinon ils disparaissent et « Mes favoris » ne filtre plus rien).
       injectFavButtons();
     }
+    await buildSearchIndex();
   });
   // Page Podcasts (no-op ailleurs : ne s'exécute que si .podcast-grid/.mix-grid
   // est présent) + bouton d'abonnement aux rappels (no-op si #pushOptIn absent).
   void initPodcastsPage();
   void initPushOptIn();
+  void initFeaturedHomepage();
+  void initRequestTracker();
   void initLiveBadge();
   // Widget sondage en direct (no-op si #pollWidget absent).
   void initPolls();
