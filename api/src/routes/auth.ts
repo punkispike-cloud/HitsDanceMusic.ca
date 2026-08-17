@@ -15,9 +15,10 @@ import {
   forgotPasswordSchema,
   setPasswordSchema,
 } from "../lib/validation.js";
-import { badRequest, unauthorized } from "../lib/errors.js";
+import { badRequest, forbidden, unauthorized } from "../lib/errors.js";
 import { env, refreshCookieSameSite } from "../env.js";
 import { requireAuth } from "../middleware/auth.js";
+import type { Context, Next } from "hono";
 import {
   issueTokenPair,
   rotateRefreshToken,
@@ -56,6 +57,27 @@ function tokenResponse(pair: TokenPair) {
 }
 
 export const authRoutes = new Hono<AppBindings>();
+
+/* Garde CSRF (défense en profondeur — audit 2026-08-16) : le cookie refresh est
+   SameSite=None en prod (admin cross-site *.up.railway.app), donc un POST
+   cross-site navigateur transporterait le cookie. Le CORS bloque déjà la
+   LECTURE de la réponse, mais la rotation/révocation (changement d'état) aurait
+   quand même lieu. On rejette toute requête dont l'Origin est présente et hors
+   whitelist. Les clients non-navigateur n'envoient pas d'Origin → non concernés.
+   Appliqué aux routes qui consomment le cookie : /refresh et /logout. */
+async function csrfOriginGuard(c: Context, next: Next) {
+  const origin = c.req.header("Origin");
+  if (
+    origin &&
+    !env.ALLOWED_ORIGINS.includes("*") &&
+    !env.ALLOWED_ORIGINS.includes(origin)
+  ) {
+    throw forbidden("Origine non autorisée", "csrf_origin");
+  }
+  await next();
+}
+authRoutes.use("/refresh", csrfOriginGuard);
+authRoutes.use("/logout", csrfOriginGuard);
 
 /* La création de comptes équipe passe par POST /v1/admin/users (scopé radio).
    Pas de /auth/register séparé : il créait des comptes hors-tenant (radio_id NULL). */

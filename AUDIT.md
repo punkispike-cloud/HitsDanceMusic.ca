@@ -40,7 +40,8 @@ requis, 1 review, `enforce_admins`), revue code complète api/admin/presence/sit
 | G7 | ✅ | `Dockerfile` racine + `enondes-site/Dockerfile` → `USER nginx` ; `.dockerignore` exclut `.env*`, `_private/`, `operator/`, `test-results/` |
 | G8 | ✅ | `restore-drill` refuse `DRILL_DB_NAME` = base source ou nom protégé (testé : exit 2) |
 | Dette | ✅ | SW navigations network-first ; vérif Content-Type réel au confirm upload ; SSL strict (`db-ssl.ts/.mjs`, pinning `DATABASE_CA_CERT`, opt-out `DB_SSL_INSECURE=1`) sur db/client + 9 scripts ; XSS `it.cover` (https-only + échappé) ; `DEPLOY-RAILWAY.md` déjà à jour |
-| Reste | 🔵 | Migrations sans `down.sql` (mitigé PITR) · email `studio@hit.radio` à valider · smoke staging CI non bloquant (choix assumé) |
+| Compl. (PR #29) | ✅ | Headers sécurité admin (CSP/XFO/HSTS/nosniff via `next.config.mjs`) + boundaries `error.tsx`/`global-error.tsx` + jeton set-password retiré de l'URL · `sentry-test` restreint à it/superadmin/owner · garde CSRF Origin sur `/auth/refresh` + `/auth/logout` · destinataire email masqué dans les logs · presence : broadcast coalescé + close 1008 anti-flood · doublon `audience-banner.js` du SHELL SW + `lastmod` sitemap |
+| Reste | 🔵 | Migrations sans `down.sql` (mitigé PITR) · email `studio@hit.radio` à valider · smoke staging CI non bloquant (choix assumé) · CSP `script-src 'unsafe-inline'` admin (hydratation Next — nonce = chantier séparé) |
 
 ### Bloqueurs (🔴)
 
