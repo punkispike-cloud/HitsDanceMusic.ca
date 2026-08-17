@@ -176,13 +176,12 @@ export const env = {
   S3_FORCE_PATH_STYLE: optional("S3_FORCE_PATH_STYLE", ""),
   MAX_AUDIO_BYTES: intOpt("MAX_AUDIO_BYTES", 524_288_000), // 500 Mo
 
-  // Géo-IP locale (MaxMind GeoLite2) — alternative auto-hébergée aux fournisseurs
-  // tiers (audit A5 : geojs.io/freeipapi.com reçoivent les IP visiteurs sans
-  // consentement). Poser GEOIP_DB_PATH = chemin vers un fichier .mmdb (à télécharger
-  // côté ops, licence MaxMind gratuite) → lookup local, zéro fuite vers un tiers.
-  // Vide → la géo n'est pas résolue (ip_country/ip_lat/ip_lon restent null) et
-  // AUCUN appel réseau n'est fait. Même posture « gated » que S3/Sentry/Stripe.
+  // Géo-IP locale — lookup fichier .mmdb uniquement (aucun IP visiteur n'est
+  // envoyé à un tiers). GEOIP_DB_PATH = chemin d'un .mmdb déjà présent.
+  // Sinon, en prod/staging, téléchargement unique de DB-IP City Lite dans /tmp.
+  // GEOIP_DISABLED=1 → géo off (tests + opt-out).
   GEOIP_DB_PATH: optional("GEOIP_DB_PATH", ""),
+  GEOIP_DISABLED: optional("GEOIP_DISABLED", ""),
 } as const;
 
 /** Le stockage S3 est-il configuré ? (gate les routes d'upload) */
@@ -190,9 +189,13 @@ export function isS3Configured(): boolean {
   return Boolean(env.S3_REGION && env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
 }
 
-/** Géo-IP locale configurée ? (sinon, aucune résolution géo, aucun appel tiers). */
+/** Géo-IP active ? Off en test (sauf GEOIP_DB_PATH posé) et si GEOIP_DISABLED=1.
+ *  En prod/staging : on (fichier local ou auto-téléchargement DB-IP). */
 export function isGeoipConfigured(): boolean {
-  return Boolean(env.GEOIP_DB_PATH);
+  if (env.GEOIP_DISABLED === "1") return false;
+  if (env.GEOIP_DB_PATH) return true;
+  if (env.NODE_ENV === "test") return false;
+  return true;
 }
 
 /** Valeur SameSite du cookie refresh : COOKIE_SAMESITE si posé et valide,

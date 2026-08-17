@@ -132,12 +132,13 @@ Sans besoin produit immédiat : **ne pas** activer (uploads restent `503 s3_unco
 
 ### Géo-IP locale (optionnel, audit A5)
 
-Sans `GEOIP_DB_PATH`, l’API n’appelle **aucun** fournisseur tiers (ip_country
-reste null). Pour activer une géo locale MaxMind GeoLite2 :
+Sans `GEOIP_DISABLED=1`, l’API résout la ville/pays en local (fichier MMDB).
+Aucun IP visiteur n’est envoyé à un tiers. En prod, si `GEOIP_DB_PATH` n’est
+pas posé, DB-IP City Lite est téléchargé une fois dans `/tmp` au premier beacon.
 
+Pour forcer un fichier MaxMind GeoLite2 :
 1. Télécharger `GeoLite2-City.mmdb` (licence MaxMind gratuite).
-2. Le monter dans le conteneur api (volume ou image) et poser
-   `GEOIP_DB_PATH=/chemin/vers/GeoLite2-City.mmdb`.
+2. Le monter dans le conteneur api et poser `GEOIP_DB_PATH=/chemin/vers/GeoLite2-City.mmdb`.
 3. Redeploy — les nouveaux beacons remplissent `ip_country` / lat / lon.
 
 ---
