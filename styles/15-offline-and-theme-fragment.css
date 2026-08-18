@@ -44,7 +44,8 @@
   --surface-warm: #ececec;
   --vinyl: #e8e8e8;
   --ink: #141414;
-  --muted: #5a5a5a;
+  /* WCAG 2.2 AA ≥4.5:1 sur --bg (#fafafa) et --surface (#f3f3f3) */
+  --muted: #525252;
   --line: rgba(0,0,0,0.10);
   --gold-border: rgba(0,0,0,0.13);
   --night: #f0f0f0;

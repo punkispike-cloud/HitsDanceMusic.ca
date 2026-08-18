@@ -40,7 +40,7 @@
 .stream-chip-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
 .stream-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stream-chip-text strong { color: #fff; font-size: 0.98rem; }
-.stream-chip-text span { color: rgba(255,255,255,0.6); font-size: 0.82rem; }
+.stream-chip-text span { color: rgba(255,255,255,0.72); font-size: 0.82rem; }
 
 @media (max-width: 760px) {
   .requests-card { grid-template-columns: 1fr; padding: 18px; }
@@ -92,7 +92,7 @@ main:focus { outline: none; }
   display: block;
   margin-top: 2px;
   font-size: 0.72rem;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.68);
 }
 
 @media (prefers-reduced-motion: reduce) {

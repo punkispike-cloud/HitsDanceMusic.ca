@@ -1,7 +1,41 @@
 # État du projet — Hits Dance Music / En Ondes
 
-> Document de reprise. Dernière mise à jour : **2026-08-15**.
-> Branche : `main` (déploiement auto Railway). Runbook ops : [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md).
+> Document de reprise. Dernière mise à jour : **2026-08-17**.
+> Branche : `main` (déploiement auto Railway). Runbook ops : [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md) · [DEPLOY-OPS.md](DEPLOY-OPS.md).
+
+---
+
+## Snapshot 2026-08-17 — système code-complet, ops externes documentées
+
+| Élément | État |
+|---|---|
+| Site live hitsdancemusic.ca | UP — PR #31 (14 améliorations) + PR #32 (WCAG 2.2 AA) en prod |
+| API prod `patient-endurance` | UP — `verify:prod` vert |
+| Admin prod | UP |
+| Staging Railway | UP — `verify:staging` vert |
+| Web Push (VAPID) | Code ✅ — clés à poser Railway ([DEPLOY-OPS.md §1](DEPLOY-OPS.md)) |
+| S3/R2 uploads | Code ✅ gated — vars prod incomplètes ([DEPLOY-OPS.md §2](DEPLOY-OPS.md)) |
+| AzuraCast + replay | Code ✅ gated — instance externe requise ([DEPLOY-OPS.md §3](DEPLOY-OPS.md)) |
+| Stripe live | Code ✅ gated — compte live requis ([DEPLOY-OPS.md §4](DEPLOY-OPS.md)) |
+| Contraste WCAG 2.2 AA | Tokens `--muted` corrigés — `npm run check:contrast` |
+
+```bash
+npm run verify:prod
+npm run verify:staging
+npm run check:contrast
+npm run check:nginx-deny
+```
+
+### Reste ops (humain)
+
+Voir **[DEPLOY-OPS.md](DEPLOY-OPS.md)** pour le guide complet. Priorité :
+
+1. Poser **VAPID** sur Railway prod + staging (`npm run vapid` dans `api/`).
+2. Corriger **S3_*** prod (endpoint/public URL tronqués) + CORS R2.
+3. **Sentry** DSN api + admin (RUNBOOK §1.4).
+4. Secrets **backup** GitHub Actions (workflow `backup.yml`).
+5. **AzuraCast** + **Stripe live** quand comptes prêts.
+6. Bascule prod `DATABASE_URL` → `enondes_app` après ~2 sem. staging stable (RUNBOOK §3.1).
 
 ---
 

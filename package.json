@@ -17,6 +17,7 @@
     "verify:rls-cutover": "node scripts/verify-rls-cutover.mjs",
     "verify:stripe": "node scripts/verify-stripe.mjs https://patient-endurance-production-21c8.up.railway.app",
     "check:nginx-deny": "node scripts/check-nginx-deny.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "setup:rls": "node scripts/setup-rls-role.mjs",
     "test:visual": "playwright test --config=tests/visual/playwright.config.mjs",
     "snap:baseline": "playwright test --config=tests/visual/playwright.config.mjs --update-snapshots",
