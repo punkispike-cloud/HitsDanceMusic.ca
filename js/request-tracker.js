@@ -44,7 +44,7 @@ function renderPanel(listEl, items) {
     return `<article class="req-card" data-id="${escapeHtml(req.id)}">
       <div class="req-card-head">
         <strong>${label}</strong>
-        <span class="req-status req-status--${escapeHtml(req.status)}">${escapeHtml(st)}</span>
+        <span class="req-status req-status--${escapeHtml(req.status)}" aria-label="Statut : ${escapeHtml(st)}">${escapeHtml(st)}</span>
       </div>
       ${req.dedication ? `<p class="req-dedic">${escapeHtml(req.dedication)}</p>` : ""}
       <time class="req-time" datetime="${escapeHtml(req.createdAt)}">${when}</time>

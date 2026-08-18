@@ -72,8 +72,11 @@ export function initPolls() {
         <span style="font-size:0.74rem;opacity:.6">en direct</span>
       </div>
       <div style="font-weight:700;font-size:1rem;margin-bottom:12px">${escapeHtml(poll.question)}</div>
-      <div style="display:flex;flex-direction:column;gap:8px">${opts}</div>
-      <div style="margin-top:10px;font-size:0.78rem;opacity:.6">${total} vote${total > 1 ? "s" : ""}${voted ? " · merci pour ton vote" : " · choisis une option"}</div>
+      <fieldset style="border:0;margin:0;padding:0">
+        <legend class="sr-only">${escapeHtml(poll.question)} — choisir une option</legend>
+        <div style="display:flex;flex-direction:column;gap:8px" role="group">${opts}</div>
+      </fieldset>
+      <div aria-live="polite" aria-atomic="true" style="margin-top:10px;font-size:0.78rem;opacity:.6">${total} vote${total > 1 ? "s" : ""}${voted ? " · merci pour ton vote" : " · choisis une option"}</div>
     </div>`;
     host.hidden = false;
 

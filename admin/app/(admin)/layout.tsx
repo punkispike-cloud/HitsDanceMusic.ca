@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { Spinner } from "@/components/ui";
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offline, setOffline] = useState(false);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (ready && !user) router.replace("/login");
   }, [ready, user, router]);
 
-  // Surveille l'état de connexion réseau pour la bannière hors-ligne.
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
     update();
@@ -28,18 +30,76 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const sidebar = document.getElementById("admin-sidebar");
+    if (!sidebar) return;
+
+    const shell = document.querySelector(".admin-shell");
+    const bg = shell
+      ? Array.from(shell.children).filter((el) => el !== sidebar && !sidebar.contains(el))
+      : Array.from(document.body.children).filter((el) => el !== sidebar && !sidebar.contains(el));
+    const restored = bg.map((el) => ({
+      el,
+      inert: el.hasAttribute("inert"),
+      hidden: el.getAttribute("aria-hidden"),
+    }));
+    bg.forEach((el) => {
+      el.setAttribute("inert", "");
+      el.setAttribute("aria-hidden", "true");
+    });
+
+    const focusables = () =>
+      Array.from(sidebar.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (el) => el.offsetParent !== null || el === document.activeElement,
+      );
+
+    const onKeydown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const list = focusables();
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !sidebar.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !sidebar.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    sidebar.addEventListener("keydown", onKeydown);
+    const first = focusables()[0];
+    first?.focus();
+
+    return () => {
+      sidebar.removeEventListener("keydown", onKeydown);
+      restored.forEach(({ el, inert, hidden }) => {
+        if (!inert) el.removeAttribute("inert");
+        if (hidden === null) el.removeAttribute("aria-hidden");
+        else el.setAttribute("aria-hidden", hidden);
+      });
+      menuBtnRef.current?.focus();
+    };
+  }, [drawerOpen]);
+
   if (!ready) return <div className="login-wrap"><Spinner label="Vérification de la session…" /></div>;
-  if (!user) return null; // redirection en cours
+  if (!user) return null;
 
   return (
     <div className="admin-shell">
+      <a className="skip-link" href="#admin-main">Aller au contenu</a>
       <Sidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <div
         className={`scrim${drawerOpen ? " open" : ""}`}
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
-      <main className="main">
+      <main className="main" id="admin-main">
         {offline && (
           <div className="offline-bar" role="status">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -55,11 +115,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         )}
         <button
+          ref={menuBtnRef}
           type="button"
           className="menu-toggle"
           aria-expanded={drawerOpen}
           aria-controls="admin-sidebar"
-          aria-label="Ouvrir le menu de navigation"
+          aria-label={drawerOpen ? "Fermer le menu de navigation" : "Ouvrir le menu de navigation"}
           onClick={() => setDrawerOpen((o) => !o)}
           style={{ marginBottom: 16 }}
         >

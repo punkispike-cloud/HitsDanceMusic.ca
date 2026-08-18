@@ -57,7 +57,7 @@ function cardHtml(item, kind) {
   const shareUrl = `${API_BASE}/v1/share/${kind === "mix" ? "mix" : "episode"}/${encodeURIComponent(item.slug)}`;
   return `<article class="od-card" id="od-${escapeHtml(item.slug)}" data-kind="${kind}" data-slug="${escapeHtml(item.slug)}" tabindex="0" role="button" aria-label="Voir ${escapeHtml(item.title)}">
     <div class="od-cover">${
-      cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" />` : `<span class="od-cover-ph" aria-hidden="true">♪</span>`
+      cover ? `<img src="${escapeHtml(cover)}" alt="Pochette : ${escapeHtml(item.title)}" loading="lazy" />` : `<span class="od-cover-ph" aria-hidden="true">♪</span>`
     }</div>
     <div class="od-body">
       <span class="od-kind">${escapeHtml(sub)}</span>
@@ -118,7 +118,7 @@ function openEpisodeModal(item, kind) {
   overlay.innerHTML = `
     <div class="adetail episode-detail" role="dialog" aria-modal="true" aria-label="${escapeHtml(item.title)}">
       <button class="adetail-close" aria-label="Fermer">×</button>
-      ${cover ? `<div class="od-detail-cover"><img src="${escapeHtml(cover)}" alt="" /></div>` : ""}
+      ${cover ? `<div class="od-detail-cover"><img src="${escapeHtml(cover)}" alt="Pochette : ${escapeHtml(item.title)}" /></div>` : ""}
       <span class="od-kind">${kind === "mix" ? escapeHtml(item.genre || "Mix") : "Podcast"}</span>
       <h2>${escapeHtml(item.title)}</h2>
       ${item.description ? `<p class="adetail-bio">${escapeHtml(item.description)}</p>` : ""}

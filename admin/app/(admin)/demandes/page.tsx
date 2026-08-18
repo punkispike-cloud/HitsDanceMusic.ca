@@ -17,13 +17,14 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
   played: "Jouée",
   ignored: "Ignorée",
 };
-const STATUS_COLOR: Record<RequestStatus, string> = {
-  new: "var(--accent)",
-  read: "var(--txt-dim)",
-  queued: "var(--ok)",
-  played: "var(--ok)",
-  ignored: "var(--danger)",
-};
+
+function StatusBadge({ status }: { status: RequestStatus }) {
+  return (
+    <span className={`status-badge status-badge--${status}`} aria-label={`Statut : ${STATUS_LABEL[status]}`}>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
 
 const FILTERS: { value: "" | RequestStatus; label: string }[] = [
   { value: "new", label: "Nouvelles" },
@@ -58,22 +59,22 @@ function ActionButtons({
   return (
     <div className="req-actions">
       {r.status !== "read" && (
-        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "read")}>
+        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} aria-label={`Marquer « ${r.title} » comme lue`} onClick={() => void onStatus(r.id, "read")}>
           Lu
         </button>
       )}
       {r.status !== "queued" && (
-        <button className="btn btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "queued")}>
+        <button className="btn btn-sm" disabled={busy === r.id} aria-label={`Mettre « ${r.title} » en file`} onClick={() => void onStatus(r.id, "queued")}>
           En file
         </button>
       )}
       {r.status !== "played" && (
-        <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "played")}>
+        <button className="btn btn-primary btn-sm" disabled={busy === r.id} aria-label={`Marquer « ${r.title} » comme jouée`} onClick={() => void onStatus(r.id, "played")}>
           Jouée
         </button>
       )}
       {r.status !== "ignored" && (
-        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => void onStatus(r.id, "ignored")}>
+        <button className="btn btn-ghost btn-sm" disabled={busy === r.id} aria-label={`Ignorer la demande « ${r.title} »`} onClick={() => void onStatus(r.id, "ignored")}>
           Ignorer
         </button>
       )}
@@ -190,9 +191,7 @@ export default function DemandesPage() {
                       {timeAgo(r.createdAt)}
                     </td>
                     <td>
-                      <span style={{ color: STATUS_COLOR[r.status], fontWeight: 700 }}>
-                        {STATUS_LABEL[r.status]}
-                      </span>
+                      <StatusBadge status={r.status} />
                     </td>
                     {canHandle && (
                       <td>
@@ -213,9 +212,7 @@ export default function DemandesPage() {
                     <strong>{r.title}</strong>
                     <div className="muted" style={{ fontSize: "0.78rem" }}>{r.artist || "—"}</div>
                   </div>
-                  <span style={{ color: STATUS_COLOR[r.status], fontWeight: 700, fontSize: "0.82rem" }}>
-                    {STATUS_LABEL[r.status]}
-                  </span>
+                  <StatusBadge status={r.status} />
                 </header>
                 {r.dedication && <p className="muted" style={{ fontSize: "0.85rem", margin: "8px 0" }}>{r.dedication}</p>}
                 <p className="muted" style={{ fontSize: "0.78rem", margin: 0 }}>

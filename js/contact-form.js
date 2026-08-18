@@ -21,18 +21,25 @@ function ensureFormLiveRegion(form) {
 
 function setFieldError(input, msg) {
   const label = input.closest("label");
+  const errId = `${input.name || input.id}-error`;
   let err = label?.querySelector(".field-error");
   if (msg) {
     input.setAttribute("aria-invalid", "true");
     if (!err && label) {
       err = document.createElement("span");
       err.className = "field-error";
+      err.id = errId;
       err.setAttribute("role", "alert");
       label.appendChild(err);
     }
-    if (err) err.textContent = msg;
+    if (err) {
+      if (!err.id) err.id = errId;
+      err.textContent = msg;
+    }
+    input.setAttribute("aria-describedby", errId);
   } else {
     input.removeAttribute("aria-invalid");
+    input.removeAttribute("aria-describedby");
     err?.remove();
   }
 }
@@ -69,6 +76,7 @@ export function bindContactForm() {
   function closeSuggest() {
     suggestList.hidden = true;
     trackInput.setAttribute("aria-expanded", "false");
+    trackInput.removeAttribute("aria-activedescendant");
     activeIdx = -1;
   }
 
@@ -79,6 +87,11 @@ export function bindContactForm() {
       `<li role="option" id="track-opt-${i}" aria-selected="${i === activeIdx}">${escapeHtml(t)}</li>`).join("");
     suggestList.hidden = false;
     trackInput.setAttribute("aria-expanded", "true");
+    if (activeIdx >= 0) {
+      trackInput.setAttribute("aria-activedescendant", `track-opt-${activeIdx}`);
+    } else {
+      trackInput.removeAttribute("aria-activedescendant");
+    }
   }
 
   function pickSuggestion(text) {
