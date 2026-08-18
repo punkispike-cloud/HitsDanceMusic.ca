@@ -15,7 +15,8 @@
   --vinyl: #080808;
   /* Text */
   --ink: #f5f5f5;
-  --muted: #888888;
+  /* WCAG 2.2 AA ≥4.5:1 sur --surface (#1a1a1a) et --bg (#0a0a0a) */
+  --muted: #9a9a9a;
   /* Borders */
   --line: rgba(255, 255, 255, 0.08);
   --gold-border: rgba(255, 255, 255, 0.13);

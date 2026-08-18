@@ -54,6 +54,11 @@ const checks = [
       const r = await get("/v1/push/vapid-public-key");
       return r.status === 200 && typeof r.json?.enabled === "boolean";
     },
+    detail: async () => {
+      const r = await get("/v1/push/vapid-public-key");
+      if (r.status !== 200) return null;
+      return r.json?.enabled ? "VAPID actif" : "VAPID absent (503 push_disabled)";
+    },
   },
   {
     name: "Créneau courant /v1/schedule/now (enrichi)",
@@ -103,7 +108,14 @@ for (const c of checks) {
   let ok = false;
   try { ok = await c.run(); } catch { ok = false; }
   if (!ok) failed++;
-  console.log(`  ${ok ? "✅" : "❌"}  ${c.name}`);
+  let extra = "";
+  if (c.detail) {
+    try {
+      const d = await c.detail();
+      if (d) extra = ` (${d})`;
+    } catch { /* ignore */ }
+  }
+  console.log(`  ${ok ? "✅" : "❌"}  ${c.name}${extra}`);
 }
 
 console.log(

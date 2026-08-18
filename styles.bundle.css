@@ -11,7 +11,7 @@
   --surface-warm: #242424;
   --vinyl: #080808;
   --ink: #f5f5f5;
-  --muted: #888;
+  --muted: #9a9a9a;
   --line: #ffffff14;
   --gold-border: #ffffff21;
   --accent: #c8102e;
@@ -3815,7 +3815,7 @@ body.is-playing-radio .site-footer {
   --surface-warm: #ececec;
   --vinyl: #e8e8e8;
   --ink: #141414;
-  --muted: #5a5a5a;
+  --muted: #525252;
   --line: #0000001a;
   --gold-border: #00000021;
   --night: #f0f0f0;
@@ -6297,7 +6297,7 @@ body.watch-open {
 }
 
 .stream-chip-text span {
-  color: #fff9;
+  color: #ffffffb8;
   font-size: .82rem;
 }
 
@@ -6366,7 +6366,7 @@ main:focus {
 }
 
 .mini-session {
-  color: #ffffff8c;
+  color: #ffffffad;
   margin-top: 2px;
   font-size: .72rem;
   display: block;
