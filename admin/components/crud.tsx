@@ -252,6 +252,7 @@ export function CrudPage<T extends { id: string }>(props: CrudPageProps<T>) {
               type="search"
               value={query}
               placeholder="Rechercher…"
+              aria-label={`Rechercher dans ${title}`}
               onChange={(e) => setQuery(e.target.value)}
               style={{ width: 200 }}
             />

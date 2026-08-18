@@ -8,11 +8,15 @@ import { toggleHistory, exportHistory } from "./history-drawer.js";
 import { shareCurrent } from "./share.js";
 import { triggerInstall } from "./install-pwa.js";
 import { downloadIcs } from "./schedule.js";
+import { activateModalTrap } from "./a11y-modal.js";
 
 let _toggleNotif = () => {};
 let _openWatch = () => {};
 let _toggleLyrics = () => {};
 let _togglePip = () => {};
+let _releaseTrap = null;
+let _previousFocus = null;
+
 export function setSearchHooks(h) {
   if (h.toggleNotif) _toggleNotif = h.toggleNotif;
   if (h.openWatch) _openWatch = h.openWatch;
@@ -93,7 +97,7 @@ function ensureSearchPalette() {
     <div class="search-box">
       <div class="search-input-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="searchInput" type="search" placeholder="Cherche un show, un DJ, une action…" autocomplete="off" />
+        <input id="searchInput" type="search" placeholder="Cherche un show, un DJ, une action…" autocomplete="off" aria-label="Recherche rapide" />
         <kbd>Esc</kbd>
       </div>
       <ul id="searchResults" class="search-results" role="listbox"></ul>
@@ -143,11 +147,14 @@ function renderSearchResults(q) {
 export function openSearch() {
   ensureSearchPalette();
   const p = $("#searchPalette");
+  _previousFocus = document.activeElement;
   p.hidden = false;
   requestAnimationFrame(() => p.classList.add("is-open"));
   const input = $("#searchInput");
   input.value = "";
   renderSearchResults("");
+  _releaseTrap?.();
+  _releaseTrap = activateModalTrap(p, { previousFocus: _previousFocus });
   setTimeout(() => input.focus(), 50);
 }
 
@@ -155,5 +162,10 @@ export function closeSearch() {
   const p = $("#searchPalette");
   if (!p || p.hidden) return;
   p.classList.remove("is-open");
+  if (_releaseTrap) {
+    _releaseTrap();
+    _releaseTrap = null;
+    _previousFocus = null;
+  }
   setTimeout(() => { p.hidden = true; }, 200);
 }

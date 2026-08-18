@@ -7,7 +7,7 @@ import { API_BASE } from "./api-config.js";
 function cardHtml(item) {
   const variant = item.variant ? ` featured-card--${escapeHtml(item.variant)}` : "";
   const cover = item.coverUrl
-    ? `<div class="featured-cover"><img src="${escapeHtml(item.coverUrl)}" alt="" loading="lazy" /></div>`
+    ? `<div class="featured-cover"><img src="${escapeHtml(item.coverUrl)}" alt="${escapeHtml(item.title || "À la une")}" loading="lazy" /></div>`
     : "";
   const tag = item.tag ? `<span class="featured-tag">${escapeHtml(item.tag)}</span>` : "";
   const meta = item.meta ? `<p class="featured-meta">${escapeHtml(item.meta)}</p>` : "";

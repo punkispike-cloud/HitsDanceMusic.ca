@@ -169,6 +169,23 @@ export function bindMoreMenu() {
   }, true);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { close(); btn.focus(); }
+    if (menu.hidden) return;
+    const items = [...menu.querySelectorAll("a, button, [role='menuitem']")].filter((el) => !el.disabled);
+    if (!items.length) return;
+    const idx = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      items[(idx + 1) % items.length].focus({ preventScroll: true });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(idx <= 0 ? items.length : idx) - 1].focus({ preventScroll: true });
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      items[0].focus({ preventScroll: true });
+    } else if (e.key === "End") {
+      e.preventDefault();
+      items[items.length - 1].focus({ preventScroll: true });
+    }
   });
   menu.addEventListener("click", (e) => {
     const target = e.target.closest("a, button, [role='menuitem']");
