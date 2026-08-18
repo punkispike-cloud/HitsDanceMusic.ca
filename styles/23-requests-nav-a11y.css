@@ -106,3 +106,44 @@ main:focus { outline: none; }
   .ticker, .marquee, .pulse, .shimmer { animation: none !important; }
   html { scroll-behavior: auto !important; }
 }
+
+/* Touch targets — minimum 44×44 px sur écrans tactiles */
+@media (pointer: coarse) {
+  .header-tool,
+  .nav-toggle,
+  .main-nav a,
+  .more-menu a,
+  .more-menu button[role="menuitem"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Badges de statut demandes (texte + forme, pas couleur seule) */
+.req-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f0;
+}
+.req-status--new { border-color: rgba(220, 20, 48, 0.5); }
+.req-status--read { border-style: dashed; }
+.req-status--queued { border-color: rgba(42, 122, 106, 0.55); }
+.req-status--played { border-color: rgba(42, 122, 106, 0.75); background: rgba(42, 122, 106, 0.15); }
+.req-status--ignored { border-color: rgba(160, 160, 168, 0.45); opacity: 0.85; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -6,8 +6,11 @@ import { getHistory } from "./now-playing.js";
 import { store, STORAGE } from "./store.js";
 import { toast } from "./toast.js";
 import { fetchRecentTracks, toggleTrackLike, getLikedSet, saveLikedSet, fmtTrackTime } from "./track-likes.js";
+import { activateModalTrap } from "./a11y-modal.js";
 
 let _apiTracks = [];
+let _releaseTrap = null;
+let _previousFocus = null;
 
 function ensureHistoryDrawer() {
   let d = $("#historyDrawer");
@@ -15,6 +18,8 @@ function ensureHistoryDrawer() {
   d = document.createElement("aside");
   d.id = "historyDrawer";
   d.className = "history-drawer";
+  d.setAttribute("role", "dialog");
+  d.setAttribute("aria-modal", "true");
   d.setAttribute("aria-label", "Historique des morceaux diffusés");
   d.hidden = true;
   d.innerHTML = `
@@ -37,9 +42,25 @@ function ensureHistoryDrawer() {
 export function toggleHistory(force) {
   const d = ensureHistoryDrawer();
   const open = typeof force === "boolean" ? force : d.hidden;
-  d.hidden = !open;
-  d.classList.toggle("is-open", open);
-  if (open) void renderHistory();
+  if (open) {
+    _previousFocus = document.activeElement;
+    d.hidden = false;
+    d.classList.add("is-open");
+    _releaseTrap?.();
+    _releaseTrap = activateModalTrap(d, {
+      closeBtn: $("#historyClose", d),
+      previousFocus: _previousFocus,
+    });
+    void renderHistory();
+  } else {
+    d.classList.remove("is-open");
+    if (_releaseTrap) {
+      _releaseTrap();
+      _releaseTrap = null;
+      _previousFocus = null;
+    }
+    d.hidden = true;
+  }
 }
 
 function sessionFallbackItems() {
@@ -58,6 +79,11 @@ function renderLikeBtn(track) {
   if (!track.id) return "";
   const liked = getLikedSet().has(track.id);
   return `<button type="button" class="history-like trk-like" data-track-id="${escapeHtml(track.id)}" aria-pressed="${liked}" aria-label="J'aime ce titre">🤘 <span>${track.likes ?? 0}</span></button>`;
+}
+
+function trackAlt(it) {
+  const label = it.artist ? `${it.artist} — ${it.title}` : it.title;
+  return escapeHtml(label || "Pochette du morceau");
 }
 
 function wireLikeButtons(listEl) {
@@ -104,7 +130,7 @@ export async function renderHistory() {
       : fmtTrackTime(it.playedAt);
     const coverUrl = typeof it.cover === "string" && /^https:\/\//i.test(it.cover) ? escapeHtml(it.cover) : "";
     const cover = coverUrl
-      ? `<img src="${coverUrl}" alt="" loading="lazy" decoding="async" width="44" height="44" />`
+      ? `<img src="${coverUrl}" alt="${trackAlt(it)}" loading="lazy" decoding="async" width="44" height="44" />`
       : `<span class="history-cover-fallback" aria-hidden="true">♪</span>`;
     const label = it.artist ? `${escapeHtml(it.artist)} — ${escapeHtml(it.title)}` : escapeHtml(it.title);
     const search = encodeURIComponent(`${it.artist || ""} ${it.title}`.trim());
@@ -161,7 +187,8 @@ export function injectHistorySearch() {
   const tools = document.createElement("div");
   tools.className = "history-search";
   tools.innerHTML = `
-    <input type="search" id="historyFilter" placeholder="Filtrer (artiste, titre)…" />
+    <label for="historyFilter" class="sr-only">Filtrer l'historique par artiste ou titre</label>
+    <input type="search" id="historyFilter" placeholder="Filtrer (artiste, titre)…" aria-label="Filtrer l'historique par artiste ou titre" />
     <button type="button" class="btn btn-ghost btn-xs" id="exportHistJson">JSON</button>
     <button type="button" class="btn btn-ghost btn-xs" id="exportHistCsv">CSV</button>`;
   head.insertAdjacentElement("afterend", tools);

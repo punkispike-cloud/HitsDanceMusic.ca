@@ -437,3 +437,40 @@ textarea:focus-visible,
   .demandes-cards { display: none; }
   .demandes-sticky-bar { display: none; }
 }
+
+/* ── A11y : skip link + badges de statut ── */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  z-index: 10000;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--txt);
+}
+.status-badge--new { border-color: var(--accent); }
+.status-badge--read { border-style: dashed; color: var(--txt-dim); }
+.status-badge--queued { border-color: var(--ok); }
+.status-badge--played { border-color: var(--ok); background: rgba(42, 122, 106, 0.15); }
+.status-badge--ignored { border-color: var(--txt-faint); color: var(--txt-dim); }

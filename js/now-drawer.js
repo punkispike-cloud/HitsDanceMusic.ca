@@ -7,6 +7,10 @@ import { getAudio, togglePlayback } from "./player.js";
 import { shareCurrent } from "./share.js";
 import { toggleHistory } from "./history-drawer.js";
 import { BRAND } from "./brand.generated.js";
+import { activateModalTrap } from "./a11y-modal.js";
+
+let _releaseTrap = null;
+let _previousFocus = null;
 
 function ensureNowPlayingDrawer() {
   let d = document.getElementById("nowPlayingDrawer");
@@ -55,8 +59,16 @@ export function openNowPlayingDrawer() {
     npCover.src = coverSrc;
     npBg.style.backgroundImage = `url("${coverSrc}")`;
   }
-  d.querySelector("#npTitle").textContent = state.currentSlot?.title || BRAND.name;
+  const slotTitle = state.currentSlot?.title || BRAND.name;
+  d.querySelector("#npTitle").textContent = slotTitle;
   d.querySelector("#npHost").textContent = state.currentSlot?.host || "";
+  if (state.currentTrack?.title) {
+    npCover.alt = state.currentTrack.artist
+      ? `${state.currentTrack.artist} — ${state.currentTrack.title}`
+      : state.currentTrack.title;
+  } else {
+    npCover.alt = slotTitle;
+  }
   const tag = SLOT_TAGS?.[state.currentSlot?.tag] || null;
   const npTag = d.querySelector("#npTag");
   if (tag) {
@@ -75,15 +87,15 @@ export function openNowPlayingDrawer() {
   const audio = getAudio();
   const npPlay = d.querySelector("#npPlay");
   npPlay.textContent = (audio && !audio.paused) ? "❚❚ Pause" : "▶ Lecture";
+  _previousFocus = document.activeElement;
   d.hidden = false;
-  // focus trap basique
-  const focusables = d.querySelectorAll("button, a, [tabindex]");
-  d.dataset.lastFocus = document.activeElement?.id || "";
-  focusables[0]?.focus({ preventScroll: true });
+  _releaseTrap?.();
+  _releaseTrap = activateModalTrap(d, {
+    closeBtn: d.querySelector("#npClose"),
+    previousFocus: _previousFocus,
+  });
   requestAnimationFrame(() => d.classList.add("is-open"));
 
-  // Stagger d'apparition des éléments du tiroir (CSS-free). On annule d'abord
-  // toute animation résiduelle d'une ouverture précédente (évite l'empilement).
   const npTrackEl = d.querySelector("#npTrack");
   const steps = [
     [d.querySelector("#npCover"), 0],
@@ -107,9 +119,10 @@ export function closeNowPlayingDrawer() {
   if (!d) return;
   d.classList.remove("is-open");
   document.body.style.overflow = "";
-  const last = d.dataset.lastFocus ? document.getElementById(d.dataset.lastFocus) : null;
-  setTimeout(() => {
-    d.hidden = true;
-    last?.focus?.();
-  }, 280);
+  if (_releaseTrap) {
+    _releaseTrap();
+    _releaseTrap = null;
+    _previousFocus = null;
+  }
+  setTimeout(() => { d.hidden = true; }, 280);
 }

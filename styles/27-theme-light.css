@@ -56,8 +56,3 @@
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* === Override : burger retire, main-nav uniquement desktop === */
-.nav-toggle { display: none !important; }
-@media (max-width: 900px) {
-  .site-header .main-nav { display: none !important; }
-}

@@ -693,12 +693,14 @@ function trapTab(e) {
 }
 
 function openSheet(st) {
-  if (!byId("sheet").classList.contains("show")) sheetLastFocus = document.activeElement; // déclencheur
+  if (!byId("sheet").classList.contains("show")) sheetLastFocus = document.activeElement;
   sheetSlug = st.slug;
   renderSheet(st);
   const sheet = byId("sheet");
   sheet.classList.add("show");
+  sheet.removeAttribute("inert");
   sheet.setAttribute("aria-hidden", "false");
+  byId("sheetBackdrop")?.removeAttribute("inert");
   setBgInert(true);
   byId("sheetClose").focus();
 }
@@ -706,6 +708,8 @@ function closeSheet() {
   const sheet = byId("sheet");
   sheet.classList.remove("show");
   sheet.setAttribute("aria-hidden", "true");
+  sheet.setAttribute("inert", "");
+  byId("sheetBackdrop")?.setAttribute("inert", "");
   setBgInert(false);
   sheetSlug = null;
   if (sheetLastFocus && typeof sheetLastFocus.focus === "function") sheetLastFocus.focus();
