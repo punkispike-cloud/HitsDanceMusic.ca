@@ -218,6 +218,13 @@
       "when": 1786990100000,
       "tag": "0030_listener_reset_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786990200000,
+      "tag": "0031_analytics_track_hourly",
+      "breakpoints": true
     }
   ]
 }

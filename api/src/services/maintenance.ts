@@ -3,7 +3,7 @@
 
 import { lt, and, eq, isNotNull, or } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, analyticsDaily, auditLog, rateBuckets, songRequests } from "../db/schema.js";
+import { refreshTokens, uploadIntents, analyticsSessions, analyticsShowListen, analyticsDaily, analyticsTrackListen, analyticsHourly, auditLog, rateBuckets, songRequests } from "../db/schema.js";
 import { env } from "../env.js";
 import { deleteObject, isS3Configured } from "../lib/s3.js";
 import { withAdvisoryLock } from "./lock.js";
@@ -72,10 +72,21 @@ async function runCleanupInner(): Promise<void> {
       .where(lt(analyticsShowListen.lastAt, analyticsCutoff))
       .returning({ id: analyticsShowListen.id });
     // Ventilation quotidienne : même fenêtre (elle porte un client_id).
+    const dayCutoff = analyticsCutoff.toISOString().slice(0, 10);
     const delDaily = await db
       .delete(analyticsDaily)
-      .where(lt(analyticsDaily.day, analyticsCutoff.toISOString().slice(0, 10)))
+      .where(lt(analyticsDaily.day, dayCutoff))
       .returning({ id: analyticsDaily.id });
+    // Écoute par titre : même fenêtre (porte un client_id). Ventilation horaire :
+    // aucune donnée personnelle, mais même rétention (rien à lire au-delà).
+    const delTrackListen = await db
+      .delete(analyticsTrackListen)
+      .where(lt(analyticsTrackListen.day, dayCutoff))
+      .returning({ id: analyticsTrackListen.id });
+    const delHourly = await db
+      .delete(analyticsHourly)
+      .where(lt(analyticsHourly.day, dayCutoff))
+      .returning({ id: analyticsHourly.id });
 
     // Demandes de titres / dédicaces : dedication + requester_name sont des données
     // potentiellement personnelles → purge alignée sur la même fenêtre (Loi 25).
@@ -99,7 +110,8 @@ async function runCleanupInner(): Promise<void> {
 
     console.log(
       `[cleanup] refresh_tokens: ${delTokens.length}, upload_intents: ${delIntents.length} (objets S3 orphelins: ${orphanObjects}), ` +
-        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, analytics_daily: ${delDaily.length}, song_requests: ${delRequests.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
+        `analytics_sessions: ${delSessions.length}, show_listen: ${delListen.length}, analytics_daily: ${delDaily.length}, ` +
+        `track_listen: ${delTrackListen.length}, hourly: ${delHourly.length}, song_requests: ${delRequests.length}, audit_log: ${delAudit.length}, rate_buckets: ${delBuckets.length}`,
     );
   } catch (err) {
     console.error("[cleanup] échec (non bloquant)", err);

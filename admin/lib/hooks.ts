@@ -28,6 +28,7 @@ import type {
   AdminUser,
   ScheduleSlot,
   AnalyticsOverview,
+  AnalyticsSummary,
   AnalyticsShow,
   AnalyticsSession,
   AnalyticsPoint,
@@ -186,6 +187,16 @@ export function useAnalyticsSessions(enabled: boolean, opts: SWRConfiguration<An
   );
 }
 
+/** Chiffres clés FENÊTRÉS sur `days` jours (le sélecteur de période s'applique) —
+ *  `days` encodé dans le chemin → re-fetch au changement de période. */
+export function useAnalyticsSummary(days: number, opts: SWRConfiguration<AnalyticsSummary> = {}) {
+  const { selectedId } = useRadio();
+  return useSWR<AnalyticsSummary>(
+    rkey(`/v1/admin/analytics/summary?days=${days}`, selectedId),
+    { ...LIST, ...opts },
+  );
+}
+
 export function useAnalyticsShows(opts: SWRConfiguration<AnalyticsShow[]> = {}) {
   const { selectedId } = useRadio();
   return useSWR<AnalyticsShow[]>(rkey("/v1/admin/analytics/shows", selectedId), { ...LIST, ...opts });
@@ -211,9 +222,14 @@ export function useAnalyticsTimeseries(days: number, opts: SWRConfiguration<Anal
   );
 }
 
-export function useAnalyticsBreakdown(opts: SWRConfiguration<AnalyticsBreakdown> = {}) {
+/** Répartitions FENÊTRÉES sur `days` jours (appareils, navigateurs, villes,
+ *  retour, profil horaire) — `days` encodé dans le chemin. */
+export function useAnalyticsBreakdown(days: number, opts: SWRConfiguration<AnalyticsBreakdown> = {}) {
   const { selectedId } = useRadio();
-  return useSWR<AnalyticsBreakdown>(rkey("/v1/admin/analytics/breakdown", selectedId), { ...LIST, ...opts });
+  return useSWR<AnalyticsBreakdown>(
+    rkey(`/v1/admin/analytics/breakdown?days=${days}`, selectedId),
+    { ...LIST, ...opts },
+  );
 }
 
 /* ──────────────────── Flux temps réel (SSE) — statistiques ────────────────────

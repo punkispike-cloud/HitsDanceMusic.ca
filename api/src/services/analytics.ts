@@ -2,9 +2,9 @@
    temps d'écoute par émission. Conçu pour des « beacons » légers envoyés par
    le front (pageview, heartbeat, listen). Valeurs bornées côté serveur. */
 
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { analyticsSessions, analyticsShowListen } from "../db/schema.js";
+import { analyticsSessions, analyticsShowListen, trackHistory } from "../db/schema.js";
 import { isGeoipConfigured } from "../env.js";
 import { resolveGeoMmdbPath } from "../lib/geo-db.js";
 
@@ -230,6 +230,87 @@ export function dailyUpsertQuery(p: {
   `;
 }
 
+/* Ventilation horaire (heure LOCALE de la radio). Chaque beacon crédite l'heure
+   où il arrive → « activité par heure » exacte, contrairement à l'ancien
+   histogramme sur first_seen. Exporté pour tests/analytics-ingest.test.ts. */
+export function hourlyUpsertQuery(p: {
+  radioId: string;
+  activeAdd: number;
+  listenAdd: number;
+}) {
+  const { radioId, activeAdd, listenAdd } = p;
+  return sql`
+    INSERT INTO analytics_hourly (radio_id, day, hour, listen_sec, active_sec)
+    VALUES (
+      ${radioId},
+      (now() AT TIME ZONE ${RADIO_TZ}::text)::date,
+      extract(hour FROM now() AT TIME ZONE ${RADIO_TZ}::text)::int,
+      ${listenAdd}, ${activeAdd}
+    )
+    ON CONFLICT (radio_id, day, hour) DO UPDATE SET
+      listen_sec = analytics_hourly.listen_sec + EXCLUDED.listen_sec,
+      active_sec = analytics_hourly.active_sec + EXCLUDED.active_sec
+  `;
+}
+
+/* Écoute par TITRE (radio, jour, titre, visiteur). Le delta crédité est celui
+   RETENU par le plafonnement de session — cohérent avec le reste. Exporté pour
+   tests/analytics-ingest.test.ts. */
+export function trackListenUpsertQuery(p: {
+  radioId: string;
+  clientId: string;
+  artist: string;
+  title: string;
+  listenAdd: number;
+}) {
+  const { radioId, clientId, artist, title, listenAdd } = p;
+  return sql`
+    INSERT INTO analytics_track_listen (radio_id, day, artist, title, client_id, listen_sec)
+    VALUES (
+      ${radioId},
+      (now() AT TIME ZONE ${RADIO_TZ}::text)::date,
+      ${artist}, ${title}, ${clientId}, ${listenAdd}
+    )
+    ON CONFLICT (radio_id, day, artist, title, client_id) DO UPDATE SET
+      listen_sec = analytics_track_listen.listen_sec + EXCLUDED.listen_sec
+  `;
+}
+
+/* ── Titre en cours de diffusion (pour attribuer l'écoute par titre) ──
+   Source : la dernière ligne de track_history (alimentée par le poller
+   now-playing, même process). Cache mémoire court par radio : sans lui, chaque
+   beacon `listen` (toutes les 20 s × chaque auditeur) ferait un SELECT.
+   Borne de fraîcheur LARGE (2 h) : un set live ou un long mix ne produit qu'UNE
+   ligne d'historique et doit continuer d'être crédité ; au-delà de 2 h sans
+   changement, on considère le poller mort et on n'attribue plus (plutôt que
+   d'attribuer à un titre périmé). */
+const NOW_TRACK_TTL_MS = 20_000;
+const NOW_TRACK_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+type NowTrack = { artist: string; title: string } | null;
+const _nowTrack = new Map<string, { value: NowTrack; fetchedAt: number }>();
+
+async function currentTrack(radioId: string): Promise<NowTrack> {
+  const cached = _nowTrack.get(radioId);
+  const nowMs = Date.now();
+  if (cached && nowMs - cached.fetchedAt < NOW_TRACK_TTL_MS) return cached.value;
+  let value: NowTrack = null;
+  try {
+    const [last] = await db
+      .select({ artist: trackHistory.artist, title: trackHistory.title, playedAt: trackHistory.playedAt })
+      .from(trackHistory)
+      .where(eq(trackHistory.radioId, radioId))
+      .orderBy(desc(trackHistory.playedAt))
+      .limit(1);
+    if (last && nowMs - last.playedAt.getTime() < NOW_TRACK_MAX_AGE_MS) {
+      value = { artist: last.artist, title: last.title };
+    }
+  } catch {
+    /* best-effort — l'attribution par titre est un bonus, jamais bloquante */
+  }
+  _nowTrack.set(radioId, { value, fetchedAt: nowMs });
+  return value;
+}
+
 export async function ingestTrack(input: TrackInput): Promise<void> {
   const { clientId, type, ip, userAgent, radioId } = input;
   const { browser, device } = parseUserAgent(userAgent);
@@ -247,6 +328,24 @@ export async function ingestTrack(input: TrackInput): Promise<void> {
   const listenAdd = Number(applied?.listenAdd ?? 0);
 
   await db.execute(dailyUpsertQuery({ radioId, clientId, activeAdd, listenAdd, pageAdd }));
+
+  // Ventilation horaire : uniquement quand du temps a réellement été crédité
+  // (un pageview seul n'ajoute pas de secondes).
+  if (activeAdd > 0 || listenAdd > 0) {
+    await db.execute(hourlyUpsertQuery({ radioId, activeAdd, listenAdd }));
+  }
+
+  // Écoute par TITRE : attribuée au titre en cours de diffusion (connu côté
+  // serveur via track_history — aucun changement du front). Best-effort : si le
+  // poller now-playing est inactif ou périmé, on n'attribue simplement pas.
+  if (listenAdd > 0) {
+    const track = await currentTrack(radioId);
+    if (track?.title) {
+      await db.execute(
+        trackListenUpsertQuery({ radioId, clientId, artist: track.artist, title: track.title, listenAdd }),
+      );
+    }
+  }
 
   // Géo-IP : une tentative par visiteur (asynchrone, n'attend pas).
   if (!_geoAttempted.has(clientId)) {

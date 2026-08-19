@@ -298,6 +298,18 @@ export interface AnalyticsOverview {
   avgListenSec: number;
 }
 
+/** Chiffres clés FENÊTRÉS (période choisie), depuis analytics_daily — chaque
+ *  beacon crédite le jour où il arrive, donc la fenêtre est exacte. */
+export interface AnalyticsSummary {
+  days: number;
+  visitors: number;
+  listenSec: number;
+  activeSec: number;
+  pageViews: number;
+  avgListenSec: number;
+  avgActiveSec: number;
+}
+
 export interface AnalyticsShow {
   showTitle: string;
   totalListenSec: number;
@@ -305,16 +317,17 @@ export interface AnalyticsShow {
   avgListenSec: number;
 }
 
-/** Titre le plus diffusé (feedback de programmation) — playCount/likeCount par
- *  titre ; avgListenSec/skipRate sont des contextes radio (écoute courte = skip). */
+/** Titre le plus diffusé (feedback de programmation). listenSec/listeners =
+ *  écoute RÉELLE par titre (attribuée à l'ingestion) — null tant que la
+ *  collecte (démarrée avec la migration 0031) n'a rien pour ce titre. */
 export interface TopTrack {
   trackId: string;
   artist: string;
   title: string;
   playCount: number;
   likeCount: number;
-  avgListenSec: number;
-  skipRate: number; // %
+  listenSec: number | null;
+  listeners: number | null;
 }
 
 export interface AnalyticsSession {
@@ -353,12 +366,16 @@ export interface GeoPoint {
   last_seen: string;
 }
 
+/** Répartitions FENÊTRÉES : visiteurs actifs sur la période. « De retour » =
+ *  vu sur ≥ 2 jours distincts de la période. `hourly` = écoute réelle par heure
+ *  locale (collecte démarrée avec la migration 0031 — vide avant). */
 export interface AnalyticsBreakdown {
+  days: number;
   devices: { device: string; sessions: number }[];
   browsers: { browser: string; sessions: number }[];
   topCities: { label: string; sessions: number }[];
   newVsReturning: { returning: number; fresh: number };
-  hourly: { hour: number; sessions: number }[];
+  hourly: { hour: number; listen_sec: number; active_sec: number }[];
 }
 
 export interface TrackHistoryEntry {

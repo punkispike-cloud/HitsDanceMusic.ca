@@ -9,7 +9,7 @@ import { db } from "../db/client.js";
 import {
   radios,
   users,
-  analyticsSessions,
+  analyticsDaily,
   analyticsShowListen,
   trackHistory,
   reportLog,
@@ -17,6 +17,7 @@ import {
 import { env, isResendConfigured } from "../env.js";
 import { sendEmail, reportEmailHtml, type ReportEmailData } from "./email.js";
 import { withAdvisoryLock } from "./lock.js";
+import { TRACK_FILTER_RES, cleanTrackLabel } from "./track-labels.js";
 
 const MONTHS_FR = [
   "janvier", "février", "mars", "avril", "mai", "juin",
@@ -41,17 +42,24 @@ export async function buildMonthlyReport(
   const start = new Date(Date.UTC(year, month - 1, 1));
   const end = new Date(Date.UTC(year, month, 1));
 
+  /* Agrégat du mois depuis analytics_daily (chaque beacon crédite son jour) :
+     l'ancienne somme sur analytics_sessions additionnait le CUMUL DE VIE de
+     chaque visiteur vu dans le mois — un habitué depuis mars gonflait chaque
+     rapport de tout son historique. Les jours d'analytics_daily sont en date
+     locale de la radio, cohérent avec « le mois » du point de vue de l'antenne. */
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const [agg] = await db
     .select({
-      listeners: sql<number>`count(distinct ${analyticsSessions.clientId})::int`,
-      listenSec: sql<number>`coalesce(sum(${analyticsSessions.listenSec}),0)::int`,
+      listeners: sql<number>`count(distinct ${analyticsDaily.clientId})::int`,
+      listenSec: sql<number>`coalesce(sum(${analyticsDaily.listenSec}),0)::int`,
     })
-    .from(analyticsSessions)
+    .from(analyticsDaily)
     .where(
       and(
-        eq(analyticsSessions.radioId, radioId),
-        gte(analyticsSessions.lastSeen, start),
-        lt(analyticsSessions.lastSeen, end),
+        eq(analyticsDaily.radioId, radioId),
+        gte(analyticsDaily.day, monthStart),
+        lt(analyticsDaily.day, nextMonth),
       ),
     );
 
@@ -72,7 +80,11 @@ export async function buildMonthlyReport(
     .orderBy(sql`count(distinct ${analyticsShowListen.clientId}) desc`)
     .limit(6);
 
-  const topTracks = await db
+  /* Même hygiène que la page Stats et l'export CSV (services/track-labels.ts) :
+     jingles/liners exclus en SQL, entités décodées et suffixes vidéo retirés à
+     la lecture. On récupère large (30) car des variantes du même titre
+     fusionnent après nettoyage — puis top 10. */
+  const rawTracks = await db
     .select({
       artist: trackHistory.artist,
       title: trackHistory.title,
@@ -84,22 +96,41 @@ export async function buildMonthlyReport(
         eq(trackHistory.radioId, radioId),
         gte(trackHistory.playedAt, start),
         lt(trackHistory.playedAt, end),
+        sql`NOT (
+             ${trackHistory.title} ~* ${TRACK_FILTER_RES.liner}
+          OR ${trackHistory.title} ~* ${TRACK_FILTER_RES.link}
+          OR (${trackHistory.title} ~* '24/7' AND ${trackHistory.title} ~* ${TRACK_FILTER_RES.radioWord})
+          OR ${trackHistory.title} ~* ${TRACK_FILTER_RES.domain}
+          OR ${trackHistory.artist} ~* ${TRACK_FILTER_RES.domain}
+        )`,
       ),
     )
     .groupBy(trackHistory.artist, trackHistory.title)
     .orderBy(sql`count(*) desc`)
-    .limit(10);
+    .limit(30);
 
+  const mergedTracks = new Map<string, { label: string; plays: number }>();
+  for (const t of rawTracks) {
+    const artist = cleanTrackLabel(t.artist);
+    const title = cleanTrackLabel(t.title);
+    if (!title) continue;
+    const label = artist ? `${artist} — ${title}` : title;
+    const prev = mergedTracks.get(label.toLowerCase());
+    if (prev) prev.plays += t.plays;
+    else mergedTracks.set(label.toLowerCase(), { label, plays: t.plays });
+  }
+  const topTracks = [...mergedTracks.values()].sort((a, b) => b.plays - a.plays).slice(0, 10);
+
+  const listeners = agg?.listeners ?? 0;
+  const listenSec = agg?.listenSec ?? 0;
   return {
     radioName: radio.name,
     periodLabel: `${MONTHS_FR[month - 1]} ${year}`,
-    listeners: agg?.listeners ?? 0,
-    listenLabel: hhmm(agg?.listenSec ?? 0),
+    listeners,
+    listenLabel: hhmm(listenSec),
+    avgListenLabel: listeners ? hhmm(Math.round(listenSec / listeners)) : null,
     topShows: topShows.map((s) => ({ title: s.title, listeners: s.listeners })),
-    topTracks: topTracks.map((t) => ({
-      label: t.artist ? `${t.artist} — ${t.title}` : t.title,
-      plays: t.plays,
-    })),
+    topTracks,
     adminUrl: `${env.ADMIN_BASE_URL}/parc/${radioId}`,
   };
 }

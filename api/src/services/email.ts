@@ -88,6 +88,8 @@ export interface ReportEmailData {
   periodLabel: string; // ex. "mai 2026"
   listeners: number;
   listenLabel: string; // ex. "42 h 10 min"
+  /** Écoute moyenne par visiteur — null si aucun visiteur sur le mois. */
+  avgListenLabel: string | null;
   topShows: { title: string; listeners: number }[];
   topTracks: { label: string; plays: number }[];
   adminUrl: string;
@@ -109,8 +111,9 @@ export function reportEmailHtml(d: ReportEmailData): string {
     `📊 ${d.radioName} — rapport de ${d.periodLabel}`,
     `<p>Voici le bilan d'audience de <strong>${esc(d.radioName)}</strong> pour ${d.periodLabel}.</p>
      <ul style="line-height:1.7">
-       <li><strong>${d.listeners}</strong> auditeurs uniques</li>
-       <li><strong>${d.listenLabel}</strong> d'écoute</li>
+       <li><strong>${d.listeners}</strong> visiteurs uniques</li>
+       <li><strong>${d.listenLabel}</strong> d'écoute au total</li>
+       ${d.avgListenLabel ? `<li><strong>${d.avgListenLabel}</strong> d'écoute en moyenne par visiteur</li>` : ""}
      </ul>
      <h2 style="font-size:15px;color:#fff;margin:24px 0 8px">Top émissions</h2>
      <table style="width:100%;border-collapse:collapse;font-size:14px">${showsRows}</table>
