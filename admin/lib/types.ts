@@ -252,6 +252,31 @@ export interface Track {
   updatedAt: string;
 }
 
+export type MediaAssetKind = "jingle" | "ad" | "intro" | "outro" | "bed";
+
+export interface MediaAsset {
+  id: string;
+  kind: MediaAssetKind;
+  name: string;
+  audioUrl: string | null;
+  durationSec: number | null;
+  status: ContentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdRotation {
+  id: string;
+  assetId: string | null;
+  weight: number;
+  dayOfWeek: number; // -1 = tous les jours ; sinon 0..6 (dimanche..samedi)
+  startMin: number;
+  endMin: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

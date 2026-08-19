@@ -24,6 +24,7 @@ import type {
   Episode,
   Mix,
   Track,
+  MediaAsset,
   AdminUser,
   ScheduleSlot,
   AnalyticsOverview,
@@ -90,6 +91,12 @@ export function useMixes() {
 export function useLibrary() {
   const { selectedId } = useRadio();
   return useSWR<Track[]>(rkey("/v1/admin/library", selectedId), LIST);
+}
+
+/** Médias (jingles/pubs/intros/outros/beds). Radio-scopé. */
+export function useMediaAssets() {
+  const { selectedId } = useRadio();
+  return useSWR<MediaAsset[]>(rkey("/v1/admin/media", selectedId), LIST);
 }
 
 export function useUsers() {
