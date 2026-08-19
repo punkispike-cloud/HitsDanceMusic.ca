@@ -742,6 +742,26 @@ export const listenerRefreshTokens = pgTable(
   }),
 );
 
+/* Reset de mot de passe auditeur : jeton à usage unique haché, miroir de
+   auth_tokens (staff). Pas de purpose : les auditeurs n'ont pas d'invitation. */
+export const listenerAuthTokens = pgTable(
+  "listener_auth_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listenerId: uuid("listener_id")
+      .notNull()
+      .references(() => listeners.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    hashIdx: uniqueIndex("listener_auth_tokens_hash_idx").on(t.tokenHash),
+    listenerIdx: index("listener_auth_tokens_listener_idx").on(t.listenerId),
+  }),
+);
+
 /* Playlists possédées par un auditeur (privées par défaut). */
 export const playlists = pgTable(
   "playlists",

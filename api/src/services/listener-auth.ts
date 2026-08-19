@@ -2,9 +2,10 @@
    services/auth.ts mais sur les tables `listeners` / `listener_refresh_tokens`.
    Séparé du staff : aucun rôle, aucun accès admin. */
 
-import { eq, and, isNull } from "drizzle-orm";
+import { randomBytes, createHash } from "node:crypto";
+import { eq, and, isNull, gt } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { listeners, listenerRefreshTokens, type Listener } from "../db/schema.js";
+import { listeners, listenerRefreshTokens, listenerAuthTokens, type Listener } from "../db/schema.js";
 import { signListenerToken, generateRefreshToken, hashRefreshToken } from "../lib/jwt.js";
 import { env } from "../env.js";
 
@@ -81,4 +82,38 @@ export async function revokeAllForListener(listenerId: string): Promise<void> {
     .update(listenerRefreshTokens)
     .set({ revokedAt: new Date() })
     .where(and(eq(listenerRefreshTokens.listenerId, listenerId), isNull(listenerRefreshTokens.revokedAt)));
+}
+
+/* ─────────────── Reset de mot de passe (jeton à usage unique) ───────────────
+   Miroir de services/auth-tokens.ts (staff) : le brut n'est renvoyé qu'une
+   fois (lien e-mail), seul le SHA-256 est stocké, consommation atomique. */
+
+function hashResetToken(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
+}
+
+/** Crée un jeton de reset, renvoie le brut (à insérer dans le lien). */
+export async function createListenerResetToken(listenerId: string, ttlSec: number): Promise<string> {
+  const raw = randomBytes(32).toString("base64url");
+  await db.insert(listenerAuthTokens).values({
+    listenerId,
+    tokenHash: hashResetToken(raw),
+    expiresAt: new Date(Date.now() + ttlSec * 1000),
+  });
+  return raw;
+}
+
+/** Consomme un jeton valide (non expiré, non utilisé). Renvoie le listenerId. */
+export async function consumeListenerResetToken(raw: string): Promise<string | null> {
+  const tokenHash = hashResetToken(raw);
+  const row = await db.query.listenerAuthTokens.findFirst({
+    where: and(
+      eq(listenerAuthTokens.tokenHash, tokenHash),
+      isNull(listenerAuthTokens.usedAt),
+      gt(listenerAuthTokens.expiresAt, new Date()),
+    ),
+  });
+  if (!row) return null;
+  await db.update(listenerAuthTokens).set({ usedAt: new Date() }).where(eq(listenerAuthTokens.id, row.id));
+  return row.listenerId;
 }

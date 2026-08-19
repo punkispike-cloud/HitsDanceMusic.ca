@@ -28,8 +28,12 @@ import {
   issueListenerTokens,
   rotateListenerToken,
   revokeListenerToken,
+  revokeAllForListener,
+  createListenerResetToken,
+  consumeListenerResetToken,
   type TokenPair,
 } from "../services/listener-auth.js";
+import { sendEmail, resetEmailHtml } from "../services/email.js";
 import type { AppBindings } from "../types.js";
 
 export const accountRoutes = new Hono<AppBindings>();
@@ -123,6 +127,43 @@ accountRoutes.post("/logout", async (c) => {
   const raw = getCookie(c, REFRESH_COOKIE);
   if (raw) await revokeListenerToken(raw);
   deleteCookie(c, REFRESH_COOKIE, { path: "/" });
+  return c.json({ ok: true });
+});
+
+/* POST /v1/account/forgot-password — envoie un lien de réinitialisation.
+   Réponse toujours { ok:true } (ne révèle pas si l'email existe). Miroir du
+   flux staff (auth.ts) sur la table listeners. */
+const forgotSchema = z.object({ email: emailSchema });
+accountRoutes.post("/forgot-password", async (c) => {
+  const { email } = forgotSchema.parse(await c.req.json());
+  const row = await db.query.listeners.findFirst({ where: eq(listeners.email, email) });
+  if (row && row.isActive) {
+    const raw = await createListenerResetToken(row.id, 60 * 60); // 1 h
+    const link = `${env.HUB_BASE_URL.replace(/\/$/, "")}/musique.html?reset=${raw}`;
+    await sendEmail({
+      to: row.email,
+      subject: "Réinitialisation de ton mot de passe — En Ondes",
+      html: resetEmailHtml(link),
+    });
+  }
+  return c.json({ ok: true });
+});
+
+/* POST /v1/account/reset-password — consomme le jeton et fixe le mdp.
+   Révoque toutes les sessions existantes. */
+const resetSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: z.string().min(8, "Mot de passe trop court (≥ 8)").max(200),
+});
+accountRoutes.post("/reset-password", async (c) => {
+  const body = resetSchema.parse(await c.req.json());
+  const listenerId = await consumeListenerResetToken(body.token);
+  if (!listenerId) throw badRequest("Lien invalide ou expiré", "invalid_token");
+  await db
+    .update(listeners)
+    .set({ passwordHash: await hashPassword(body.password), updatedAt: new Date() })
+    .where(eq(listeners.id, listenerId));
+  await revokeAllForListener(listenerId);
   return c.json({ ok: true });
 });
 

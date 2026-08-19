@@ -165,16 +165,18 @@
           <span>Nom affiché</span>
           <input type="text" id="afName" autocomplete="nickname" maxlength="80" />
         </label>
-        <label class="field">
+        <label class="field" id="emailField">
           <span>Courriel</span>
           <input type="email" id="afEmail" autocomplete="email" required />
         </label>
-        <label class="field">
-          <span>Mot de passe</span>
+        <label class="field" id="passField">
+          <span id="passLabel">Mot de passe</span>
           <input type="password" id="afPass" autocomplete="current-password" required minlength="8" />
         </label>
         <p class="form-err" id="authErr" role="alert" hidden></p>
+        <p class="form-msg" id="authMsg" role="status" hidden></p>
         <button class="primary-btn" id="authSubmit" type="submit">Se connecter</button>
+        <button class="forgot-btn" id="forgotBtn" type="button">Mot de passe oublié ?</button>
       </form>
     </div>
   </div>

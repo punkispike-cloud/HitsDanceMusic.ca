@@ -635,9 +635,11 @@ function renderAccount() {
 }
 
 let authMode = "login";
+let resetToken = null; // jeton du lien e-mail (?reset=…), consommé en mode "reset"
 function openAuthModal() {
   setAuthMode("login");
   byId("authErr").hidden = true;
+  byId("authMsg").hidden = true;
   showModal("authModal");
   setTimeout(() => byId("afEmail")?.focus(), 50);
 }
@@ -647,8 +649,14 @@ function setAuthMode(mode) {
   byId("tabRegister").classList.toggle("on", mode === "register");
   byId("nameField").hidden = mode !== "register";
   byId("afName").required = mode === "register";
-  byId("afPass").setAttribute("autocomplete", mode === "register" ? "new-password" : "current-password");
-  byId("authSubmit").textContent = mode === "register" ? "Créer mon compte" : "Se connecter";
+  // Mode "reset" (arrivée par lien e-mail) : seul le nouveau mot de passe est demandé.
+  byId("emailField").hidden = mode === "reset";
+  byId("afEmail").required = mode !== "reset";
+  byId("passLabel").textContent = mode === "reset" ? "Nouveau mot de passe" : "Mot de passe";
+  byId("afPass").setAttribute("autocomplete", mode === "login" ? "current-password" : "new-password");
+  byId("forgotBtn").hidden = mode !== "login";
+  byId("authSubmit").textContent =
+    mode === "register" ? "Créer mon compte" : mode === "reset" ? "Changer le mot de passe" : "Se connecter";
 }
 
 async function submitAuth(e) {
@@ -657,9 +665,20 @@ async function submitAuth(e) {
   const password = byId("afPass").value;
   const displayName = byId("afName").value.trim();
   const err = byId("authErr");
+  const msg = byId("authMsg");
   err.hidden = true;
+  msg.hidden = true;
   byId("authSubmit").disabled = true;
   try {
+    if (authMode === "reset") {
+      await acct.resetPassword(resetToken, password);
+      resetToken = null;
+      byId("authForm").reset();
+      setAuthMode("login");
+      msg.textContent = "Mot de passe changé — connecte-toi.";
+      msg.hidden = false;
+      return;
+    }
     if (authMode === "register") await acct.register({ email, password, displayName });
     else await acct.login({ email, password });
     hideModal("authModal");
@@ -670,6 +689,47 @@ async function submitAuth(e) {
   } finally {
     byId("authSubmit").disabled = false;
   }
+}
+
+/* « Mot de passe oublié ? » : envoie le lien sur l'email saisi. La réponse est
+   volontairement la même que l'email existe ou non. */
+async function submitForgot() {
+  const email = byId("afEmail").value.trim();
+  const err = byId("authErr");
+  const msg = byId("authMsg");
+  err.hidden = true;
+  msg.hidden = true;
+  if (!email) {
+    err.textContent = "Entre ton courriel d'abord.";
+    err.hidden = false;
+    byId("afEmail").focus();
+    return;
+  }
+  byId("forgotBtn").disabled = true;
+  try {
+    await acct.forgotPassword(email);
+    msg.textContent = "Si un compte existe pour ce courriel, un lien de réinitialisation a été envoyé (valide 1 h).";
+    msg.hidden = false;
+  } catch (ex) {
+    err.textContent = ex.message || "Échec de l'envoi";
+    err.hidden = false;
+  } finally {
+    byId("forgotBtn").disabled = false;
+  }
+}
+
+/* Arrivée par lien e-mail : ?reset=<jeton> → modale en mode "reset". */
+function handleResetLink() {
+  const token = new URLSearchParams(location.search).get("reset");
+  if (!token) return;
+  resetToken = token;
+  // Nettoie l'URL (le jeton ne doit pas traîner dans l'historique).
+  history.replaceState(null, "", location.pathname);
+  setAuthMode("reset");
+  byId("authErr").hidden = true;
+  byId("authMsg").hidden = true;
+  showModal("authModal");
+  setTimeout(() => byId("afPass")?.focus(), 50);
 }
 
 /* ───────────────── Modales (générique) ───────────────── */
@@ -713,9 +773,10 @@ function wireModals() {
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
-  byId("tabLogin").addEventListener("click", () => { setAuthMode("login"); byId("authErr").hidden = true; });
-  byId("tabRegister").addEventListener("click", () => { setAuthMode("register"); byId("authErr").hidden = true; });
+  byId("tabLogin").addEventListener("click", () => { setAuthMode("login"); byId("authErr").hidden = true; byId("authMsg").hidden = true; });
+  byId("tabRegister").addEventListener("click", () => { setAuthMode("register"); byId("authErr").hidden = true; byId("authMsg").hidden = true; });
   byId("authForm").addEventListener("submit", submitAuth);
+  byId("forgotBtn").addEventListener("click", submitForgot);
   byId("plCreateForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = byId("plNewName").value.trim();
@@ -774,6 +835,7 @@ function init() {
   loadGenres();
   loadTracks();
   acct.initSession(); // restaure la session si cookie de refresh valide
+  handleResetLink(); // ?reset=<jeton> (lien e-mail) → modale « nouveau mot de passe »
 }
 
 init();

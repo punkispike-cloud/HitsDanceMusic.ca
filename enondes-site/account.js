@@ -83,6 +83,16 @@ export async function login({ email, password }) {
   return d.listener;
 }
 
+/* Mot de passe oublié : la réponse est toujours ok (ne révèle pas si l'email existe). */
+export async function forgotPassword(email) {
+  await jsonOrThrow(await raw("/account/forgot-password", { method: "POST", body: JSON.stringify({ email }) }, false));
+}
+
+/* Consomme le jeton du lien e-mail (?reset=…) et fixe le nouveau mot de passe. */
+export async function resetPassword(token, password) {
+  await jsonOrThrow(await raw("/account/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }, false));
+}
+
 export async function logout() {
   try { await fetch(`${API}/account/logout`, { method: "POST", credentials: "include" }); } catch {}
   auth.token = null;
