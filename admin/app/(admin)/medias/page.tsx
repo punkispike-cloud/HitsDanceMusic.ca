@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { CrudPage, type FieldConfig, type Column } from "@/components/crud";
 import { AudioUpload } from "@/components/audio-upload";
+import { useToast } from "@/components/toast";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useMediaAssets } from "@/lib/hooks";
 import {
@@ -71,11 +74,36 @@ const mediaFields: FieldConfig[] = [
   { name: "status", label: "Statut", type: "select", half: true, options: STATUS_OPTIONS, default: "draft" },
 ];
 
+interface SyncResult {
+  synced: number;
+  errors: { rotationId: string; assetName: string; error?: string }[];
+  skippedNoAudio: string[];
+}
+
 export default function MediasPage() {
   const { user } = useAuth();
+  const toast = useToast();
   // Même règle que les pistes : pas d'ownership par artiste, tout éditorial de la
   // radio (animateur/superadmin/owner) peut gérer. `it` est exclu.
   const canManage = user?.role === "animateur" || isEditorialAdmin(user?.role);
+  // Pousser vers le moteur de diffusion = superadmin/owner seulement (comme l'API).
+  const canSync = isEditorialAdmin(user?.role);
+  const [syncing, setSyncing] = useState(false);
+
+  const doSync = async () => {
+    setSyncing(true);
+    try {
+      const r = await api.post<SyncResult>("/v1/admin/rotations/sync", {});
+      const parts = [`${r.synced} rotation${r.synced > 1 ? "s" : ""} synchronisée${r.synced > 1 ? "s" : ""}`];
+      if (r.errors.length) parts.push(`${r.errors.length} en erreur (${r.errors[0]?.error ?? "?"})`);
+      if (r.skippedNoAudio.length) parts.push(`sans audio : ${r.skippedNoAudio.join(", ")}`);
+      toast(parts.join(" · "), r.errors.length ? "warn" : "ok");
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Échec de la synchronisation", "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const { data: assets } = useMediaAssets();
   const assetName = (id: string | null) => assets?.find((a) => a.id === id)?.name ?? "—";
@@ -129,6 +157,18 @@ export default function MediasPage() {
         }
         toForm={(r) => ({ name: r.name, kind: r.kind, status: r.status })}
       />
+      {canSync && (
+        <div className="page-head">
+          <p className="muted" style={{ margin: 0 }}>
+            Le plan ci-dessous ne diffuse rien tant qu&apos;il n&apos;est pas poussé vers le moteur
+            de diffusion. Seules les rotations actives dont le média est publié et téléversé
+            partent.
+          </p>
+          <button className="btn btn-primary" onClick={() => void doSync()} disabled={syncing}>
+            {syncing ? "Synchronisation…" : "Synchroniser la diffusion"}
+          </button>
+        </div>
+      )}
       <CrudPage<AdRotation>
         title="Rotations (plan de diffusion)"
         endpoint="/v1/admin/rotations"
