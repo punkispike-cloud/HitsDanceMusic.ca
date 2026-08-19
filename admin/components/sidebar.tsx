@@ -23,6 +23,7 @@ const LINKS: { href: string; label: string; canSee: (role: Role) => boolean }[] 
   { href: "/podcasts", label: "Podcasts", canSee: (r) => r !== "it" },
   { href: "/mixes", label: "Mixes", canSee: (r) => r !== "it" },
   { href: "/pistes", label: "Pistes", canSee: (r) => r !== "it" },
+  { href: "/medias", label: "Médias & jingles", canSee: (r) => r !== "it" },
   { href: "/studio", label: "Studio DJ", canSee: (r) => r !== "it" },
   { href: "/demandes", label: "Demandes", canSee: isOnAir },
   { href: "/sondages", label: "Sondages", canSee: isOnAir },

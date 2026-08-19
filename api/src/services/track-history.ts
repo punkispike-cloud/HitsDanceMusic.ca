@@ -10,13 +10,18 @@ import { withAdvisoryLock } from "./lock.js";
 
 const POLL_MS = 30_000;
 
-function decodeEntities(s: string): string {
+/** Décode les entités HTML usuelles des métadonnées de flux. Exporté : la
+ *  lecture (top titres) doit aussi décoder — l'historique déjà en base contient
+ *  des entités insérées avant que ce décodage ne soit complet (`&apos;`…). */
+export function decodeEntities(s: string): string {
   return s
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"');
+    .replace(/&#0*39;/g, "'")
+    .replace(/&#x0*27;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, "&"); // en dernier : sinon &amp;apos; se décoderait deux fois
 }
 
 function splitArtistTitle(song: string): { artist: string; title: string } | null {
@@ -37,9 +42,11 @@ function parseNowPlaying(txt: string): { artist: string; title: string } | null 
       const j = JSON.parse(raw) as Record<string, unknown>;
       const np = (j.now_playing ?? j.current_track ?? j.track ?? j) as Record<string, unknown>;
       const node = (np.song ?? np) as Record<string, unknown>;
-      const title = String(node.title ?? node.song ?? node.now_playing_title ?? "");
-      const artist = String(node.artist ?? node.now_playing_artist ?? "");
-      if (title) return { artist: artist.slice(0, 200), title: title.slice(0, 200) };
+      // Décodage ici aussi : certains now-playing JSON (relais, agrégateurs)
+      // livrent des entités HTML — seul le chemin 7.html décodait jusqu'ici.
+      const title = decodeEntities(String(node.title ?? node.song ?? node.now_playing_title ?? ""));
+      const artist = decodeEntities(String(node.artist ?? node.now_playing_artist ?? ""));
+      if (title) return { artist: artist.trim().slice(0, 200), title: title.trim().slice(0, 200) };
     } catch {
       /* pas du JSON valide → on tente le format texte */
     }

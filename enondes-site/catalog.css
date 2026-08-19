@@ -382,6 +382,18 @@ body.modal-open { overflow: hidden; }
 }
 .field input:focus { border-color: var(--accent); }
 .form-err { color: #ff6b7d; font-size: 0.85rem; margin: 4px 0 12px; }
+.form-msg { color: var(--txt); font-size: 0.85rem; margin: 4px 0 12px; }
+.forgot-btn {
+  background: none;
+  border: 0;
+  color: var(--txt-dim);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 10px;
+  padding: 4px;
+}
+.forgot-btn:hover, .forgot-btn:focus-visible { color: var(--txt); }
 .primary-btn {
   width: 100%; background: var(--brand-grad); color: #fff; border: none;
   border-radius: var(--r-pill); padding: 13px; font: inherit; font-weight: 700; cursor: pointer;

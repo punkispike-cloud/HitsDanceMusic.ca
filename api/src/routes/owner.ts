@@ -16,9 +16,11 @@ import { slugify } from "../lib/validation.js";
 import { invalidateRadioCache } from "../services/tenant.js";
 import { isAzuraCastConfigured, createStation } from "../services/azuracast.js";
 import { buildMonthlyReport } from "../services/reports.js";
-import { isStripeBillingConfigured } from "../env.js";
+import { env, isStripeBillingConfigured, isResendConfigured } from "../env.js";
 import { createCheckoutSession, createPortalSession, BILLABLE_TIERS, tierToPriceId } from "../services/stripe.js";
 import { hashPassword } from "../lib/password.js";
+import { createAuthToken } from "../services/auth-tokens.js";
+import { sendEmail, inviteEmailHtml } from "../services/email.js";
 import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
 
@@ -142,8 +144,8 @@ function randomTempPassword(): string {
    Commercial : owner seul. Provisioning enrichi (A3) : crée optionnellement le
    superadmin du tenant (compte + mot de passe temporaire) et une ligne
    d'abonnement « trialing » (intention de facturation ; le vrai paiement Stripe
-   se fait via /billing/checkout par le client). Le branchement du flux AzuraCast
-   + l'envoi d'un e-mail d'invitation viendront en Phase 9 / service mail. */
+   se fait via /billing/checkout par le client). Si Resend est configuré, le
+   superadmin reçoit un e-mail d'invitation (lien set-password 48 h). */
 ownerRoutes.post("/radios", requireOwner, async (c) => {
   const body = radioCreate.parse(await c.req.json());
   const slug = slugify(body.slug || body.name);
@@ -187,7 +189,7 @@ ownerRoutes.post("/radios", requireOwner, async (c) => {
   if (!row) throw new Error("Échec création radio");
 
   // Superadmin du nouveau tenant (idempotent sur l'e-mail : re-rattache au tenant).
-  let superadmin: { id: string; email: string; tempPassword?: string } | null = null;
+  let superadmin: { id: string; email: string; tempPassword?: string; invited?: boolean } | null = null;
   if (body.superadminEmail) {
     const tempPassword = body.superadminPassword ? null : randomTempPassword();
     const passwordHash = await hashPassword(body.superadminPassword || tempPassword || randomTempPassword());
@@ -215,6 +217,19 @@ ownerRoutes.post("/radios", requireOwner, async (c) => {
       .returning({ id: users.id, email: users.email });
     if (!u) throw new Error("Échec création superadmin");
     superadmin = { id: u.id, email: u.email, ...(tempPassword ? { tempPassword } : {}) };
+
+    // Invitation e-mail (best-effort) : lien « définir ton mot de passe » 48 h,
+    // même flux que les invitations staff (admin.ts). Le mot de passe temporaire
+    // reste dans la réponse comme canal de secours si Resend est inactif.
+    if (isResendConfigured()) {
+      const token = await createAuthToken(u.id, "invite", 48 * 60 * 60);
+      const link = `${env.ADMIN_BASE_URL.replace(/\/$/, "")}/set-password?token=${token}`;
+      superadmin.invited = await sendEmail({
+        to: u.email,
+        subject: `Ton accès à la console — ${body.name}`,
+        html: inviteEmailHtml(body.superadminName || body.name, link),
+      });
+    }
   }
 
   // Abonnement « trialing » (intention de facturation — pas un paiement Stripe).

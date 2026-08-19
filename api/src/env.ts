@@ -133,6 +133,8 @@ export const env = {
   RESEND_API_KEY: optional("RESEND_API_KEY", ""),
   EMAIL_FROM: optional("EMAIL_FROM", "Hits Dance Music <no-reply@hitsdancemusic.ca>"),
   ADMIN_BASE_URL: optional("ADMIN_BASE_URL", "https://zucchini-charisma-production-3a67.up.railway.app"),
+  // Hub En Ondes (liens de reset auditeur). Passer à https://enondes.ca quand le DNS sera actif.
+  HUB_BASE_URL: optional("HUB_BASE_URL", "https://enondes-hub-production.up.railway.app"),
 
   // Web Push (VAPID) — généré une fois (npm run vapid). Inactif si absent.
   VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY", ""),

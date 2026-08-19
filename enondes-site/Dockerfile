@@ -20,4 +20,8 @@ EXPOSE 8080
 
 USER nginx
 
-CMD ["sh", "-c", "sed -i \"s/listen 8080;/listen $PORT;/\" /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# API_UPSTREAM_HOST (optionnel) : hôte API du proxy /api/. Sans la variable,
+# l'upstream reste la prod (défaut du nginx.conf). À poser sur le service
+# staging (patient-endurance-staging.up.railway.app) pour que les tests du
+# catalogue n'écrivent pas dans la base de production.
+CMD ["sh", "-c", "sed -i \"s/listen 8080;/listen $PORT;/\" /etc/nginx/conf.d/default.conf && if [ -n \"$API_UPSTREAM_HOST\" ]; then sed -i \"s/patient-endurance-production-21c8\\.up\\.railway\\.app/$API_UPSTREAM_HOST/g\" /etc/nginx/conf.d/default.conf; fi && nginx -g 'daemon off;'"]

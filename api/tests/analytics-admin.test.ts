@@ -113,7 +113,7 @@ test("/export : owner sans X-Radio-Id -> 404 (garde passée)", async () => {
 
 /* ───────── routes agrégées : pas de garde RBAC propre (tout admin y accède) ───────── */
 
-const AGGREGATE_ROUTES = ["/overview", "/shows", "/top-tracks", "/timeseries", "/geo", "/breakdown"];
+const AGGREGATE_ROUTES = ["/overview", "/summary", "/shows", "/top-tracks", "/timeseries", "/geo", "/breakdown"];
 
 for (const path of AGGREGATE_ROUTES) {
   test(`${path} : it -> 404 (pas de garde RBAC, atteint le handler puis radio null)`, async () => {

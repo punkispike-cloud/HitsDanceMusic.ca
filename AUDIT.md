@@ -142,7 +142,7 @@ inchangées ; le live garde son lien). Tout ce qui dépend d'un service externe 
 |---|---|---|---|
 | 1 | Player podcasts/mixes public | ✅ `podcasts.html` (page additive) | — |
 | 2 | Flux RSS podcasts | ✅ `GET /v1/rss/:showSlug` | — |
-| 3 | Badge live « en ondes / à venir » | ⏳ à câbler (touche page gelée) | décision user |
+| 3 | Badge live « en ondes / à venir » | ✅ `js/live-badge.js` (initLiveBadge, main.js) | — |
 | 4 | Rappels Web Push | ✅ table + abo + rappels auto | `VAPID_*` (`npm run vapid`) |
 | 5 | Cartes de partage Open Graph | ✅ `GET /v1/share/...` | — |
 | 6 | Sentry (monitoring) | ✅ branché | `SENTRY_DSN` |

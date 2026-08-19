@@ -43,7 +43,7 @@ export const slotTag = pgEnum("slot_tag", [
 
 export const contentStatus = pgEnum("content_status", ["draft", "published", "archived"]);
 
-export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover", "track"]);
+export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover", "track", "media"]);
 export const uploadStatus = pgEnum("upload_status", ["pending", "completed", "aborted"]);
 
 const timestamps = {
@@ -462,6 +462,52 @@ export const analyticsShowListen = pgTable(
   }),
 );
 
+/* ───────────────────────── analytics_track_listen (écoute par titre) ─────────────────────────
+   Écoute réelle PAR TITRE, ventilée par jour. Une ligne par (radio, jour, titre,
+   visiteur). Attribuée CÔTÉ SERVEUR à l'ingestion du beacon `listen` : l'API
+   connaît le titre en cours via le poller now-playing (track_history). Permet un
+   temps d'écoute et un nombre d'auditeurs distincts EXACTS et fenêtrables par
+   titre — ce que analytics_show_listen (cumul à vie par émission) ne peut pas.
+   Pas d'IP ni de user-agent ; purgée par le job de rétention (client_id). */
+
+export const analyticsTrackListen = pgTable(
+  "analytics_track_listen",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    artist: text("artist").notNull().default(""),
+    title: text("title").notNull(),
+    clientId: text("client_id").notNull(),
+    listenSec: integer("listen_sec").notNull().default(0),
+  },
+  (t) => ({
+    keyIdx: uniqueIndex("analytics_track_listen_key_idx").on(t.radioId, t.day, t.artist, t.title, t.clientId),
+    dayIdx: index("analytics_track_listen_day_idx").on(t.radioId, t.day),
+  }),
+);
+
+/* ───────────────────────── analytics_hourly (écoute par heure) ─────────────────────────
+   Temps d'écoute / temps actif par (jour, heure LOCALE America/Toronto). Chaque
+   beacon crédite l'heure où il arrive → « activité par heure » exacte et
+   fenêtrable, contrairement à l'ancien histogramme basé sur first_seen (heure de
+   la première visite, une fois pour toutes). Aucune donnée personnelle. */
+
+export const analyticsHourly = pgTable(
+  "analytics_hourly",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    radioId: uuid("radio_id").references(() => radios.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    hour: integer("hour").notNull(),
+    listenSec: integer("listen_sec").notNull().default(0),
+    activeSec: integer("active_sec").notNull().default(0),
+  },
+  (t) => ({
+    keyIdx: uniqueIndex("analytics_hourly_key_idx").on(t.radioId, t.day, t.hour),
+  }),
+);
+
 /* ───────────────────────── track_history (titres diffusés) ─────────────────────────
    Historique des titres passés à l'antenne. Alimenté par un poller qui interroge
    le now-playing du flux et enregistre chaque changement de titre. */
@@ -739,6 +785,26 @@ export const listenerRefreshTokens = pgTable(
   (t) => ({
     listenerIdx: index("listener_refresh_listener_idx").on(t.listenerId),
     tokenIdx: index("listener_refresh_token_idx").on(t.tokenHash),
+  }),
+);
+
+/* Reset de mot de passe auditeur : jeton à usage unique haché, miroir de
+   auth_tokens (staff). Pas de purpose : les auditeurs n'ont pas d'invitation. */
+export const listenerAuthTokens = pgTable(
+  "listener_auth_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listenerId: uuid("listener_id")
+      .notNull()
+      .references(() => listeners.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    hashIdx: uniqueIndex("listener_auth_tokens_hash_idx").on(t.tokenHash),
+    listenerIdx: index("listener_auth_tokens_listener_idx").on(t.listenerId),
   }),
 );
 

@@ -1,7 +1,26 @@
 # État du projet — Hits Dance Music / En Ondes
 
-> Document de reprise. Dernière mise à jour : **2026-08-17**.
+> Document de reprise. Dernière mise à jour : **2026-08-18**.
 > Branche : `main` (déploiement auto Railway). Runbook ops : [RUNBOOK-PRODUCTION.md](RUNBOOK-PRODUCTION.md) · [DEPLOY-OPS.md](DEPLOY-OPS.md).
+
+---
+
+## Snapshot 2026-08-18 — chaînes e2e complétées (audit 0→100)
+
+Audit exhaustif toutes surfaces → les chaînes cassées côté code sont fermées :
+
+| Chaîne | Avant | Maintenant |
+|---|---|---|
+| Pubs/jingles | CRUD API sans UI ni upload (feature morte) | Page admin `/medias` (bibliothèque + rotations), upload kind `media` (migration 0029) |
+| Studio DJ boucles | `setLoop`/`clearLoop` sans bouton | IN/OUT/retrait + région sur la waveform |
+| Compte auditeur | mot de passe perdu = compte perdu | forgot/reset e-mail complet (migration 0030, `HUB_BASE_URL`) |
+| Provisioning tenant | mdp temporaire à transmettre à la main | invitation e-mail auto si Resend actif |
+| Hub staging | proxy `/api/` en dur → écrivait en prod | `API_UPSTREAM_HOST` (var conteneur) |
+| `.env.example` | 15 vars non documentées | resynchronisé avec `env.ts` |
+
+Reste **hors code** (accès requis) : vars S3 prod tronquées, VAPID, Sentry,
+secrets backup GitHub, bascule RLS prod, DNS enondes.ca, Stripe live,
+AzuraCast, TuneIn, TODO légaux Loi 25 (hub), dossier Rockfort.
 
 ---
 

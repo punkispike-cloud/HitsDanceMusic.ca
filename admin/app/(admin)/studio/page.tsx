@@ -92,6 +92,8 @@ export default function StudioPage() {
   const downloadUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<Record<DeckId, HTMLInputElement | null>>({ A: null, B: null });
   const tapRef = useRef<Record<DeckId, number[]>>({ A: [], B: [] });
+  const loopInRef = useRef<Record<DeckId, number | null>>({ A: null, B: null });
+  const [loopPending, setLoopPending] = useState<Record<DeckId, boolean>>({ A: false, B: false });
 
   // Création du moteur au montage (client-only).
   useEffect(() => {
@@ -207,6 +209,31 @@ export default function StudioPage() {
   };
   const onReverb = (deck: DeckId, v: number) => {
     engineRef.current?.setReverb(deck, v);
+    sync();
+  };
+  /* Boucle IN/OUT : IN marque le début à la position courante, OUT ferme la
+     région et l'active (engine.setLoop), × la retire. Le marqueur IN est
+     transient (ref) — seul l'état de boucle vit dans le moteur. */
+  const onLoopIn = (deck: DeckId) => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    loopInRef.current[deck] = eng.deckPosition(deck);
+    setLoopPending((p) => ({ ...p, [deck]: true }));
+  };
+  const onLoopOut = (deck: DeckId) => {
+    const eng = engineRef.current;
+    const start = loopInRef.current[deck];
+    if (!eng || start == null) return;
+    const end = eng.deckPosition(deck);
+    eng.setLoop(deck, Math.min(start, end), Math.max(start, end));
+    loopInRef.current[deck] = null;
+    setLoopPending((p) => ({ ...p, [deck]: false }));
+    sync();
+  };
+  const onLoopClear = (deck: DeckId) => {
+    engineRef.current?.clearLoop(deck);
+    loopInRef.current[deck] = null;
+    setLoopPending((p) => ({ ...p, [deck]: false }));
     sync();
   };
   const onSetBpm = (deck: DeckId, bpm: number) => {
@@ -398,6 +425,10 @@ export default function StudioPage() {
             onVol={(v) => onVol("A", v)}
             onReverb={(v) => onReverb("A", v)}
             onTap={() => onTap("A")}
+            loopPending={loopPending.A}
+            onLoopIn={() => onLoopIn("A")}
+            onLoopOut={() => onLoopOut("A")}
+            onLoopClear={() => onLoopClear("A")}
             onReanalyze={() => onReanalyze("A")}
             onSetBpm={(b) => onSetBpm("A", b)}
             onPickLibrary={() => setPickerFor("A")}
@@ -423,6 +454,10 @@ export default function StudioPage() {
             onVol={(v) => onVol("B", v)}
             onReverb={(v) => onReverb("B", v)}
             onTap={() => onTap("B")}
+            loopPending={loopPending.B}
+            onLoopIn={() => onLoopIn("B")}
+            onLoopOut={() => onLoopOut("B")}
+            onLoopClear={() => onLoopClear("B")}
             onReanalyze={() => onReanalyze("B")}
             onSetBpm={(b) => onSetBpm("B", b)}
             onPickLibrary={() => setPickerFor("B")}
@@ -654,6 +689,10 @@ function DeckPanel({
   onVol,
   onReverb,
   onTap,
+  loopPending,
+  onLoopIn,
+  onLoopOut,
+  onLoopClear,
   onReanalyze,
   onSetBpm,
   onPickLibrary,
@@ -673,6 +712,10 @@ function DeckPanel({
   onVol: (v: number) => void;
   onReverb: (v: number) => void;
   onTap: () => void;
+  loopPending: boolean;
+  onLoopIn: () => void;
+  onLoopOut: () => void;
+  onLoopClear: () => void;
   onReanalyze: () => void;
   onSetBpm: (bpm: number) => void;
   onPickLibrary: () => void;
@@ -711,13 +754,49 @@ function DeckPanel({
         )}
       </div>
 
-      <Waveform buffer={state.buffer} progress={position} onSeek={onSeek} />
+      <Waveform
+        buffer={state.buffer}
+        progress={position}
+        onSeek={onSeek}
+        loopStart={state.loopActive ? state.loopStart : null}
+        loopEnd={state.loopActive ? state.loopEnd : null}
+      />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, marginBottom: 10 }}>
         <span className="muted" style={{ fontSize: "0.85rem" }}>
           {fmt(position)} / {fmt(dur)}
+          {state.loopActive && (
+            <span title="Boucle active"> · ⟳ {fmt(state.loopStart)}–{fmt(state.loopEnd)}</span>
+          )}
         </span>
         <div style={{ display: "flex", gap: 6 }}>
+          <button
+            className={`btn btn-sm ${loopPending ? "btn-primary" : "btn-ghost"}`}
+            type="button"
+            onClick={onLoopIn}
+            disabled={!state.buffer}
+            title="Marquer le début de boucle à la position courante"
+          >
+            IN
+          </button>
+          <button
+            className="btn btn-sm btn-ghost"
+            type="button"
+            onClick={onLoopOut}
+            disabled={!state.buffer || !loopPending}
+            title="Fermer la boucle à la position courante"
+          >
+            OUT
+          </button>
+          <button
+            className="btn btn-sm btn-ghost"
+            type="button"
+            onClick={onLoopClear}
+            disabled={!state.loopActive}
+            title="Retirer la boucle"
+          >
+            ⟳✕
+          </button>
           <button className="btn btn-sm btn-primary" type="button" onClick={onPlay} disabled={!state.buffer}>
             ▶
           </button>

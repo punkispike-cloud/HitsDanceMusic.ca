@@ -98,8 +98,8 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
   );
   const maxS = Math.max(1, ...pts.map((p) => p.sessions));
   // Liveness visuelle calculée côté client à partir de last_seen + `now` (horloge
-  // 1 s du parent) → un point s'« éteint » tout seul après 60 s sans nouveau fetch
-  // (effet « live » réactif entre deux polls de 4 s).
+  // 1 s du parent) → un point s'« éteint » tout seul après 60 s même si le flux
+  // SSE reste silencieux (aucun beacon → aucun push serveur).
   const isLive = (p: GeoPoint) => now - new Date(p.last_seen).getTime() < LIVE_WINDOW_MS;
   // Compteur EXACT du direct : somme de `live_sessions` (calculé côté serveur avec
   // le même prédicat que /overview) → cohérent avec la carte KPI « En direct ».
@@ -111,7 +111,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
 
   // Résumé synthétique de la carte pour les lecteurs d'écran (role=img).
   const mapSummary = pts.length
-    ? `Carte des visiteurs : ${pts.length} ville(s), ${liveCities} en direct totalisant ${liveSessions} session(s) en direct.`
+    ? `Carte des visiteurs : ${pts.length} ville(s), ${liveCities} en direct totalisant ${liveSessions} visiteur(s) en direct.`
     : "Carte des visiteurs : aucune ville à afficher.";
 
   return (
@@ -147,7 +147,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
                 <circle cx={x} cy={y} r={r + 3} fill="#19c37d" opacity={0.22} />
               )}
               <circle cx={x} cy={y} r={r} fill={color} stroke="#ffffff" strokeWidth={0.5} opacity={0.92}>
-                <title>{`${p.label ?? "?"} — ${p.sessions} session(s)${live ? ` · ${p.live_sessions} en direct` : ""}`}</title>
+                <title>{`${p.label ?? "?"} — ${p.sessions} visiteur(s)${live ? ` · ${p.live_sessions} en direct` : ""}`}</title>
               </circle>
             </g>
           );
@@ -159,7 +159,7 @@ export default function VisitorMap({ points, now }: { points: GeoPoint[] | null;
         <thead>
           <tr>
             <th scope="col">Ville</th>
-            <th scope="col">Sessions</th>
+            <th scope="col">Visiteurs</th>
             <th scope="col">État</th>
           </tr>
         </thead>

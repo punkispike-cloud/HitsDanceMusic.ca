@@ -19,7 +19,12 @@ import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { sessionUpsertQuery, dailyUpsertQuery } from "../src/services/analytics.js";
+import {
+  sessionUpsertQuery,
+  dailyUpsertQuery,
+  hourlyUpsertQuery,
+  trackListenUpsertQuery,
+} from "../src/services/analytics.js";
 
 const RADIO_TZ = "America/Toronto";
 const dialect = new PgDialect();
@@ -116,6 +121,25 @@ before(async () => {
       page_views integer NOT NULL DEFAULT 0
     );
     CREATE UNIQUE INDEX analytics_daily_day_client_idx ON analytics_daily (radio_id, day, client_id);
+    CREATE TABLE analytics_hourly (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      radio_id uuid REFERENCES radios(id) ON DELETE CASCADE,
+      day date NOT NULL,
+      hour integer NOT NULL,
+      listen_sec integer NOT NULL DEFAULT 0,
+      active_sec integer NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX analytics_hourly_key_idx ON analytics_hourly (radio_id, day, hour);
+    CREATE TABLE analytics_track_listen (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      radio_id uuid REFERENCES radios(id) ON DELETE CASCADE,
+      day date NOT NULL,
+      artist text NOT NULL DEFAULT '',
+      title text NOT NULL,
+      client_id text NOT NULL,
+      listen_sec integer NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX analytics_track_listen_key_idx ON analytics_track_listen (radio_id, day, artist, title, client_id);
   `);
   const r = await pg.query<{ id: string }>(`INSERT INTO radios DEFAULT VALUES RETURNING id`);
   radioId = r.rows[0]!.id;
@@ -180,6 +204,35 @@ test("« visiteurs aujourd'hui » = dernière barre de la série quotidienne", a
   );
   assert.equal(series.rows.length, 30, "30 jours, trous compris");
   assert.equal(today.rows[0]!.today, series.rows.at(-1)!.sessions);
+});
+
+test("ventilation horaire : les secondes s'accumulent sur (jour, heure) sans doublon", async () => {
+  await run(hourlyUpsertQuery({ radioId, activeAdd: 20, listenAdd: 20 }));
+  await run(hourlyUpsertQuery({ radioId, activeAdd: 10, listenAdd: 5 }));
+  const r = await pg.query<{ n: number; listen: number; active: number }>(
+    `SELECT count(*)::int AS n, sum(listen_sec)::int AS listen, sum(active_sec)::int AS active
+       FROM analytics_hourly WHERE radio_id = $1`,
+    [radioId],
+  );
+  // Deux beacons dans la même heure → UNE ligne, sommes exactes. (Un passage
+  // d'heure pile pendant le test créerait 2 lignes ; les sommes restent exactes.)
+  assert.ok(r.rows[0]!.n <= 2);
+  assert.equal(r.rows[0]!.listen, 25);
+  assert.equal(r.rows[0]!.active, 30);
+});
+
+test("écoute par titre : cumul par (jour, titre, visiteur), variantes séparées", async () => {
+  const t = { radioId, clientId: "fan", artist: "Tiësto", title: "Lay Low" };
+  await run(trackListenUpsertQuery({ ...t, listenAdd: 20 }));
+  await run(trackListenUpsertQuery({ ...t, listenAdd: 20 }));
+  await run(trackListenUpsertQuery({ ...t, clientId: "autre", listenAdd: 20 }));
+  const r = await pg.query<{ listen: number; listeners: number }>(
+    `SELECT sum(listen_sec)::int AS listen, count(DISTINCT client_id)::int AS listeners
+       FROM analytics_track_listen WHERE radio_id = $1 AND title = 'Lay Low'`,
+    [radioId],
+  );
+  assert.equal(r.rows[0]!.listen, 60, "les secondes des deux auditeurs s'additionnent");
+  assert.equal(r.rows[0]!.listeners, 2, "auditeurs distincts exacts");
 });
 
 test("reprise d'historique : rejouable sans doubler les compteurs", async () => {

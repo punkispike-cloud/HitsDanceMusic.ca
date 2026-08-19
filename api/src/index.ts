@@ -82,6 +82,8 @@ app.route("/v1", trackRoutes);
 app.use("/v1/account/login", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
 app.use("/v1/account/register", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
 app.use("/v1/account/refresh", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
+app.use("/v1/account/forgot-password", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
+app.use("/v1/account/reset-password", authRateLimit(env.AUTH_RATE_LIMIT_RPM));
 app.route("/v1/account", accountRoutes);
 app.route("/v1", rssRoutes); // GET /v1/rss/:showSlug
 app.route("/v1", shareRoutes); // GET /v1/share/...

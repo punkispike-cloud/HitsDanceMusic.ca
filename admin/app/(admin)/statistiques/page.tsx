@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   useAnalyticsStream,
+  useAnalyticsSummary,
   useAnalyticsShows,
   useAnalyticsTimeseries,
   useAnalyticsBreakdown,
@@ -78,6 +79,22 @@ function IconCheck() {
   );
 }
 
+/* Titre de section avec sa portée temporelle EXPLICITE : chaque bloc de la page
+   dit sur quelle fenêtre il porte (période choisie / temps réel / depuis le
+   lancement) — c'était la source n° 1 de confusion de l'ancienne page. */
+function SectionTitle({ children, scope }: { children: React.ReactNode; scope?: string }) {
+  return (
+    <h2 style={{ marginTop: 28, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", textWrap: "balance" }}>
+      {children}
+      {scope && (
+        <span className="muted" style={{ fontSize: "0.78rem", fontWeight: 500 }}>
+          {scope}
+        </span>
+      )}
+    </h2>
+  );
+}
+
 /* Mini graphe à barres (SVG, sans dépendance) du temps d'écoute par jour. */
 function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   const max = Math.max(1, ...data.map((d) => d.listen_sec));
@@ -138,6 +155,59 @@ function TimeSeriesChart({ data }: { data: AnalyticsPoint[] }) {
   );
 }
 
+/* Profil d'écoute par heure locale (0-23). Donnée EXACTE : chaque beacon crédite
+   l'heure où il arrive (analytics_hourly) — remplace l'ancien histogramme qui
+   comptait l'heure de PREMIÈRE visite de chaque visiteur. */
+function HourlyListenChart({ data }: { data: { hour: number; listen_sec: number }[] }) {
+  const byHour = new Array(24).fill(0) as number[];
+  for (const d of data) if (d.hour >= 0 && d.hour < 24) byHour[d.hour] = d.listen_sec;
+  const total = byHour.reduce((a, v) => a + v, 0);
+  if (!total) {
+    return (
+      <Empty label="Mesure horaire toute récente — les barres se remplissent au fil des écoutes." />
+    );
+  }
+  const max = Math.max(1, ...byHour);
+  const peakHour = byHour.indexOf(max);
+  return (
+    <div className="card">
+      <div
+        role="img"
+        aria-label={`Temps d'écoute par heure (heure de Montréal). Pic à ${peakHour} h avec ${formatDuration(max)}.`}
+        style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 120, borderBottom: "1px solid var(--line)" }}
+      >
+        {byHour.map((v, h) => (
+          <div key={h} title={`${h} h — ${formatDuration(v)} d'écoute`} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+            {/* Le pic est marqué par une opacité pleine (les autres barres atténuées). */}
+            <div style={{ height: `${(v / max) * 100}%`, background: "var(--accent)", opacity: h === peakHour && v > 0 ? 1 : 0.78, borderRadius: 2, minHeight: v ? 2 : 0 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--txt-dim)", marginTop: 4 }}>
+        <span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span>
+      </div>
+      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
+      <table className="sr-only">
+        <caption>Temps d&apos;écoute par heure (heure de Montréal)</caption>
+        <thead>
+          <tr>
+            <th scope="col">Heure</th>
+            <th scope="col">Écoute</th>
+          </tr>
+        </thead>
+        <tbody>
+          {byHour.map((v, h) => (
+            <tr key={h}>
+              <th scope="row">{h} h</th>
+              <td>{formatDuration(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* Liste à barres : libellé · barre proportionnelle · valeur.
    `caption` décrit la série pour l'alternative tabulaire lecteurs d'écran. */
 function BarList({ items, caption }: { items: { label: string; value: number }[]; caption?: string }) {
@@ -155,7 +225,7 @@ function BarList({ items, caption }: { items: { label: string; value: number }[]
             <span style={{ flex: 1, height: 8, background: "var(--panel-2)", borderRadius: 4 }}>
               <span style={{ display: "block", width: `${(it.value / max) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 4, minWidth: 3 }} />
             </span>
-            <span className="muted" style={{ fontSize: "0.8rem", width: 36, textAlign: "right" }}>{it.value}</span>
+            <span className="muted" style={{ fontSize: "0.8rem", width: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{it.value}</span>
           </div>
         ))}
       </div>
@@ -165,7 +235,7 @@ function BarList({ items, caption }: { items: { label: string; value: number }[]
         <thead>
           <tr>
             <th scope="col">Libellé</th>
-            <th scope="col">Sessions</th>
+            <th scope="col">Visiteurs</th>
             <th scope="col">Part</th>
           </tr>
         </thead>
@@ -183,51 +253,6 @@ function BarList({ items, caption }: { items: { label: string; value: number }[]
   );
 }
 
-/* Histogramme de l'activité par heure (0-23, fuseau America/Toronto). */
-function HourlyChart({ data }: { data: { hour: number; sessions: number }[] }) {
-  const byHour = new Array(24).fill(0) as number[];
-  for (const d of data) if (d.hour >= 0 && d.hour < 24) byHour[d.hour] = d.sessions;
-  const max = Math.max(1, ...byHour);
-  const peakHour = byHour.indexOf(max);
-  return (
-    <div className="card">
-      <div
-        role="img"
-        aria-label={`Activité par heure (heure de Montréal). Pic à ${peakHour} h avec ${max} visite(s).`}
-        style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 90, borderBottom: "1px solid var(--line)" }}
-      >
-        {byHour.map((v, h) => (
-          <div key={h} title={`${h} h — ${v} visite(s)`} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-            {/* Le pic est marqué par une opacité pleine (les autres barres atténuées). */}
-            <div style={{ height: `${(v / max) * 100}%`, background: "var(--accent)", opacity: h === peakHour && v > 0 ? 1 : 0.78, borderRadius: 2, minHeight: v ? 2 : 0 }} />
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--txt-dim)", marginTop: 4 }}>
-        <span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span>
-      </div>
-      {/* Alternative tabulaire réservée aux lecteurs d'écran. */}
-      <table className="sr-only">
-        <caption>Activité par heure (heure de Montréal)</caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            <th scope="col">Visites</th>
-          </tr>
-        </thead>
-        <tbody>
-          {byHour.map((v, h) => (
-            <tr key={h}>
-              <th scope="row">{h} h</th>
-              <td>{v}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /** Étiquette relative compacte, ex. « il y a 3 s ». */
 function relTime(ts: number, now: number): string {
   const s = Math.max(0, Math.round((now - ts) / 1000));
@@ -236,7 +261,7 @@ function relTime(ts: number, now: number): string {
   return `il y a ${Math.floor(s / 60)} min`;
 }
 
-const HEAVY_MS = 60_000; // rafraîchissement « lourd » (graphe + émissions)
+const HEAVY_MS = 60_000; // rafraîchissement « lourd » (graphes + tableaux)
 const LIVE_WINDOW_MS = 60_000; // une session vue il y a moins de 60 s = « en direct »
 
 export default function StatistiquesPage() {
@@ -254,18 +279,20 @@ export default function StatistiquesPage() {
 
   // Data-layer : flux SSE temps réel pour overview / geo / sessions (poussé par le
   // serveur — quasi-instantané à chaque beacon + tick 2 s) ; SWR 60 s pour les
-  // données « lourdes » (graphe, émissions, répartitions, top titres). `auto`
-  // false → le flux se ferme (pause). `keepPreviousData` (posé dans les hooks)
-  // garde la radio / la période précédente pendant le fetch (pas de flash).
+  // données « lourdes » (résumé de période, graphes, émissions, répartitions,
+  // top titres). `auto` false → le flux se ferme (pause). `keepPreviousData`
+  // (posé dans les hooks) garde la radio / la période précédente pendant le fetch.
   const heavyInterval = auto ? HEAVY_MS : 0;
   const stream = useAnalyticsStream(auto);
   const overview = stream.overview;
   const geo = stream.geo;
   const sessions = stream.sessions;
+  const summaryRes = useAnalyticsSummary(days, { refreshInterval: heavyInterval });
   const showsRes = useAnalyticsShows({ refreshInterval: heavyInterval });
   const seriesRes = useAnalyticsTimeseries(days, { refreshInterval: heavyInterval });
-  const breakdownRes = useAnalyticsBreakdown({ refreshInterval: heavyInterval });
+  const breakdownRes = useAnalyticsBreakdown(days, { refreshInterval: heavyInterval });
   const topTracksRes = useTopTracks(days, { refreshInterval: heavyInterval });
+  const summary = summaryRes.data;
   const shows = showsRes.data;
   const series = seriesRes.data;
   const breakdown = breakdownRes.data;
@@ -344,9 +371,12 @@ export default function StatistiquesPage() {
     }
   };
 
-  const exportCsv = async (type: "sessions" | "shows") => {
+  const exportCsv = async (type: "sessions" | "shows" | "tracks") => {
     try {
-      await api.download(`/v1/admin/analytics/export?type=${type}`, `${type}.csv`);
+      // `tracks` est fenêtré : on exporte la période affichée à l'écran.
+      const qs = type === "tracks" ? `&days=${days}` : "";
+      const filename = type === "tracks" ? `top-titres-${days}j.csv` : `${type}.csv`;
+      await api.download(`/v1/admin/analytics/export?type=${type}${qs}`, filename);
     } catch {
       toast("Export impossible", "error");
     }
@@ -355,16 +385,32 @@ export default function StatistiquesPage() {
   const maxShow = shows?.[0]?.totalListenSec || 1;
   const totalShowSec = (shows ?? []).reduce((a, s) => a + s.totalListenSec, 0);
 
+  // Taux de retour sur la période : « de retour » = vu sur ≥ 2 jours distincts.
+  const returning = breakdown?.newVsReturning.returning ?? 0;
+  const fresh = breakdown?.newVsReturning.fresh ?? 0;
+  const returnRate = returning + fresh ? Math.round((returning / (returning + fresh)) * 100) : null;
+
+  // L'écoute par titre est mesurée depuis peu : tant qu'aucune ligne n'a de
+  // données, on n'affiche pas deux colonnes de « — » (bruit) — juste une note.
+  const hasTrackListen = (topTracks ?? []).some((t) => t.listenSec != null);
+
+  const periodLabel = `${days} derniers jours`;
+
   return (
     <div>
       <div className="page-head">
         <h1>Statistiques d&apos;audience</h1>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select aria-label="Période" value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ width: 130 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <select aria-label="Période analysée" value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ width: 130 }}>
             <option value={7}>7 jours</option>
             <option value={30}>30 jours</option>
             <option value={90}>90 jours</option>
           </select>
+          {isAdmin && (
+            <button className="btn btn-ghost btn-sm" onClick={() => void exportCsv("tracks")}>
+              <IconDownload /> CSV titres
+            </button>
+          )}
           {isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => void exportCsv("shows")}>
               <IconDownload /> CSV émissions
@@ -372,7 +418,7 @@ export default function StatistiquesPage() {
           )}
           {isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => void exportCsv("sessions")}>
-              <IconDownload /> CSV sessions
+              <IconDownload /> CSV visiteurs
             </button>
           )}
           <span
@@ -407,7 +453,17 @@ export default function StatistiquesPage() {
         .stats-dot--on { background:#19c37d; animation:statsPulse 1.4s ease-in-out infinite; }
         .stats-livedot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#19c37d; margin-right:6px; vertical-align:middle; animation:statsPulse 1.4s ease-in-out infinite; }
         .stats-row-live > td:first-child { box-shadow: inset 3px 0 0 #19c37d; }
+        .stats-alltime { display:flex; flex-direction:column; justify-content:center; gap:4px; }
+        .stats-alltime .row { display:flex; justify-content:space-between; gap:12px; font-size:.85rem; }
+        .stats-alltime .row b { font-variant-numeric: tabular-nums; }
         @keyframes statsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(25,195,125,.55);} 50%{ box-shadow:0 0 0 5px rgba(25,195,125,0);} }
+        /* Respect de prefers-reduced-motion : les pastilles restent visibles
+           (l'état « en direct » n'est pas porté par la seule animation), elles
+           cessent simplement de pulser. */
+        @media (prefers-reduced-motion: reduce) {
+          .stats-dot--on, .stats-livedot { animation: none; }
+        }
+        .data td, .data th { text-wrap: pretty; }
       `}</style>
 
       {!overview && error ? (
@@ -416,46 +472,32 @@ export default function StatistiquesPage() {
         <TableSkeleton cols={4} rows={6} />
       ) : (
         <>
+          {/* ─────────── EN CE MOMENT (temps réel, flux SSE) ─────────── */}
+          <SectionTitle scope="temps réel">En ce moment</SectionTitle>
           <div className="cards-grid">
             <div className="card stat-card" style={{ borderLeft: "4px solid var(--ok)" }}>
               <div className="label"><span aria-hidden="true">● </span>En direct (60 s)</div>
-              <div className="value">{overview.live}</div>
+              <div className="value" style={{ fontVariantNumeric: "tabular-nums" }}>{overview.live}</div>
             </div>
             <div className="card stat-card">
               <div className="label">Visiteurs aujourd&apos;hui</div>
-              <div className="value">{overview.today}</div>
+              <div className="value" style={{ fontVariantNumeric: "tabular-nums" }}>{overview.today}</div>
             </div>
-            <div className="card stat-card">
-              <div className="label">Visiteurs (total)</div>
-              <div className="value">{overview.totalSessions}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="label">Pages vues</div>
-              <div className="value">{overview.pageViews}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="label">Temps d&apos;écoute total</div>
-              <div className="value">{formatDuration(overview.totalListenSec)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="label">Temps sur le site (total)</div>
-              <div className="value">{formatDuration(overview.totalActiveSec)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="label">Écoute moy. / visiteur</div>
-              <div className="value">{formatDuration(overview.avgListenSec)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="label">Temps moy. / visiteur</div>
-              <div className="value">{formatDuration(overview.avgActiveSec)}</div>
+            {/* « Total enregistré », pas « depuis le lancement » : la rétention
+                analytics (Loi 25) purge les données au-delà de la fenêtre de
+                conservation — le cumul ne couvre que ce qui est conservé. */}
+            <div className="card stat-card stats-alltime">
+              <div className="label">Total enregistré</div>
+              <div className="row"><span className="muted">Visiteurs</span><b>{overview.totalSessions}</b></div>
+              <div className="row"><span className="muted">Écoute totale</span><b>{formatDuration(overview.totalListenSec)}</b></div>
+              <div className="row"><span className="muted">Pages vues</span><b>{overview.pageViews}</b></div>
             </div>
           </div>
 
-          <h2 style={{ marginTop: 28 }}>Carte des visiteurs en direct</h2>
+          <SectionTitle scope="temps réel">Carte des visiteurs en direct</SectionTitle>
           <VisitorMap points={geo ?? null} now={nowTick} />
 
-          <h2 style={{ marginTop: 28 }}>Détails de l&apos;audience</h2>
-          <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+          <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center", marginTop: 12 }}>
             <strong style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><IconBell /> Alertes</strong>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem" }}>
               M&apos;alerter si ≥
@@ -474,67 +516,144 @@ export default function StatistiquesPage() {
                 Activer les notifications navigateur
               </button>
             ) : (
-              <span style={{ color: "var(--ok)", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              // #19c37d (≈8:1 sur fond sombre) : var(--ok) #2a7a6a ne passe pas
+              // AA 4.5:1 pour du texte de cette taille.
+              <span style={{ color: "#19c37d", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <IconCheck /> Notifications actives
               </span>
             )}
           </div>
 
-          {breakdown && (
-            <>
-              <div className="cards-grid" style={{ marginTop: 12 }}>
-                <div className="card stat-card">
-                  <div className="label">Nouveaux visiteurs</div>
-                  <div className="value">{breakdown.newVsReturning.fresh}</div>
-                </div>
-                <div className="card stat-card">
-                  <div className="label">Visiteurs de retour</div>
-                  <div className="value">{breakdown.newVsReturning.returning}</div>
-                </div>
-                <div className="card stat-card">
-                  <div className="label">Taux de retour</div>
-                  <div className="value">
-                    {(() => {
-                      const t = breakdown.newVsReturning.fresh + breakdown.newVsReturning.returning;
-                      return t ? `${Math.round((breakdown.newVsReturning.returning / t) * 100)} %` : "—";
-                    })()}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 12 }}>
-                <div>
-                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Appareils</h3>
-                  <BarList caption="Sessions par appareil" items={breakdown.devices.map((d) => ({ label: d.device, value: d.sessions }))} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Navigateurs</h3>
-                  <BarList caption="Sessions par navigateur" items={breakdown.browsers.map((b) => ({ label: b.browser, value: b.sessions }))} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Top villes</h3>
-                  <BarList caption="Sessions par ville" items={breakdown.topCities.map((ci) => ({ label: ci.label, value: ci.sessions }))} />
-                </div>
-              </div>
-
-              <h3 style={{ fontSize: "0.95rem", margin: "16px 0 8px" }}>Activité par heure (heure de Montréal)</h3>
-              <HourlyChart data={breakdown.hourly} />
-            </>
-          )}
-
-          <h2 style={{ marginTop: 28 }}>Écoute par jour ({days} derniers jours)</h2>
-          {series && series.length > 0 ? (
-            <TimeSeriesChart data={series} />
+          {/* ─────────── PÉRIODE CHOISIE (le sélecteur s'applique à TOUT ce qui suit) ─────────── */}
+          <SectionTitle scope={periodLabel}>Chiffres clés de la période</SectionTitle>
+          {!summary ? (
+            <TableSkeleton cols={4} rows={1} />
           ) : (
-            <Empty label="Pas encore de données." />
+            <div className="cards-grid">
+              <div className="card stat-card">
+                <div className="label">Visiteurs</div>
+                <div className="value" style={{ fontVariantNumeric: "tabular-nums" }}>{summary.visitors}</div>
+              </div>
+              <div className="card stat-card">
+                <div className="label">Écoute totale</div>
+                <div className="value">{formatDuration(summary.listenSec)}</div>
+              </div>
+              <div className="card stat-card">
+                <div className="label">Écoute moy. / visiteur</div>
+                <div className="value">{formatDuration(summary.avgListenSec)}</div>
+              </div>
+              <div className="card stat-card">
+                <div className="label">Taux de retour</div>
+                <div className="value" style={{ fontVariantNumeric: "tabular-nums" }}>{returnRate === null ? "—" : `${returnRate} %`}</div>
+                <div className="muted" style={{ fontSize: "0.72rem" }}>revenus ≥ 2 jours distincts</div>
+              </div>
+              <div className="card stat-card">
+                <div className="label">Pages vues</div>
+                <div className="value" style={{ fontVariantNumeric: "tabular-nums" }}>{summary.pageViews}</div>
+              </div>
+            </div>
           )}
 
-          <h2 style={{ marginTop: 28 }}>Temps d&apos;écoute par émission</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginTop: 20 }}>
+            <div>
+              <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Écoute par jour</h3>
+              {series && series.length > 0 ? (
+                <TimeSeriesChart data={series} />
+              ) : (
+                <Empty label="Pas encore de données." />
+              )}
+            </div>
+            <div>
+              <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Écoute par heure (heure de Montréal)</h3>
+              {/* breakdown absent = chargement (skeleton) ; présent mais vide =
+                  la collecte horaire n'a pas encore de données (message dédié). */}
+              {!breakdown ? <TableSkeleton cols={1} rows={3} /> : <HourlyListenChart data={breakdown.hourly} />}
+            </div>
+          </div>
+
+          {breakdown && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 20 }}>
+              <div>
+                <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Appareils</h3>
+                <BarList caption={`Visiteurs par appareil (${periodLabel})`} items={breakdown.devices.map((d) => ({ label: d.device, value: d.sessions }))} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Navigateurs</h3>
+                <BarList caption={`Visiteurs par navigateur (${periodLabel})`} items={breakdown.browsers.map((b) => ({ label: b.browser, value: b.sessions }))} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "0.95rem", margin: "0 0 8px" }}>Top villes</h3>
+                <BarList caption={`Visiteurs par ville (${periodLabel})`} items={breakdown.topCities.map((ci) => ({ label: ci.label, value: ci.sessions }))} />
+              </div>
+            </div>
+          )}
+
+          <SectionTitle scope={periodLabel}>Titres les plus diffusés</SectionTitle>
+          {!topTracks || topTracks.length === 0 ? (
+            <Empty label="Pas encore de titres diffusés sur cette période." />
+          ) : (
+            <div className="table-wrap">
+              <p className="muted" style={{ fontSize: "0.82rem", marginBottom: 10 }}>
+                Passages = diffusions à l&apos;antenne · 🤘 = likes des auditeurs
+                {hasTrackListen && <> · Écoute &amp; Auditeurs = temps réellement écouté pendant les passages du titre (« — » = pas encore mesuré)</>}.
+                Jingles et identifiants de station exclus.
+              </p>
+              <table className="data">
+                <caption className="sr-only">
+                  Titres les plus diffusés sur les {days} derniers jours : passages à
+                  l&apos;antenne, likes{hasTrackListen ? ", temps d'écoute et auditeurs" : ""}.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Titre</th>
+                    <th scope="col">Artiste</th>
+                    <th scope="col">Passages</th>
+                    <th scope="col"><span aria-hidden="true">🤘</span><span className="sr-only">Likes</span></th>
+                    {hasTrackListen && <th scope="col">Écoute</th>}
+                    {hasTrackListen && <th scope="col">Auditeurs</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {topTracks.map((t, i) => (
+                    <tr key={t.trackId ?? i}>
+                      <th scope="row">{t.title}</th>
+                      <td>{t.artist || "—"}</td>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.playCount}</td>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.likeCount}</td>
+                      {hasTrackListen && (
+                        <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {t.listenSec == null ? <span className="muted">—</span> : formatDuration(t.listenSec)}
+                        </td>
+                      )}
+                      {hasTrackListen && (
+                        <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {t.listeners == null ? <span className="muted">—</span> : t.listeners}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!hasTrackListen && (
+                <p className="muted" style={{ fontSize: "0.78rem", marginTop: 8 }}>
+                  L&apos;écoute réelle par titre (temps écouté, auditeurs) est mesurée depuis la
+                  mise à jour d&apos;août 2026 — les colonnes apparaîtront dès les premières écoutes.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ─────────── TOTAL ENREGISTRÉ (hors sélecteur de période) ─────────── */}
+          <SectionTitle scope="total enregistré">Temps d&apos;écoute par émission</SectionTitle>
           {!shows || shows.length === 0 ? (
             <Empty label="Pas encore de données d'écoute." />
           ) : (
             <div className="table-wrap">
               <table className="data">
+                <caption className="sr-only">
+                  Temps d&apos;écoute par émission — total enregistré, indépendant de la
+                  période sélectionnée.
+                </caption>
                 <thead>
                   <tr>
                     <th scope="col">Émission</th>
@@ -551,7 +670,7 @@ export default function StatistiquesPage() {
                     <tr key={s.showTitle}>
                       <th scope="row">{s.showTitle}</th>
                       <td>{formatDuration(s.totalListenSec)}</td>
-                      <td>{s.listeners}</td>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.listeners}</td>
                       <td>{formatDuration(s.avgListenSec)}</td>
                       <td>
                         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -579,64 +698,27 @@ export default function StatistiquesPage() {
             </div>
           )}
 
-          <h2 style={{ marginTop: 28 }}>Titres les plus diffusés ({days} derniers jours)</h2>
-          {!topTracks || topTracks.length === 0 ? (
-            <Empty label="Pas encore de titres diffusés sur cette période." />
-          ) : (
-            <div className="table-wrap">
-              <p className="muted" style={{ fontSize: "0.82rem", marginBottom: 10 }}>
-                Passages = fois jouées à l&apos;antenne · 🤘 = likes · Écoute moy. &amp; Skip =
-                contexte radio sur la période (skip = écoute &lt; 15 s).
-              </p>
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th scope="col">Titre</th>
-                    <th scope="col">Artiste</th>
-                    <th scope="col">Passages</th>
-                    <th scope="col">🤘</th>
-                    <th scope="col">Écoute moy.</th>
-                    <th scope="col">Skip</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topTracks.map((t, i) => (
-                    <tr key={t.trackId ?? i}>
-                      <th scope="row">{t.title}</th>
-                      <td>{t.artist || "—"}</td>
-                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.playCount}</td>
-                      <td style={{ fontVariantNumeric: "tabular-nums" }}>{t.likeCount}</td>
-                      <td className="muted">{formatDuration(t.avgListenSec)}</td>
-                      <td>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span aria-hidden="true" style={{ width: 48, height: 6, background: "var(--panel-2)", borderRadius: 3, display: "inline-block" }}>
-                            <span style={{ display: "block", width: `${t.skipRate}%`, height: "100%", background: "var(--warn, #d97706)", borderRadius: 3, minWidth: t.skipRate ? 2 : 0 }} />
-                          </span>
-                          <span style={{ fontVariantNumeric: "tabular-nums", width: 34, textAlign: "right" }}>{t.skipRate} %</span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <h2 style={{ marginTop: 28 }}>
-            Sessions visiteurs {isAdmin ? "(IP & détails)" : ""}
-          </h2>
+          <SectionTitle scope="cumul de vie par visiteur">
+            Visiteurs récents {isAdmin ? "(IP & détails)" : ""}
+          </SectionTitle>
           {!isAdmin ? (
-            <Empty label="Le détail des sessions (IP) est réservé aux super-administrateurs." />
+            <Empty label="Le détail des visiteurs (IP) est réservé aux super-administrateurs." />
           ) : !sessions || sessions.length === 0 ? (
-            <Empty label="Aucune session enregistrée." />
+            <Empty label="Aucun visiteur enregistré." />
           ) : (
             <>
               <p className="muted" style={{ fontSize: "0.82rem", marginBottom: 10 }}>
-                <span aria-hidden="true">⚖️ </span>Les adresses IP sont des données personnelles (Loi 25). Pense à l&apos;indiquer
-                dans ta politique de confidentialité et à définir une durée de conservation.
+                Une ligne par visiteur : « Sur le site » et « Écoute » cumulent TOUTES ses visites
+                depuis la première. <span aria-hidden="true">⚖️ </span>Les adresses IP sont des données
+                personnelles (Loi 25) — à mentionner dans ta politique de confidentialité, avec une
+                durée de conservation.
               </p>
               <div className="table-wrap">
                 <table className="data">
+                  <caption className="sr-only">
+                    Visiteurs récents : une ligne par visiteur, temps cumulés depuis sa
+                    première visite. Contient les adresses IP.
+                  </caption>
                   <thead>
                     <tr>
                       <th scope="col">IP</th>
@@ -658,9 +740,9 @@ export default function StatistiquesPage() {
                           <td>{s.ipCountry ?? "—"}</td>
                           <td>{s.device ?? "—"}</td>
                           <td>{s.browser ?? "—"}</td>
-                          <td>{s.pageViews}</td>
-                          <td>{formatDuration(s.activeSec)}</td>
-                          <td>{formatDuration(s.listenSec)}</td>
+                          <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.pageViews}</td>
+                          <td style={{ fontVariantNumeric: "tabular-nums" }}>{formatDuration(s.activeSec)}</td>
+                          <td style={{ fontVariantNumeric: "tabular-nums" }}>{formatDuration(s.listenSec)}</td>
                           <td className="muted">
                             {isLive && <span className="stats-livedot" title="Actif en ce moment" />}
                             {new Date(s.lastSeen).toLocaleString("fr-CA")}

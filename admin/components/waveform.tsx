@@ -30,6 +30,8 @@ export function Waveform({
   height = 72,
   color = "var(--line-2)",
   playedColor = "var(--accent)",
+  loopStart = null,
+  loopEnd = null,
 }: {
   buffer: AudioBuffer | null;
   progress: number; // secondes
@@ -37,6 +39,9 @@ export function Waveform({
   height?: number;
   color?: string;
   playedColor?: string;
+  /** Région de boucle active (s) — null = pas de surcouche. */
+  loopStart?: number | null;
+  loopEnd?: number | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const peaksRef = useRef<Float32Array | null>(null);
@@ -70,6 +75,16 @@ export function Waveform({
       const amp = peaks[i]! * mid * 0.96;
       ctx.fillStyle = x < playedX ? playedColor : color;
       ctx.fillRect(x, mid - amp, Math.max(1, barW - 0.4), amp * 2);
+    }
+    // Surcouche de boucle : région translucide + bornes.
+    if (loopStart != null && loopEnd != null && buffer.duration > 0) {
+      const x1 = (loopStart / buffer.duration) * w;
+      const x2 = (loopEnd / buffer.duration) * w;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.fillRect(x1, 0, Math.max(1, x2 - x1), h);
+      ctx.fillStyle = playedColor;
+      ctx.fillRect(x1, 0, 1.5, h);
+      ctx.fillRect(x2 - 1.5, 0, 1.5, h);
     }
   });
 
