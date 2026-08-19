@@ -202,6 +202,142 @@ function djUsername(djName: string): string {
   return u || `dj_${Date.now()}`;
 }
 
+/* ─────────────── Synchro pubs/jingles → playlists AzuraCast ───────────────
+   Pousse le plan de rotation local (media_assets + ad_rotations, cf. page admin
+   /medias) vers AzuraCast : une playlist par rotation active (poids + fenêtre
+   horaire), l'audio du média téléversé dans les fichiers de la station puis
+   rattaché à la playlist. Best-effort par rotation : une erreur n'interrompt
+   pas les autres. Gated par isAzuraCastConfigured (503 côté route sinon).
+
+   NB : formes d'API à VALIDER une fois le serveur en place (même réserve que
+   createStation/createStreamer) : GET/POST /api/station/{short}/files,
+   GET/POST/PUT /api/station/{short}/playlist(s), PUT /api/station/{short}/file/{id}. */
+
+/** Minutes depuis minuit → entier HHMM AzuraCast (ex. 390 → 630 = 06:30).
+ *  1440 (fin de journée) → 0 (minuit, convention AzuraCast). */
+export function toAzuraTime(min: number): number {
+  if (min >= 1440) return 0;
+  return Math.floor(min / 60) * 100 + (min % 60);
+}
+
+/** Jour local (0=dimanche..6=samedi, -1=tous) → jours ISO AzuraCast (1=lundi..7=dimanche).
+ *  -1 → null (pas de restriction de jour). */
+export function toAzuraDays(dayOfWeek: number): number[] | null {
+  if (dayOfWeek < 0) return null;
+  return [dayOfWeek === 0 ? 7 : dayOfWeek];
+}
+
+export interface RotationForSync {
+  id: string;
+  weight: number;
+  dayOfWeek: number;
+  startMin: number;
+  endMin: number;
+  asset: { id: string; name: string; audioUrl: string };
+}
+
+export interface RotationSyncResult {
+  rotationId: string;
+  assetName: string;
+  ok: boolean;
+  error?: string;
+}
+
+const playlistName = (rotationId: string) => `eo-rot-${rotationId.slice(0, 8)}`;
+const mediaPath = (assetId: string, audioUrl: string) => {
+  const ext = /\.(mp3|m4a|aac|ogg|wav)(\?|$)/i.exec(audioUrl)?.[1]?.toLowerCase() ?? "mp3";
+  return `enondes-media/${assetId}.${ext}`;
+};
+
+/** Synchronise les rotations actives d'une radio vers sa station AzuraCast. */
+export async function syncRotationsToStation(
+  stationShortName: string,
+  rotations: RotationForSync[],
+): Promise<RotationSyncResult[]> {
+  const short = encodeURIComponent(stationShortName);
+
+  // Inventaires existants (une requête chacun, pas par rotation).
+  const filesRaw = (await acFetch(`/api/station/${short}/files`)) as unknown;
+  const fileIdByPath = new Map<string, number>();
+  if (Array.isArray(filesRaw)) {
+    for (const f of filesRaw) {
+      const r = f as Record<string, unknown>;
+      if (typeof r.path === "string" && r.id != null) fileIdByPath.set(r.path, Number(r.id));
+    }
+  }
+  const playlistsRaw = (await acFetch(`/api/station/${short}/playlists`)) as unknown;
+  const playlistIdByName = new Map<string, number>();
+  if (Array.isArray(playlistsRaw)) {
+    for (const p of playlistsRaw) {
+      const r = p as Record<string, unknown>;
+      if (typeof r.name === "string" && r.id != null) playlistIdByName.set(r.name, Number(r.id));
+    }
+  }
+
+  const results: RotationSyncResult[] = [];
+  for (const rot of rotations) {
+    try {
+      // 1. Audio du média présent dans la station (téléversement base64 sinon).
+      const path = mediaPath(rot.asset.id, rot.asset.audioUrl);
+      let mediaId = fileIdByPath.get(path);
+      if (mediaId == null) {
+        const audio = await fetch(rot.asset.audioUrl);
+        if (!audio.ok) throw new Error(`audio ${rot.asset.audioUrl} → ${audio.status}`);
+        const b64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
+        const up = (await acFetch(`/api/station/${short}/files`, {
+          method: "POST",
+          body: JSON.stringify({ path, file: b64 }),
+        })) as Record<string, unknown>;
+        mediaId = Number(up.id);
+        fileIdByPath.set(path, mediaId);
+      }
+
+      // 2. Playlist de la rotation (créée ou mise à jour : poids + fenêtre).
+      const days = toAzuraDays(rot.dayOfWeek);
+      const body = JSON.stringify({
+        name: playlistName(rot.id),
+        type: "default",
+        is_enabled: true,
+        weight: rot.weight,
+        schedule_items: [
+          {
+            start_time: toAzuraTime(rot.startMin),
+            end_time: toAzuraTime(rot.endMin),
+            ...(days ? { days } : {}),
+          },
+        ],
+      });
+      let playlistId = playlistIdByName.get(playlistName(rot.id));
+      if (playlistId == null) {
+        const created = (await acFetch(`/api/station/${short}/playlists`, {
+          method: "POST",
+          body,
+        })) as Record<string, unknown>;
+        playlistId = Number(created.id);
+        playlistIdByName.set(playlistName(rot.id), playlistId);
+      } else {
+        await acFetch(`/api/station/${short}/playlist/${playlistId}`, { method: "PUT", body });
+      }
+
+      // 3. Rattache le média à la playlist.
+      await acFetch(`/api/station/${short}/file/${mediaId}`, {
+        method: "PUT",
+        body: JSON.stringify({ playlists: [{ id: playlistId }] }),
+      });
+
+      results.push({ rotationId: rot.id, assetName: rot.asset.name, ok: true });
+    } catch (err) {
+      results.push({
+        rotationId: rot.id,
+        assetName: rot.asset.name,
+        ok: false,
+        error: (err as Error).message,
+      });
+    }
+  }
+  return results;
+}
+
 export async function createStreamer(stationShortName: string, djName: string): Promise<HarborCredentials> {
   const password = randomBytes(12).toString("base64url");
   const r = (await acFetch(`/api/station/${encodeURIComponent(stationShortName)}/streamers`, {

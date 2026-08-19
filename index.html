@@ -124,8 +124,8 @@
           </button>
           <div id="moreMenu" class="more-menu" role="menu" hidden>
             <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
-            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
-            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hit%20Radio%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
+            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
+            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
             <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
             <button type="button" role="menuitem" id="resetGeoBtn"><span aria-hidden="true">📍</span> Réinitialiser ma localisation</button>
           </div>
@@ -219,6 +219,9 @@
               <source src="https://cast5.asurahosting.com/proxy/hitsdanc/stream" type="audio/mpeg" />
               Votre navigateur ne prend pas en charge la lecture audio HTML5.
             </audio>
+
+            <!-- Bandeau d'état du player (reconnexion / hors ligne), rempli par js/player.js. -->
+            <p class="player-banner" id="playerBanner" role="status" aria-live="polite" hidden></p>
           </div>
         </div>
       </section>

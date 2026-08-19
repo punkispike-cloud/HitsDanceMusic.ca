@@ -356,3 +356,21 @@
 @media (prefers-reduced-motion: reduce) {
   .site-header .header-play::after { animation: none; }
 }
+
+/* Bandeau d'état sous le panneau : reconnexion en cours / flux injoignable.
+   Rempli et masqué par setPlayingUI (js/player.js) ; role="status" côté HTML,
+   donc l'annonce a11y est portée par le markup, pas par le CSS. Fond opaque
+   (pas de translucide) pour garder le texte blanc lisible par-dessus la
+   pochette floutée du panneau. */
+.player-2026 .player-banner {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-glow);
+  background: #2a0a10;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+}
+.player-2026 .player-banner[hidden] { display: none; }

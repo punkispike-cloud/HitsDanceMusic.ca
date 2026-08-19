@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ingestTrack } from "../services/analytics.js";
 import { emitAnalyticsBeacon } from "../services/analytics-bus.js";
-import { beaconAllowed } from "../services/beacon-limit.js";
+import { beaconAllowed, newSessionAllowed } from "../services/beacon-limit.js";
 import type { AppBindings } from "../types.js";
 
 export const trackRoutes = new Hono<AppBindings>();
@@ -38,17 +38,24 @@ trackRoutes.post("/track", async (c) => {
   const radioId = c.get("radioId");
   if (!radioId) return c.body(null, 204); // hôte non rattaché à une radio → on ignore
 
-  // Anti-abus (audit A3) : plafond par clientId sur 60 s. Un bot réutilisant un
-  // même clientId pour injecter de fausses secondes est droppé silencieusement.
-  // Un bot générant un clientId neuf à chaque coup reste limité par l'IP (rateLimit
-  // global). On répond 204 (léger, ne révèle rien au visiteur).
+  const ip = clientIp(c.req.raw.headers);
+
+  // Anti-abus (audit A3), deux gardes complémentaires. On répond 204 dans les
+  // deux cas — même réponse qu'un beacon accepté, donc rien n'est révélé au
+  // visiteur sur le filtrage.
+  //  1. Plafond par clientId sur 60 s : attrape le bot qui réutilise un même
+  //     clientId pour injecter de fausses secondes d'écoute.
+  //  2. Plafond de création de sessions par IP : attrape le bot qui génère un
+  //     clientId neuf à chaque coup (invisible pour la garde 1, et borné à
+  //     RATE_LIMIT_RPM près par le rateLimit global — trop large).
   if (!beaconAllowed(parsed.data.clientId)) return c.body(null, 204);
+  if (!newSessionAllowed(ip, parsed.data.clientId)) return c.body(null, 204);
 
   try {
     await ingestTrack({
       ...parsed.data,
       radioId,
-      ip: clientIp(c.req.raw.headers),
+      ip,
       userAgent: c.req.header("User-Agent") || "",
     });
     // Notifie les clients SSE admin connectés à cette radio → pousse un instantané

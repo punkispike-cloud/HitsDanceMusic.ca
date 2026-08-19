@@ -23,10 +23,12 @@ import {
   mediaAssets,
   adRotations,
   featuredItems,
+  radios,
 } from "../db/schema.js";
 import { slugify, slotTagSchema, registerSchema, roleSchema } from "../lib/validation.js";
 import { hashPassword } from "../lib/password.js";
-import { badRequest, notFound, conflict, forbidden } from "../lib/errors.js";
+import { badRequest, notFound, conflict, forbidden, AppError } from "../lib/errors.js";
+import { isAzuraCastConfigured, syncRotationsToStation } from "../services/azuracast.js";
 import {
   requireRole,
   requireEditorialAdmin,
@@ -613,6 +615,63 @@ adminRoutes.patch("/rotations/:id", requireRole("animateur", "superadmin", "owne
     .returning();
   if (!row) throw notFound("Rotation introuvable");
   return c.json(row);
+});
+
+/* POST /rotations/sync — pousse le plan de rotation vers la station AzuraCast
+   de la radio (playlists + fenêtres + audio). Diffusion = superadmin/owner
+   (plus restrictif que le CRUD éditorial). 503 sans AzuraCast configuré. */
+adminRoutes.post("/rotations/sync", requireRole("superadmin", "owner"), async (c) => {
+  const radioId = requireRadioId(c.get("radioId"));
+  if (!isAzuraCastConfigured()) {
+    throw new AppError(503, "azuracast_unconfigured", "AzuraCast non configuré sur le serveur");
+  }
+  const radio = await db.query.radios.findFirst({
+    where: eq(radios.id, radioId),
+    columns: { slug: true },
+  });
+  if (!radio) throw notFound("Radio introuvable");
+
+  const rows = await db
+    .select({
+      id: adRotations.id,
+      weight: adRotations.weight,
+      dayOfWeek: adRotations.dayOfWeek,
+      startMin: adRotations.startMin,
+      endMin: adRotations.endMin,
+      assetId: mediaAssets.id,
+      assetName: mediaAssets.name,
+      audioUrl: mediaAssets.audioUrl,
+    })
+    .from(adRotations)
+    .innerJoin(mediaAssets, eq(adRotations.assetId, mediaAssets.id))
+    .where(
+      and(
+        eq(adRotations.radioId, radioId),
+        eq(adRotations.isActive, true),
+        eq(mediaAssets.status, "published"),
+      ),
+    );
+
+  const [ready, skipped] = [
+    rows.filter((r) => r.audioUrl),
+    rows.filter((r) => !r.audioUrl).map((r) => r.assetName),
+  ];
+  const results = await syncRotationsToStation(
+    radio.slug,
+    ready.map((r) => ({
+      id: r.id,
+      weight: r.weight,
+      dayOfWeek: r.dayOfWeek,
+      startMin: r.startMin,
+      endMin: r.endMin,
+      asset: { id: r.assetId, name: r.assetName, audioUrl: r.audioUrl! },
+    })),
+  );
+  return c.json({
+    synced: results.filter((r) => r.ok).length,
+    errors: results.filter((r) => !r.ok),
+    skippedNoAudio: skipped,
+  });
 });
 
 adminRoutes.delete("/rotations/:id", requireRole("animateur", "superadmin", "owner"), async (c) => {
