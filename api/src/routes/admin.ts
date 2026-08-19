@@ -508,7 +508,7 @@ adminRoutes.delete("/library/:id", requireRole("animateur", "superadmin", "owner
 /* ═══════════════════════ PUBS / JINGLES (média + rotation) ═══════════════════════
    Bibliothèque de médias (jingles/pubs/intros/outros/beds) + plan de rotation par
    fenêtre horaire. Écriture = animateur+/superadmin/owner, cloisonnée par radio.
-   L'audio est téléversé via les uploads existants (kind à étendre si besoin) ;
+   L'audio est téléversé via les uploads existants (kind "media") ;
    la synchro vers AzuraCast/Liquidsoap est gated par AZURACAST_BASE_URL. */
 
 const mediaAssetInput = z.object({

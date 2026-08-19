@@ -43,7 +43,7 @@ export const slotTag = pgEnum("slot_tag", [
 
 export const contentStatus = pgEnum("content_status", ["draft", "published", "archived"]);
 
-export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover", "track"]);
+export const uploadKind = pgEnum("upload_kind", ["episode", "mix", "cover", "track", "media"]);
 export const uploadStatus = pgEnum("upload_status", ["pending", "completed", "aborted"]);
 
 const timestamps = {
