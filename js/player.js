@@ -10,6 +10,7 @@ import { getMontrealParts } from "./time.js";
 import { STREAM_URL, fetchNowPlaying, fetchCover, fallbackCoverDataUri, pushHistory } from "./now-playing.js";
 import { BRAND } from "./brand.generated.js";
 import { toast } from "./toast.js";
+import { announce } from "./a11y.js";
 
 let audio = null;
 export const playerUIs = new Set();
@@ -26,6 +27,11 @@ export function setWatchSyncHook(fn) { watchSyncHook = fn; }
 // Hook optionnel pour annoncer un nouveau morceau (a11y), câblé par a11y/track.
 let announceTrackHook = null;
 export function setAnnounceTrackHook(fn) { announceTrackHook = fn; }
+
+// Dernier état player annoncé (a11y) : on ne réannonce que sur CHANGEMENT d'état,
+// sinon « Reconnexion… (3) », « Reconnexion… (4) » spammeraient le lecteur d'écran
+// à chaque tentative du watchdog.
+let lastAnnouncedPlayerState = null;
 
 export function getAudio() { return audio; }
 
@@ -90,6 +96,28 @@ export function setPlayingUI(isPlaying, label) {
   else if (l.includes("indisponible") || l.includes("bloquée") || l.includes("bloquee")) s = "offline";
   else if (l.includes("pause")) s = "paused";
   document.body.dataset.playerState = s;
+  // a11y : jusqu'ici l'état n'existait que pour le CSS — un auditeur au lecteur
+  // d'écran n'apprenait jamais que le flux bufferise ou est tombé. On annonce les
+  // entrées en état problème, et la reprise du direct après un problème (pas les
+  // transitions ordinaires play/pause, déjà portées par le bouton).
+  if (s !== lastAnnouncedPlayerState) {
+    const wasProblem = lastAnnouncedPlayerState === "buffering" || lastAnnouncedPlayerState === "offline";
+    if (s === "buffering" || s === "offline") announce(label || "");
+    else if (s === "live" && wasProblem) announce("En direct");
+    lastAnnouncedPlayerState = s;
+  }
+  // Bandeau d'état sous le panneau (reconnexion / hors ligne). #playerBanner
+  // n'existe que sur l'accueil → no-op ailleurs.
+  const banner = document.getElementById("playerBanner");
+  if (banner) {
+    if (s === "buffering" || s === "offline") {
+      banner.hidden = false;
+      banner.textContent = label || "";
+    } else {
+      banner.hidden = true;
+      banner.textContent = "";
+    }
+  }
   const vinyl = $("#vinylDisc");
   if (vinyl) vinyl.classList.toggle("is-spinning", isPlaying);
   if (watchSyncHook) watchSyncHook();

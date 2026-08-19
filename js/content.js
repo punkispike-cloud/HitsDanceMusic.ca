@@ -122,6 +122,13 @@ export async function loadContentFromApi() {
     // Rend les cartes cliquables → fiche profil (par data-slug, fetch détaillé).
     wireTalentCards(talentGrid, list);
     touchedTalent = true;
+  } else if (talentGrid) {
+    // Repli (API injoignable ou liste vide) : les cartes statiques du HTML restent
+    // affichées, avec role="button" et tabindex="0" — sans ce câblage elles seraient
+    // focusables mais inertes au clic comme au clavier. wireTalentCards délègue sur
+    // la grille et lit data-slug dans le DOM, donc il fonctionne sans données ; la
+    // fiche est alors récupérée par fetch à l'ouverture.
+    wireTalentCards(talentGrid, []);
   }
 
   if (showGrid && Array.isArray(shows) && shows.length) {

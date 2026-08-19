@@ -8140,6 +8140,22 @@ html, body {
   }
 }
 
+.player-2026 .player-banner {
+  border: 1px solid var(--accent-glow);
+  color: #fff;
+  text-align: center;
+  background: #2a0a10;
+  border-radius: 10px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.player-2026 .player-banner[hidden] {
+  display: none;
+}
+
 .talent-card {
   cursor: pointer;
 }
