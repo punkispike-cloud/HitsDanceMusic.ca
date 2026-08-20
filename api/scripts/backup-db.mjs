@@ -115,9 +115,17 @@ const dumpFile = join(workDir, fileName);
 
 // --- SSL : traduire la politique resolveDbSsl pour libpq (pg_dump) ----------
 // node-postgres vérifie la CA par défaut ; libpq avec sslmode=require chiffre
-// SANS vérifier la CA. On mappe donc : CA posé → verify-full + PGSSLROOTCERT
+// SANS vérifier la CA. On mappe donc : CA posé → verify-ca + PGSSLROOTCERT
 // (pinning) ; strict sans CA → verify-full + store système Linux s'il existe ;
 // DB_SSL_INSECURE=1 → require inchangé (avertissement déjà émis).
+//
+// Pourquoi verify-ca et pas verify-full quand la CA est posée : le certificat
+// généré par le template postgres-ssl de Railway porte CN=localhost et
+// SAN=DNS:localhost uniquement, alors qu'on l'atteint par le proxy TCP
+// (<sous-domaine>.proxy.rlwy.net). verify-full échouerait donc toujours sur la
+// comparaison du nom d'hôte — « server certificate for "localhost" does not
+// match host name ». verify-ca garde le pinning de la CA (le lien est chiffré et
+// l'autorité vérifiée), seule la vérification du nom d'hôte est abandonnée.
 let dumpUrl = databaseUrl;
 try {
   const ssl = resolveDbSsl(databaseUrl);
@@ -125,8 +133,8 @@ try {
     const caPath = join(workDir, "db-ca.pem");
     await writeFile(caPath, ssl.ca);
     process.env.PGSSLROOTCERT = caPath;
-    dumpUrl = setSslMode(dumpUrl, "verify-full");
-    log("SSL : pinning CA (verify-full).");
+    dumpUrl = setSslMode(dumpUrl, "verify-ca");
+    log("SSL : pinning CA (verify-ca).");
   } else if (ssl?.rejectUnauthorized) {
     const systemStore = "/etc/ssl/certs/ca-certificates.crt";
     if (existsSync(systemStore)) {
