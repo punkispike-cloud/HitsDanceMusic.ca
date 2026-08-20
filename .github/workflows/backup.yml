@@ -50,7 +50,20 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install -y postgresql-client-18
+          # /usr/bin/pg_dump est le wrapper postgresql-common : il choisit la
+          # version par défaut du système (16 sur le runner), pas la plus
+          # récente installée. On met donc les vrais binaires 18 devant.
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: Vérifier la version du client
+        run: |
           pg_dump --version
+          # Échoue tout de suite si le PATH ne pointe pas sur le client 18 :
+          # sans ça, l'erreur n'apparaît qu'au dump, noyée dans la sortie.
+          pg_dump --version | grep -qE '\(PostgreSQL\) 18\.' || {
+            echo "::error::pg_dump n'est pas en 18 — le backup echouera sur un mismatch de version"
+            exit 1
+          }
 
       - name: Installer les dépendances API (SDK S3)
         working-directory: api
