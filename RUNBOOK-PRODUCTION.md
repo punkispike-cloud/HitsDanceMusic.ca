@@ -125,7 +125,11 @@ Sans besoin produit immédiat : **ne pas** activer (uploads restent `503 s3_unco
 3. Variables :
    - api : `ALLOWED_ORIGINS` (site + admin + hub), `ADMIN_BASE_URL`, `PUBLIC_SITE_URL`
    - admin : `NEXT_PUBLIC_API_URL=https://api.hitsdancemusic.ca` → **rebuild**
-4. Site : CSP `connect-src` dans `nginx.conf` (URL API) + rebuild web.
+4. Site : CSP `connect-src` dans `nginx.conf` (URL API) + rebuild web. **Ne pas
+   éditer `nginx.conf` à la main** : l'URL API y est substituée par
+   `scripts/build-brand.mjs` (champ `urls.api` du `brand/<slug>.json`, cf.
+   `textTargets`) — une modif directe serait écrasée au prochain build de
+   marque. Mettre à jour le brand json, puis rebuild.
 5. Ensuite : sur l’api, poser `COOKIE_SAMESITE=Lax` (même parent → plus besoin
    de `SameSite=None`). Défaut actuel sans variable : `None` en prod (cross-site
    `*.up.railway.app`), `Lax` en dev. Valeurs : `None` | `Lax` | `Strict`.
