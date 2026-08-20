@@ -37,8 +37,20 @@ jobs:
           cache-dependency-path: api/package-lock.json
 
       # pg_dump/pg_restore (le script valide l'archive avec pg_restore --list).
-      - name: Installer postgresql-client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # Le paquet `postgresql-client` d'Ubuntu est resté en 16 alors que la base
+      # Railway tourne en 18 ; pg_dump refuse de sauvegarder un serveur plus
+      # récent que lui (« aborting because of server version mismatch »). On
+      # installe donc explicitement le client 18 depuis le dépôt PGDG.
+      - name: Installer postgresql-client-18 (dépôt PGDG)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-18
+          pg_dump --version
 
       - name: Installer les dépendances API (SDK S3)
         working-directory: api
