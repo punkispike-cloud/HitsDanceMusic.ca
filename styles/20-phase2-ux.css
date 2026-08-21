@@ -10,7 +10,7 @@
   display: grid;
   place-items: center;
   font-size: 2.4rem;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--black-a55);
   border-radius: inherit;
   animation: muteFlash 0.55s ease-out;
   pointer-events: none;
@@ -61,7 +61,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--white-a18);
   background: rgba(0,0,0,0.45);
   color: #fff;
   display: grid;
@@ -72,7 +72,7 @@
   -webkit-backdrop-filter: blur(10px);
   transition: transform 0.18s ease, background 0.18s ease;
 }
-.np-drawer .np-close:hover { transform: scale(1.08); background: rgba(0,0,0,0.7); }
+.np-drawer .np-close:hover { transform: scale(1.08); background: var(--black-a70); }
 .np-drawer .np-inner {
   position: relative;
   z-index: 1;
@@ -95,8 +95,8 @@
   object-fit: cover;
   border-radius: 18px;
   box-shadow:
-    0 30px 80px rgba(0,0,0,0.7),
-    0 0 0 1px rgba(255,255,255,0.08),
+    0 30px 80px var(--black-a70),
+    0 0 0 1px var(--white-a08),
     0 0 60px color-mix(in srgb, var(--dynamic-accent, #c8102e) 30%, transparent);
 }
 .np-drawer .np-meta { color: #fff; }
@@ -128,8 +128,8 @@
   margin: 14px 0 0;
   padding: 10px 16px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--white-a06);
+  border: 1px solid var(--white-a08);
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -155,7 +155,7 @@
   box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, #c8102e) 45%, transparent);
 }
 .np-drawer .btn-ghost {
-  background: rgba(255,255,255,0.08);
+  background: var(--white-a08);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.14);
 }

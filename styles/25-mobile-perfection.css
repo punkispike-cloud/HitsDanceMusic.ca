@@ -324,8 +324,8 @@ html, body { overflow-x: hidden; }
   padding: 4px 6px 4px 9px;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 18px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line, var(--white-a08));
+  box-shadow: inset 0 1px 0 var(--white-a06), 0 4px 18px rgba(0, 0, 0, 0.35);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   font-variant-numeric: tabular-nums;
@@ -364,7 +364,7 @@ html, body { overflow-x: hidden; }
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--white-a05);
   color: rgba(255, 255, 255, 0.92);
 }
 .presence-ic {
@@ -372,7 +372,7 @@ html, body { overflow-x: hidden; }
   width: 14px;
   height: 14px;
 }
-.presence-visitors .presence-ic { color: rgba(255, 255, 255, 0.7); }
+.presence-visitors .presence-ic { color: var(--white-a70); }
 .presence-listeners {
   background: linear-gradient(135deg, rgba(var(--red-glow-rgb), 0.28), var(--red-a12));
   color: #ffd6dd;

@@ -21,7 +21,7 @@
 
 .od-cover {
   aspect-ratio: 16 / 9;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(135deg, var(--white-a05), rgba(255, 255, 255, 0.02));
   display: flex; align-items: center; justify-content: center;
 }
 .od-cover img { width: 100%; height: 100%; object-fit: cover; }

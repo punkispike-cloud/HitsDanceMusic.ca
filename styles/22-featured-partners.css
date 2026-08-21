@@ -62,7 +62,7 @@
   border-radius: 14px;
   overflow: hidden;
   background: #0a0a0a;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--white-a08);
 }
 .featured-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -82,7 +82,7 @@
   padding: 22px;
   border-radius: 16px;
   background: rgba(15,15,18,0.85);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--white-a08);
   text-decoration: none;
   color: inherit;
   transition: transform .25s ease, border-color .25s ease, background .25s ease;

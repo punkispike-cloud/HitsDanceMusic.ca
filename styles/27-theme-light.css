@@ -11,23 +11,23 @@
 :root[data-theme="light"] .site-header.solid,
 :root[data-theme="light"] body.is-scrolled .site-header {
   background: rgba(255, 255, 255, 0.97);
-  border-bottom-color: rgba(0, 0, 0, 0.12);
+  border-bottom-color: var(--black-a12);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 :root[data-theme="light"] .nav-toggle-bar { background: var(--ink); }
 :root[data-theme="light"] .nav-toggle {
   background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.12);
+  border-color: var(--black-a12);
 }
-:root[data-theme="light"] .main-nav { background: rgba(255, 255, 255, 0.97); border-bottom-color: rgba(0, 0, 0, 0.12); }
-:root[data-theme="light"] .main-nav a { color: rgba(0, 0, 0, 0.7); }
+:root[data-theme="light"] .main-nav { background: rgba(255, 255, 255, 0.97); border-bottom-color: var(--black-a12); }
+:root[data-theme="light"] .main-nav a { color: var(--black-a70); }
 :root[data-theme="light"] .main-nav a:hover,
 :root[data-theme="light"] .main-nav a.active,
 :root[data-theme="light"] .main-nav a.is-active { background: var(--red-a08); color: var(--accent); }
 
 :root[data-theme="light"] .partner-card {
   background: #fff;
-  border-color: rgba(0, 0, 0, 0.10);
+  border-color: var(--black-a10);
   color: var(--ink);
 }
 :root[data-theme="light"] .partner-card:hover {
@@ -35,7 +35,7 @@
   border-color: var(--red-a40);
 }
 :root[data-theme="light"] .partner-logo { color: var(--ink); }
-:root[data-theme="light"] .partner-meta { color: rgba(0, 0, 0, 0.6); }
+:root[data-theme="light"] .partner-meta { color: var(--black-a60); }
 :root[data-theme="light"] .partner-card--brw .brw-djs-names li {
   color: var(--ink);
   background: var(--red-a08);
@@ -44,10 +44,10 @@
 
 :root[data-theme="light"] .featured-card {
   background: #fff;
-  border-color: rgba(0, 0, 0, 0.10);
+  border-color: var(--black-a10);
   color: var(--ink);
 }
-:root[data-theme="light"] .featured-card p:last-child { color: rgba(0, 0, 0, 0.7); }
+:root[data-theme="light"] .featured-card p:last-child { color: var(--black-a70); }
 :root[data-theme="light"] .featured-cover { background: #f0f0f0; border-color: rgba(0, 0, 0, 0.08); }
 
 :root[data-theme="light"] .site-footer {

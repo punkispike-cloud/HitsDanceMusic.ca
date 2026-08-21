@@ -42,7 +42,7 @@
   color: var(--muted);
   font-style: italic;
 }
-.slot-list li.is-now .slot-host { color: rgba(255,255,255,0.7); }
+.slot-list li.is-now .slot-host { color: var(--white-a70); }
 
 /* === Bouton install PWA (apparaît si supporté) === */
 #installPwaBtn { display: none; }

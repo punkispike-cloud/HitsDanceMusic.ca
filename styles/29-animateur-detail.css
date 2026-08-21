@@ -25,10 +25,10 @@
   width: 100%;
   max-width: 600px;
   background: #0f0f12;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--white-a12);
   border-radius: 18px;
   padding: 26px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 70px var(--black-a55);
   transform: translateY(10px) scale(0.98);
   transition: transform 0.2s ease;
 }
@@ -41,14 +41,14 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--white-a16);
+  background: var(--white-a05);
   color: #fff;
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
 }
-.adetail-close:hover { background: rgba(255, 255, 255, 0.12); }
+.adetail-close:hover { background: var(--white-a12); }
 
 .adetail-head { display: flex; gap: 18px; align-items: center; margin-bottom: 18px; }
 .adetail-photo {
@@ -64,7 +64,7 @@
   font-weight: 800;
   font-size: 1.8rem;
   color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--white-a12);
 }
 .adetail-photo img { width: 100%; height: 100%; object-fit: cover; }
 .adetail-head h2 { margin: 0 0 4px; font-size: 1.5rem; }
@@ -80,14 +80,14 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--white-a16);
+  background: var(--white-a04);
   color: #fff;
   font-weight: 700;
   font-size: 0.84rem;
   text-decoration: none;
 }
-.adetail-social:hover { background: rgba(255, 255, 255, 0.1); }
+.adetail-social:hover { background: var(--white-a10); }
 
 .adetail-section { margin-top: 18px; }
 .adetail-section h3 {
@@ -104,7 +104,7 @@
   gap: 10px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--white-a03);
   border-left: 3px solid var(--li-accent, #c8102e);
 }
 .adetail-list .li-time { font-variant-numeric: tabular-nums; font-weight: 700; color: rgba(255, 255, 255, 0.6); min-width: 96px; }

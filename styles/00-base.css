@@ -208,7 +208,7 @@ body.is-scrolled .site-header {
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
   backdrop-filter: blur(24px) saturate(1.5);
   border-bottom-color: var(--gold-border);
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.55), 0 1px 0 var(--red-a10);
+  box-shadow: 0 4px 32px var(--black-a55), 0 1px 0 var(--red-a10);
 }
 
 .brand {
@@ -248,7 +248,7 @@ body.is-scrolled .site-header {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--white-a06);
   cursor: pointer;
   align-items: center;
   justify-content: center;
@@ -375,7 +375,7 @@ body.is-scrolled .site-header {
     180deg,
     transparent 0%,
     transparent 55%,
-    rgba(0, 0, 0, 0.55) 82%,
+    var(--black-a55) 82%,
     rgba(0, 0, 0, 0.92) 100%
   );
 }
@@ -396,8 +396,8 @@ body.is-scrolled .site-header {
     linear-gradient(
       118deg,
       rgba(0, 0, 0, 0.94) 0%,
-      rgba(0, 0, 0, 0.55) 44%,
-      rgba(0, 0, 0, 0.12) 70%,
+      var(--black-a55) 44%,
+      var(--black-a12) 70%,
       transparent 88%
     ),
     linear-gradient(0deg, rgba(0, 0, 0, 0.38) 0%, transparent 46%);
@@ -414,7 +414,7 @@ body.is-scrolled .site-header {
 }
 
 .hero-layer-vignette {
-  background: radial-gradient(ellipse 85% 70% at 50% 45%, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse 85% 70% at 50% 45%, transparent 30%, var(--black-a55) 100%);
 }
 
 .hero-grain {
@@ -531,7 +531,7 @@ body.is-scrolled .site-header {
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.65))
+  filter: drop-shadow(0 6px 22px var(--black-a65))
           drop-shadow(0 0 28px rgba(220, 30, 50, 0.25));
   /* "Dance" et "Music" sur deux lignes empilées */
   white-space: pre-line;
@@ -576,7 +576,7 @@ h2 {
     linear-gradient(160deg, var(--red-a07) 0%, transparent 50%),
     rgba(10, 10, 10, 0.92);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 1px var(--white-a04),
     0 24px 60px rgba(0, 0, 0, 0.75),
     0 0 50px var(--red-a07);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
@@ -593,7 +593,7 @@ h2 {
   position: absolute;
   inset: 1px;
   border-radius: calc(var(--radius-lg) - 1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 var(--white-a10);
   pointer-events: none;
 }
 
@@ -711,7 +711,7 @@ h2 {
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.55), 0 0 14px rgba(232, 25, 46, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(232, 25, 46, 0.6);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -720,7 +720,7 @@ h2 {
 .volume-control input[type="range"]:focus-visible::-webkit-slider-thumb,
 .volume-control input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.12);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 14px rgba(0, 0, 0, 0.65), 0 0 22px rgba(232, 25, 46, 0.95);
+  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(232, 25, 46, 0.95);
 }
 
 .volume-control input[type="range"]::-moz-range-thumb {
@@ -729,7 +729,7 @@ h2 {
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.55), 0 0 14px rgba(232, 25, 46, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(232, 25, 46, 0.6);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -738,7 +738,7 @@ h2 {
 .volume-control input[type="range"]:focus-visible::-moz-range-thumb,
 .volume-control input[type="range"]:active::-moz-range-thumb {
   transform: scale(1.12);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 14px rgba(0, 0, 0, 0.65), 0 0 22px rgba(232, 25, 46, 0.95);
+  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(232, 25, 46, 0.95);
 }
 
 .volume-control input[type="range"]::-webkit-slider-runnable-track {
@@ -748,15 +748,15 @@ h2 {
     90deg,
     var(--accent-bright, #e8192e) 0,
     var(--accent-bright, #e8192e) var(--vol-fill, 85%),
-    rgba(255, 255, 255, 0.16) var(--vol-fill, 85%),
-    rgba(255, 255, 255, 0.16) 100%
+    var(--white-a16) var(--vol-fill, 85%),
+    var(--white-a16) 100%
   );
 }
 
 .volume-control input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--white-a16);
 }
 
 .volume-control input[type="range"]::-moz-range-progress {
@@ -841,8 +841,8 @@ h2 {
 }
 
 .button.ghost-light {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--white-a20);
+  background: var(--white-a06);
   color: #fff;
 }
 
@@ -889,7 +889,7 @@ h2 {
   padding-top: var(--space-10);
   padding-bottom: var(--space-10);
   background: var(--bg);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--white-a05);
 }
 
 .quick-strip-card {
@@ -1134,7 +1134,7 @@ h2 {
   box-shadow:
     0 0 0 1px var(--red-a10),
     0 0 22px var(--red-a18),
-    0 8px 28px rgba(0, 0, 0, 0.55);
+    0 8px 28px var(--black-a55);
 }
 
 .avatar.has-photo {
@@ -1285,7 +1285,7 @@ h2 {
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-3) 0 var(--space-3) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--white-a04);
   border-radius: 0 6px 6px 0;
   transition: background 0.15s var(--ease-soft);
 }
@@ -1495,7 +1495,7 @@ h2 {
 }
 
 .player-panel.large {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--white-a12);
 }
 
 .show-grid,
@@ -1574,7 +1574,7 @@ h2 {
 .link-stack a {
   border-radius: 10px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--white-a06);
   font-weight: 800;
   border: 1px solid var(--line);
 }
@@ -1599,7 +1599,7 @@ h2 {
 }
 
 .info-band p {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--white-a70);
 }
 
 .talent-grid.extended {

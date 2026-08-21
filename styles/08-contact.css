@@ -39,7 +39,7 @@
   padding: 8px 12px;
   cursor: pointer;
   font-size: 0.85rem;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--white-a04);
 }
 .suggest-list li:last-child { border-bottom: none; }
 .suggest-list li:hover { background: rgba(var(--red-glow-rgb), 0.15); }

@@ -81,7 +81,7 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.mini-icon-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+.mini-icon-btn:hover { background: var(--white-a08); border-color: var(--white-a20); }
 .mini-icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .mini-icon-btn.is-muted { color: var(--accent); border-color: var(--accent); }
 .mini-volume {
@@ -127,7 +127,7 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.icon-btn.mute-btn:hover { background: rgba(255,255,255,0.08); }
+.icon-btn.mute-btn:hover { background: var(--white-a08); }
 .icon-btn.mute-btn.is-muted { color: var(--accent); border-color: var(--accent); }
 .icon-btn.mute-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 

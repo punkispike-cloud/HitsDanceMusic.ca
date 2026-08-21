@@ -46,12 +46,12 @@
   --ink: #141414;
   /* WCAG 2.2 AA ≥4.5:1 sur --bg (#fafafa) et --surface (#f3f3f3) */
   --muted: #525252;
-  --line: rgba(0,0,0,0.10);
+  --line: var(--black-a10);
   --gold-border: rgba(0,0,0,0.13);
   --night: #f0f0f0;
-  --shadow: 0 28px 80px rgba(0,0,0,0.18);
-  --shadow-rest: 0 4px 24px rgba(0,0,0,0.10);
-  --shadow-lift: 0 18px 52px rgba(0,0,0,0.15);
+  --shadow: 0 28px 80px var(--black-a18);
+  --shadow-rest: 0 4px 24px var(--black-a10);
+  --shadow-lift: 0 18px 52px var(--black-a15);
 }
 :root[data-theme="light"] body { background: var(--bg); color: var(--ink); }
 :root[data-theme="light"] .mini-player {
