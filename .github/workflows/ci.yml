@@ -41,6 +41,10 @@ jobs:
       # bindRequestDb pose la GUC). Activer DATABASE_URL=enondes_app seulement après
       # npm run test:rls vert sur une base jetable — pas encore en CI.
       - run: RLS_STRICT=1 npm run tenant:guard
+      # Garde des migrations : une migration destructive (DROP TABLE/COLUMN,
+      # DELETE, TRUNCATE, ALTER … TYPE) doit livrer son api/migrations/down/.
+      # Vert aujourd'hui : aucune des 32 ne détruit de donnée.
+      - run: npm run migrations:guard
 
   frontend-unit:
     name: Site (tests unitaires)

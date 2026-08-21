@@ -22,6 +22,59 @@ Endpoint de test : `api/src/routes/health-admin.ts` (monté sous `/v1/admin/heal
 
 ---
 
+## Vague 1.6 — Resend (alertes d'antenne) 🔴
+
+> **Le bloquant n°1 de l'audit du 21-08.** `monitor.ts` tourne en production
+> (`MONITOR_ENABLED` vaut `"true"` par défaut) : il teste chaque radio active
+> toutes les 2 min, distingue `down` de `silent`, écrit `radios.health_status`.
+> Puis il s'arrête sur `if (!isResendConfigured()) return`. Sans Resend, la
+> chaîne de détection est complète **et se termine dans le vide** : la première
+> personne à découvrir une panne d'antenne est un auditeur.
+>
+> Même conséquence pour les invitations d'équipe et les réinitialisations de mot
+> de passe : `sendEmail` renvoie `false`, l'appelant ne le sait pas.
+
+**Ce n'est pas une variable à coller — il y a un délai DNS.** `EMAIL_FROM` vaut
+`no-reply@hitsdancemusic.ca` et Resend **refuse d'expédier depuis un domaine non
+vérifié**. C'est la seule tâche de la remise en état qui dépende d'un tiers :
+à lancer en premier, même si le reste attend.
+
+1. Resend → *Domains* → ajouter `hitsdancemusic.ca`.
+2. Poser les enregistrements DNS chez le registraire : **SPF**, **DKIM**, et le
+   sous-domaine `MAIL FROM`. Attendre le ✅ (quelques minutes à quelques heures).
+3. Créer une clé API → service Railway `api` → `RESEND_API_KEY=re_…`.
+4. Vérifier que `EMAIL_FROM` correspond bien au domaine vérifié.
+
+**Vérification — obligatoire, la variable posée ne prouve rien :**
+
+```bash
+curl -s https://<api>/health | jq '{monitor, alerts, sentry}'
+# attendu : { "monitor": true, "alerts": true, "sentry": true }
+```
+
+Puis un envoi réel : inviter un membre d'équipe depuis la console admin et
+constater la réception.
+
+### Le drill dead-air
+
+Poser la clé ne prouve pas que l'alerte **arrive**. Sur staging :
+
+1. Pointer `radios.now_playing_url` d'une radio active vers une URL morte.
+2. Attendre un cycle (`MONITOR_INTERVAL_MS`, 2 min par défaut).
+3. Vérifier **les deux** : `SELECT health_status FROM radios WHERE …` → `down`,
+   **et** le courriel « 🔴 … hors ligne » reçu.
+4. Rejouer pour le silence : `STREAM_SILENCE_MIN=1`, flux joignable mais titre
+   figé → `silent` + courriel « 🟠 … silence détecté ».
+5. Restaurer l'URL et les variables.
+
+Attention au debounce : `ALERT_DEBOUNCE_MIN` (60 min) empêche une seconde
+alerte, et l'alerte ne part que sur **transition** — repasser `health_status` à
+`up` entre deux essais, sinon le second drill semblera muet à tort.
+
+**Un chemin d'alerte non rejoué est un chemin non fonctionnel.**
+
+---
+
 ## Incident 2026-08-15 — suppression Postgres cross-env
 
 `railway serviceDelete` / GraphQL `serviceDelete` sur le service **`Postgres`**
@@ -92,9 +145,63 @@ railway environment link production   # revenir sur prod après
 
 ### Rollback
 
-- **App seule** : revert du merge sur `main` → redeploy auto Railway.
-- **Migration** : PITR Postgres + `npm run restore-drill` (voir SECURITE-ROTATION.md §4).
-  La 0027 est additive — pas de DROP.
+> Écrit à froid, exprès. En panne, on ne conçoit pas une procédure : on
+> l'exécute. Si une étape ci-dessous surprend, c'est ici qu'il faut la corriger,
+> pas pendant l'incident.
+
+#### 1. Code seul — la base n'a pas bougé
+
+Deux chemins, du plus sûr au plus rapide :
+
+- **Revert du merge sur `main`** → redeploy auto Railway. Trace conservée dans
+  l'historique git ; c'est le défaut.
+- **Redeploy d'un déploiement antérieur** (Railway → service → *Deployments* →
+  ⋯ → *Redeploy*). Plus rapide, mais **`main` ne bouge pas** : le prochain merge
+  ramène le code fautif. À n'utiliser que pour reprendre l'antenne tout de
+  suite, puis reverter proprement dans la foulée.
+
+**Ce qui ne revient PAS en arrière** : la base de données, les objets S3 déjà
+écrits, les courriels partis, les événements Stripe déjà traités (la table
+`stripe_events` les considère comme vus — un rejeu sera ignoré, c'est voulu).
+
+#### 2. Migration destructive
+
+`npm run migrations:guard` (en CI) impose un `api/migrations/down/<nom>.sql`
+pour toute migration qui perd de la donnée. Aujourd'hui **aucune des 32 n'est
+dans ce cas** — les seuls `DROP` sont des index recréés dans la foulée (0009).
+Voir `api/migrations/down/README.md`.
+
+Avant d'appliquer une migration destructive en production :
+
+1. **Instantané dédié** — ne pas se reposer sur la sauvegarde quotidienne
+   (`backup.yml`, 7h17 UTC) : jusqu'à 24 h d'écart. `npm run backup:db`.
+2. Appliquer la migration.
+3. En cas d'échec : jouer `api/migrations/down/<nom>.sql`, puis retirer la ligne
+   correspondante de `__drizzle_migrations` — sinon Drizzle la croit appliquée
+   et ne la rejouera jamais.
+
+Si le `down` n'existe pas ou ne suffit pas, on passe au rollback global.
+
+#### 3. Rollback global (PITR) — dernier recours
+
+PITR + `npm run restore-drill` (détail : SECURITE-ROTATION.md §4). Il ramène
+**toute** la base à un instant : tout ce qui a été écrit depuis est perdu
+(inscriptions, analytics, historique des titres).
+
+⚠️ **Leçon du 17 août 2026** : une restauration PITR à moitié appliquée a laissé
+la base repartir **vide**, sans que rien ne le signale. Donc, impérativement :
+
+- restaurer **d'abord dans une base jetable**, jamais directement sur la prod ;
+- **compter les lignes** de `radios`, `users`, `track_history`, `subscriptions`
+  avant de basculer — un compte à zéro veut dire que la restauration a échoué,
+  pas que la base était vide ;
+- ne basculer `DATABASE_URL` qu'après ces comptes.
+
+#### 4. Après tout rollback
+
+`npm run verify:prod` puis `node scripts/pre-go-live.mjs --slug <client>`. Le
+check #9 confirme que les alertes sont toujours armées — un rollback qui perd
+`RESEND_API_KEY` remettrait la radio dans l'angle mort du 21 août.
 
 ---
 
