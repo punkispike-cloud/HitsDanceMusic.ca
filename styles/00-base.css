@@ -1,6 +1,6 @@
 /* =====================================================
    Fix global : l'attribut HTML [hidden] doit toujours cacher l'élément.
-   Sans !important, n'importe quelle règle .x { display: flex/grid/... }
+   Sans, n'importe quelle règle .x { display: flex/grid/... }
    écrasait display:none et empêchait les menus/panneaux de se fermer.
    ===================================================== */
 [hidden] { display: none !important; }
@@ -1373,7 +1373,7 @@ h2 {
 }
 
 .contact-phone {
-  margin-top: 16px !important;
+  margin-top: 16px;
 }
 
 .cta-link {

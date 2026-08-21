@@ -14,7 +14,7 @@
                  (ex. `--accent: var(--red-600)`), + génération de la couche
                  sémantique par marque depuis brand/*.json.
      · étape 4 — remplacer les hex/rgba dupliqués des composants.
-     · étape 5 — dériver les dimensions tactiles pour tuer les `!important`.
+     · étape 5 — dériver les dimensions tactiles pour tuer les ``.
 
    MÉTHODE — ces valeurs ne sont pas inventées : elles sortent d'un inventaire
    des 32 fichiers de styles/ (85 hex distincts / 288 occurrences, 190 rgba

@@ -207,11 +207,11 @@ body[data-player-state="paused"] .player-live-badge {
 /* 1.8 — Toasts : repositionner au-dessus du mini-player sur mobile */
 @media (max-width: 720px) {
   #toastHost {
-    top: auto !important;
-    bottom: 110px !important;
-    right: 12px !important;
-    left: 12px !important;
-    align-items: stretch !important;
+    top: auto;
+    bottom: 110px;
+    right: 12px;
+    left: 12px;
+    align-items: stretch;
   }
   #toastHost .toast { width: 100%; }
 }
@@ -486,8 +486,8 @@ body.watch-open { overflow: hidden; }
 /* Couleur dynamique : utilise --dynamic-accent quand dispo, sinon rouge HR */
 :root { --dynamic-accent: var(--accent); }
 .player-panel--signature { box-shadow: 0 30px 80px -30px var(--dynamic-accent, rgba(var(--accent-rgb), 0.4)); transition: box-shadow .6s ease; }
-.player-live-badge { background: linear-gradient(90deg, var(--dynamic-accent, var(--accent)), rgba(255,58,110,0.85)) !important; transition: background .6s ease; }
-.play-button { background: var(--dynamic-accent, var(--accent)) !important; transition: background .6s ease; }
+.player-live-badge { background: linear-gradient(90deg, var(--dynamic-accent, var(--accent)), rgba(255,58,110,0.85)); transition: background .6s ease; }
+.play-button { background: var(--dynamic-accent, var(--accent)); transition: background .6s ease; }
 
 /* Lyrics panel */
 .lyrics-panel { position: fixed; top: 80px; right: 20px; width: 360px; max-height: 70vh; background: rgba(15,12,18,0.96); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid var(--white-a12); border-radius: 16px; z-index: 150; display: flex; flex-direction: column; box-shadow: 0 30px 80px var(--black-a50); animation: lyricsIn .25s ease; }
@@ -550,21 +550,21 @@ body.watch-open { overflow: hidden; }
 /* === V5c === details: logo+, lyrics min/drag, more menu */
 
 /* Logo plus grand avec halo */
-.brand-mark:not(.brand-mark--final) { width: 56px !important; height: 56px !important; border-radius: 14px !important; padding: 4px; }
-.brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.45) 0%, rgba(15,12,18,1) 70%) !important; box-shadow: 0 0 32px rgba(255,80,120,0.45), 0 0 0 1px rgba(255,80,120,0.3) inset !important; transition: transform .3s ease, box-shadow .3s ease; }
-.brand:hover .brand-mark--img { transform: scale(1.06) rotate(-3deg); box-shadow: 0 0 48px rgba(255,80,120,0.7), 0 0 0 2px rgba(255,80,120,0.5) inset !important; }
-[data-theme="light"] .brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.18) 0%, var(--slate-30) 70%) !important; }
+.brand-mark:not(.brand-mark--final) { width: 56px; height: 56px; border-radius: 14px; padding: 4px; }
+.brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.45) 0%, rgba(15,12,18,1) 70%); box-shadow: 0 0 32px rgba(255,80,120,0.45), 0 0 0 1px rgba(255,80,120,0.3) inset; transition: transform .3s ease, box-shadow .3s ease; }
+.brand:hover .brand-mark--img { transform: scale(1.06) rotate(-3deg); box-shadow: 0 0 48px rgba(255,80,120,0.7), 0 0 0 2px rgba(255,80,120,0.5) inset; }
+[data-theme="light"] .brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.18) 0%, var(--slate-30) 70%); }
 
 /* Logo final : grande image rectangulaire, sort du header */
 .site-header .brand .brand-mark--final {
-  width: auto !important;
-  height: 96px !important;
+  width: auto;
+  height: 96px;
   max-height: 96px;
-  padding: 0 !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 6px 18px var(--black-a60)) drop-shadow(0 0 22px var(--amber-glow));
@@ -575,12 +575,12 @@ body.watch-open { overflow: hidden; }
   filter: drop-shadow(0 8px 22px var(--black-a70)) drop-shadow(0 0 32px rgba(255,80,120,0.55));
 }
 @media (max-width: 720px) {
-  .site-header .brand .brand-mark--final { height: 44px !important; max-height: 44px; width: auto !important; }
+  .site-header .brand .brand-mark--final { height: 44px; max-height: 44px; width: auto; }
   .hero-media { inset: 0; }
 }
 
 /* Boutons d'origine masqu\u00e9s quand d\u00e9plac\u00e9s dans le menu */
-.header-tool.is-collapsed { display: none !important; }
+.header-tool.is-collapsed { display: none; }
 
 /* Bouton 'plus' */
 .more-btn svg { width: 18px; height: 18px; }
@@ -598,5 +598,5 @@ body.watch-open { overflow: hidden; }
 .lyrics-min { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; font-weight: 700; }
 .lyrics-min:hover { background: var(--white-a10); }
 .lyrics-panel.is-min .lyrics-body { display: none; }
-.lyrics-panel.is-min { width: 240px !important; }
+.lyrics-panel.is-min { width: 240px; }
 .lyrics-panel { left: auto; }

@@ -101,7 +101,7 @@
 }
 .player-2026.is-playing .p26-cover::before { opacity: 0.9; }
 .player-2026 .p26-cover img {
-  width: 100% !important; height: 100% !important;
+  width: 100%; height: 100%;
   object-fit: cover; display: block;
   transition: transform .8s ease;
 }
@@ -172,7 +172,7 @@
 .player-2026 .countdown-line strong { color: var(--gray-0); font-weight: 700; }
 
 /* Mute button auto-injecté par script.js : redondant avec vol-icon, on cache */
-.player-2026 .p26-volume #muteToggle { display: none !important; }
+.player-2026 .p26-volume #muteToggle { display: none; }
 
 /* Controles */
 .player-2026 .p26-controls {
@@ -184,9 +184,9 @@
   border-top: 1px solid var(--white-a06);
 }
 .player-2026 .play-button {
-  width: 64px !important; height: 64px !important; flex: 0 0 auto;
+  width: 64px; height: 64px; flex: 0 0 auto;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgb(var(--accent-glow-rgb)), var(--red-450)) !important;
+  background: linear-gradient(135deg, rgb(var(--accent-glow-rgb)), var(--red-450));
   color: var(--gray-0); border: none; cursor: pointer;
   box-shadow:
     0 12px 32px -8px rgba(var(--accent-glow-rgb), 0.6),
@@ -258,7 +258,7 @@
     grid-template-areas: "play status" "vol vol";
     gap: 12px 14px;
   }
-  .player-2026 .play-button { grid-area: play; width: 56px !important; height: 56px !important; }
+  .player-2026 .play-button { grid-area: play; width: 56px; height: 56px; }
   .player-2026 .p26-status { grid-area: status; }
   .player-2026 .p26-volume { grid-area: vol; min-width: 0; }
   .player-2026 .p26-meta { width: auto; justify-content: flex-end; gap: 6px; }
@@ -303,8 +303,8 @@
   box-shadow: 0 10px 24px rgba(var(--accent-glow-rgb), 0.55), inset 0 1px 0 rgba(255,255,255,0.28);
 }
 .site-header .header-play:active { transform: translateY(0) scale(0.98); }
-.site-header .header-play .hp-label { display: none !important; }
-.site-header .header-play .hp-pulse { display: none !important; }
+.site-header .header-play .hp-label { display: none; }
+.site-header .header-play .hp-pulse { display: none; }
 .site-header .header-play .hp-ico {
   width: 18px;
   height: 18px;

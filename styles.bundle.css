@@ -1371,7 +1371,7 @@ h2 {
 }
 
 .contact-phone {
-  margin-top: 16px !important;
+  margin-top: 16px;
 }
 
 .cta-link {
@@ -4252,6 +4252,18 @@ body.is-playing-radio .site-footer {
   animation: 1.5s 2 hr-pulse;
 }
 
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  position: absolute !important;
+}
+
 .rail-section {
   padding: 20px 24px 8px;
 }
@@ -4721,8 +4733,8 @@ body[data-player-state="paused"] .player-live-badge {
 
 @media (width <= 720px) {
   #toastHost {
-    align-items: stretch !important;
-    inset: auto 12px 110px !important;
+    align-items: stretch;
+    inset: auto 12px 110px;
   }
 
   #toastHost .toast {
@@ -5411,13 +5423,13 @@ body.watch-open {
 }
 
 .player-live-badge {
+  background: linear-gradient(90deg, var(--dynamic-accent, var(--accent)), #ff3a6ed9);
   transition: background .6s;
-  background: linear-gradient(90deg, var(--dynamic-accent, var(--accent)), #ff3a6ed9) !important;
 }
 
 .play-button {
+  background: var(--dynamic-accent, var(--accent));
   transition: background .6s;
-  background: var(--dynamic-accent, var(--accent)) !important;
 }
 
 .lyrics-panel {
@@ -5693,40 +5705,40 @@ body.watch-open {
 }
 
 .brand-mark:not(.brand-mark--final) {
+  border-radius: 14px;
+  width: 56px;
+  height: 56px;
   padding: 4px;
-  border-radius: 14px !important;
-  width: 56px !important;
-  height: 56px !important;
 }
 
 .brand-mark--img {
+  background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), .45) 0%, #0f0c12 70%);
   transition: transform .3s, box-shadow .3s;
-  background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), .45) 0%, #0f0c12 70%) !important;
-  box-shadow: 0 0 32px #ff507873, inset 0 0 0 1px #ff50784d !important;
+  box-shadow: 0 0 32px #ff507873, inset 0 0 0 1px #ff50784d;
 }
 
 .brand:hover .brand-mark--img {
   transform: scale(1.06) rotate(-3deg);
-  box-shadow: 0 0 48px #ff5078b3, inset 0 0 0 2px #ff507880 !important;
+  box-shadow: 0 0 48px #ff5078b3, inset 0 0 0 2px #ff507880;
 }
 
 [data-theme="light"] .brand-mark--img {
-  background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), .18) 0%, var(--slate-30) 70%) !important;
+  background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), .18) 0%, var(--slate-30) 70%);
 }
 
 .site-header .brand .brand-mark--final {
-  object-fit: contain;
+  width: auto;
+  height: 96px;
   max-height: 96px;
+  box-shadow: none;
+  object-fit: contain;
   filter: drop-shadow(0 6px 18px var(--black-a60)) drop-shadow(0 0 22px var(--amber-glow));
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   transition: transform .3s, filter .3s;
   display: block;
-  width: auto !important;
-  height: 96px !important;
-  box-shadow: none !important;
-  background: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
 }
 
 .site-header .brand:hover .brand-mark--final {
@@ -5736,9 +5748,9 @@ body.watch-open {
 
 @media (width <= 720px) {
   .site-header .brand .brand-mark--final {
+    width: auto;
+    height: 44px;
     max-height: 44px;
-    width: auto !important;
-    height: 44px !important;
   }
 
   .hero-media {
@@ -5747,7 +5759,7 @@ body.watch-open {
 }
 
 .header-tool.is-collapsed {
-  display: none !important;
+  display: none;
 }
 
 .more-btn svg {
@@ -5824,7 +5836,7 @@ body.watch-open {
 }
 
 .lyrics-panel.is-min {
-  width: 240px !important;
+  width: 240px;
 }
 
 .lyrics-panel {
@@ -6031,18 +6043,6 @@ body.watch-open {
     transition: none !important;
     animation: none !important;
   }
-}
-
-.sr-only {
-  clip: rect(0,0,0,0);
-  white-space: nowrap;
-  border: 0;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  position: absolute !important;
 }
 
 @media (width <= 720px) {
@@ -7016,8 +7016,8 @@ body.is-offline .site-header {
   }
 
   .player-cover img {
-    width: 72px !important;
-    height: 72px !important;
+    width: 72px;
+    height: 72px;
   }
 
   .player-onair-title {
@@ -7032,8 +7032,8 @@ body.is-offline .site-header {
 
   .play-button {
     flex: none;
-    width: 56px !important;
-    height: 56px !important;
+    width: 56px;
+    height: 56px;
   }
 
   .player-status-block {
@@ -7067,23 +7067,23 @@ body.is-offline .site-header {
 
 @media (pointer: coarse) {
   .volume-control input[type="range"]::-webkit-slider-thumb {
-    width: 22px !important;
-    height: 22px !important;
+    width: 22px;
+    height: 22px;
   }
 
   .volume-control input[type="range"]::-moz-range-thumb {
-    width: 22px !important;
-    height: 22px !important;
+    width: 22px;
+    height: 22px;
   }
 
   .mini-volume::-webkit-slider-thumb {
-    width: 18px !important;
-    height: 18px !important;
+    width: 18px;
+    height: 18px;
   }
 
   .mini-volume::-moz-range-thumb {
-    width: 18px !important;
-    height: 18px !important;
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -7147,8 +7147,8 @@ body.is-offline .site-header {
   }
 
   .talent-grid.extended .avatar.has-photo, .avatar.has-photo {
-    width: 64px !important;
-    height: 64px !important;
+    width: 64px;
+    height: 64px;
   }
 
   .talent-card p {
@@ -7240,12 +7240,9 @@ body.is-offline .site-header {
     border-left: none;
     border-top: 1px solid var(--line);
     border-radius: 18px 18px 0 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100% !important;
-    height: 70dvh !important;
-    top: auto !important;
+    width: 100%;
+    height: 70dvh;
+    inset: auto 0 0;
   }
 
   .search-palette {
@@ -7667,7 +7664,7 @@ html, body {
 
 @media (width <= 380px) {
   .install-pwa-btn, .presence-badge {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -7899,10 +7896,10 @@ html, body {
 
 .player-2026 .p26-cover img {
   object-fit: cover;
+  width: 100%;
+  height: 100%;
   transition: transform .8s;
   display: block;
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .player-2026.is-playing .p26-cover img {
@@ -8049,7 +8046,7 @@ html, body {
 }
 
 .player-2026 .p26-volume #muteToggle {
-  display: none !important;
+  display: none;
 }
 
 .player-2026 .p26-controls {
@@ -8062,6 +8059,9 @@ html, body {
 }
 
 .player-2026 .play-button {
+  background: linear-gradient(135deg, rgb(var(--accent-glow-rgb)), var(--red-450));
+  width: 64px;
+  height: 64px;
   color: var(--gray-0);
   cursor: pointer;
   box-shadow: 0 12px 32px -8px rgba(var(--accent-glow-rgb), .6),
@@ -8070,9 +8070,6 @@ html, body {
   border-radius: 50%;
   flex: none;
   transition: transform .2s, box-shadow .2s;
-  background: linear-gradient(135deg, rgb(var(--accent-glow-rgb)), var(--red-450)) !important;
-  width: 64px !important;
-  height: 64px !important;
 }
 
 .player-2026 .play-button:hover {
@@ -8193,8 +8190,8 @@ html, body {
 
   .player-2026 .play-button {
     grid-area: play;
-    width: 56px !important;
-    height: 56px !important;
+    width: 56px;
+    height: 56px;
   }
 
   .player-2026 .p26-status {
@@ -8261,7 +8258,7 @@ html, body {
 }
 
 .site-header .header-play .hp-label, .site-header .header-play .hp-pulse {
-  display: none !important;
+  display: none;
 }
 
 .site-header .header-play .hp-ico {
