@@ -12,13 +12,13 @@
   padding: clamp(18px, 2.4vw, 26px);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(220,20,48,0.18), transparent 60%),
+    radial-gradient(circle at 0% 0%, var(--red-a18), transparent 60%),
     radial-gradient(circle at 100% 100%, rgba(120,0,30,0.18), transparent 60%),
     rgba(14, 14, 18, 0.92);
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
     0 30px 80px -30px rgba(0,0,0,0.65),
-    0 0 0 1px rgba(220,20,48,0.18) inset;
+    0 0 0 1px var(--red-a18) inset;
   backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
 }
@@ -90,12 +90,12 @@
     0 16px 40px -12px rgba(0,0,0,0.7),
     0 0 0 1px rgba(255,255,255,0.06) inset;
   background:
-    linear-gradient(135deg, rgba(220,20,48,0.35), rgba(40,0,10,0.6)),
+    linear-gradient(135deg, var(--red-a35), rgba(40,0,10,0.6)),
     #0c0c10;
 }
 .player-2026 .p26-cover::before {
   content: ""; position: absolute; inset: -30%;
-  background: radial-gradient(circle, var(--dynamic-accent, rgba(220,20,48,0.4)), transparent 65%);
+  background: radial-gradient(circle, var(--dynamic-accent, var(--red-a40)), transparent 65%);
   filter: blur(40px); opacity: 0; transition: opacity .6s ease;
   z-index: -1;
 }
@@ -151,7 +151,7 @@
 .player-2026 .player-track-live {
   display: inline-flex; align-items: center; gap: 8px;
   margin: 8px 0 0; padding: 8px 12px;
-  background: rgba(220,20,48,0.12);
+  background: var(--red-a12);
   border: 1px solid rgba(220,20,48,0.28);
   border-radius: 10px;
   color: #fff; font-size: 0.85rem; font-weight: 600;
@@ -190,14 +190,14 @@
   color: #fff; border: none; cursor: pointer;
   box-shadow:
     0 12px 32px -8px rgba(220,20,48,0.6),
-    0 0 0 4px rgba(220,20,48,0.12);
+    0 0 0 4px var(--red-a12);
   transition: transform .2s ease, box-shadow .2s ease;
 }
 .player-2026 .play-button:hover {
   transform: scale(1.06);
   box-shadow:
     0 16px 40px -8px rgba(220,20,48,0.8),
-    0 0 0 6px rgba(220,20,48,0.18);
+    0 0 0 6px var(--red-a18);
 }
 .player-2026 .p26-status { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .player-2026 .player-status {
@@ -300,7 +300,7 @@
 .site-header .header-play:hover {
   transform: translateY(-1px) scale(1.04);
   filter: brightness(1.08);
-  box-shadow: 0 10px 24px rgba(220, 20, 48, 0.55), inset 0 1px 0 rgba(255,255,255,0.28);
+  box-shadow: 0 10px 24px var(--red-a55), inset 0 1px 0 rgba(255,255,255,0.28);
 }
 .site-header .header-play:active { transform: translateY(0) scale(0.98); }
 .site-header .header-play .hp-label { display: none !important; }
@@ -330,7 +330,7 @@
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(220, 20, 48, 0.55);
+  box-shadow: 0 0 0 0 var(--red-a55);
   opacity: 0;
   transition: opacity .25s ease;
 }

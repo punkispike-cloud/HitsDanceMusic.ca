@@ -16,8 +16,8 @@
   flex-direction: column;
   transition: transform 0.3s var(--ease-out), border-color 0.2s;
 }
-.od-card:hover { transform: translateY(-3px); border-color: rgba(220, 20, 48, 0.4); }
-.od-card.od-highlight { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(220, 20, 48, 0.35); }
+.od-card:hover { transform: translateY(-3px); border-color: var(--red-a40); }
+.od-card.od-highlight { border-color: var(--accent); box-shadow: 0 0 0 2px var(--red-a35); }
 
 .od-cover {
   aspect-ratio: 16 / 9;
@@ -76,7 +76,7 @@
   animation: live-pulse 2s infinite;
 }
 @keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(220, 20, 48, 0.55); }
+  0% { box-shadow: 0 0 0 0 var(--red-a55); }
   70% { box-shadow: 0 0 0 8px rgba(220, 20, 48, 0); }
   100% { box-shadow: 0 0 0 0 rgba(220, 20, 48, 0); }
 }

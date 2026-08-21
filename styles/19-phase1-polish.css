@@ -541,7 +541,7 @@ body.watch-open { overflow: hidden; }
 .tool-btn { font-size: 1rem; }
 
 /* === V5b === Logo image */
-.brand-mark--img { padding: 0; background: #0d0a10; border: 1.5px solid rgba(220,20,48,0.5); object-fit: contain; box-shadow: 0 0 24px rgba(255,200,80,0.25); }
+.brand-mark--img { padding: 0; background: #0d0a10; border: 1.5px solid var(--red-a50); object-fit: contain; box-shadow: 0 0 24px rgba(255,200,80,0.25); }
 [data-theme="light"] .brand-mark--img { background: #f8f8fa; border-color: rgba(200,16,46,0.35); }
 .player-cover img { object-fit: cover; }
 
@@ -567,7 +567,7 @@ body.watch-open { overflow: hidden; }
   box-shadow: none !important;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 22px rgba(220,20,48,0.35));
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 22px var(--red-a35));
   transition: transform .3s ease, filter .3s ease;
 }
 .site-header .brand:hover .brand-mark--final {

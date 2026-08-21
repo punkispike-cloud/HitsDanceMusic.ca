@@ -49,13 +49,13 @@
     border-radius: 50%;
     background:
       radial-gradient(circle at 50% 50%, rgba(16, 12, 7, 0.95) 11.5%, transparent 12%),
-      radial-gradient(circle at 50% 50%, rgba(220, 20, 48, 0.12) 19.5%, transparent 20%),
+      radial-gradient(circle at 50% 50%, var(--red-a12) 19.5%, transparent 20%),
       radial-gradient(circle at 50% 50%, transparent 29%, rgba(220, 20, 48, 0.04) 29.5%, transparent 30%),
       radial-gradient(circle at 50% 50%, transparent 38%, rgba(255, 255, 255, 0.02) 38.5%, transparent 39%),
       conic-gradient(from 0deg, #1c1c1c, #222222, #1c1c1c, #202020, #1c1c1c, #2a2a2a, #1c1c1c);
     box-shadow:
       0 0 80px rgba(0, 0, 0, 0.75),
-      0 0 0 1px rgba(220, 20, 48, 0.18),
+      0 0 0 1px var(--red-a18),
       inset 0 0 30px rgba(0, 0, 0, 0.6);
     animation: vinylSpin 14s linear infinite;
     animation-play-state: paused;
@@ -144,7 +144,7 @@
   height: 40px;
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
-  background: rgba(220, 20, 48, 0.1);
+  background: var(--red-a10);
   border: 1px solid rgba(220, 20, 48, 0.20);
   color: var(--amber-soft);
   flex-shrink: 0;
@@ -302,7 +302,7 @@
 .static-form textarea:focus {
   outline: none;
   border-color: var(--amber);
-  box-shadow: 0 0 0 3px rgba(220, 20, 48, 0.18);
+  box-shadow: 0 0 0 3px var(--red-a18);
 }
 
 /* Info band warm */

@@ -10,10 +10,10 @@
   padding: clamp(22px, 3vw, 40px);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(220,20,48,0.18), transparent 60%),
+    radial-gradient(circle at 0% 0%, var(--red-a18), transparent 60%),
     linear-gradient(160deg, rgba(20,18,22,0.95), rgba(10,10,10,0.95));
   border: 1px solid rgba(220,20,48,0.28);
-  box-shadow: 0 30px 70px -30px rgba(220,20,48,0.5);
+  box-shadow: 0 30px 70px -30px var(--red-a50);
 }
 .requests-text h2 { margin: 8px 0 12px; font-size: clamp(1.4rem, 2.5vw, 2rem); color: #fff; }
 .requests-text p { margin: 0; color: rgba(255,255,255,0.78); font-size: 1rem; line-height: 1.55; }
@@ -36,7 +36,7 @@
   text-decoration: none; color: inherit;
   transition: transform .25s ease, border-color .25s ease, background .25s ease;
 }
-.stream-chip:hover { transform: translateY(-2px); border-color: rgba(220,20,48,0.5); background: rgba(20,18,22,0.95); }
+.stream-chip:hover { transform: translateY(-2px); border-color: var(--red-a50); background: rgba(20,18,22,0.95); }
 .stream-chip-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
 .stream-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stream-chip-text strong { color: #fff; font-size: 0.98rem; }
@@ -84,8 +84,8 @@ main:focus { outline: none; }
   font-size: 0.78rem;
   font-weight: 600;
   color: rgba(255,255,255,0.85);
-  background: rgba(220,20,48,0.18);
-  border: 1px solid rgba(220,20,48,0.4);
+  background: var(--red-a18);
+  border: 1px solid var(--red-a40);
   border-radius: 999px;
 }
 .mini-session {
@@ -130,7 +130,7 @@ main:focus { outline: none; }
   background: rgba(255, 255, 255, 0.06);
   color: #f0f0f0;
 }
-.req-status--new { border-color: rgba(220, 20, 48, 0.5); }
+.req-status--new { border-color: var(--red-a50); }
 .req-status--read { border-style: dashed; }
 .req-status--queued { border-color: rgba(42, 122, 106, 0.55); }
 .req-status--played { border-color: rgba(42, 122, 106, 0.75); background: rgba(42, 122, 106, 0.15); }

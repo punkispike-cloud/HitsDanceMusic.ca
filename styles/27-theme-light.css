@@ -23,7 +23,7 @@
 :root[data-theme="light"] .main-nav a { color: rgba(0, 0, 0, 0.7); }
 :root[data-theme="light"] .main-nav a:hover,
 :root[data-theme="light"] .main-nav a.active,
-:root[data-theme="light"] .main-nav a.is-active { background: rgba(220, 20, 48, 0.08); color: var(--accent); }
+:root[data-theme="light"] .main-nav a.is-active { background: var(--red-a08); color: var(--accent); }
 
 :root[data-theme="light"] .partner-card {
   background: #fff;
@@ -32,14 +32,14 @@
 }
 :root[data-theme="light"] .partner-card:hover {
   background: #fff;
-  border-color: rgba(220, 20, 48, 0.4);
+  border-color: var(--red-a40);
 }
 :root[data-theme="light"] .partner-logo { color: var(--ink); }
 :root[data-theme="light"] .partner-meta { color: rgba(0, 0, 0, 0.6); }
 :root[data-theme="light"] .partner-card--brw .brw-djs-names li {
   color: var(--ink);
-  background: rgba(220, 20, 48, 0.08);
-  border-color: rgba(220, 20, 48, 0.35);
+  background: var(--red-a08);
+  border-color: var(--red-a35);
 }
 
 :root[data-theme="light"] .featured-card {
