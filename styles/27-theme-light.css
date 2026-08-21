@@ -4,55 +4,58 @@
     en dur ; ces overrides les rendent lisibles en thème light)
    ===================================================================== */
 :root[data-theme="light"] .site-header {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--white-a92);
   color: var(--ink);
   border-bottom-color: var(--line);
 }
 :root[data-theme="light"] .site-header.solid,
 :root[data-theme="light"] body.is-scrolled .site-header {
-  background: rgba(255, 255, 255, 0.97);
-  border-bottom-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: var(--white-a97);
+  border-bottom-color: var(--black-a12);
+  box-shadow: 0 4px 20px var(--black-a08);
 }
 :root[data-theme="light"] .nav-toggle-bar { background: var(--ink); }
 :root[data-theme="light"] .nav-toggle {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.12);
+  background: var(--black-a04);
+  border-color: var(--black-a12);
 }
-:root[data-theme="light"] .main-nav { background: rgba(255, 255, 255, 0.97); border-bottom-color: rgba(0, 0, 0, 0.12); }
-:root[data-theme="light"] .main-nav a { color: rgba(0, 0, 0, 0.7); }
+:root[data-theme="light"] .main-nav { background: var(--white-a97); border-bottom-color: var(--black-a12); }
+:root[data-theme="light"] .main-nav a { color: var(--black-a70); }
 :root[data-theme="light"] .main-nav a:hover,
 :root[data-theme="light"] .main-nav a.active,
-:root[data-theme="light"] .main-nav a.is-active { background: rgba(220, 20, 48, 0.08); color: var(--accent); }
+:root[data-theme="light"] .main-nav a.is-active { background: rgba(var(--accent-glow-rgb), 0.08); color: var(--accent); }
 
 :root[data-theme="light"] .partner-card {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.10);
+  background: var(--gray-0);
+  border-color: var(--black-a10);
   color: var(--ink);
 }
 :root[data-theme="light"] .partner-card:hover {
-  background: #fff;
-  border-color: rgba(220, 20, 48, 0.4);
+  background: var(--gray-0);
+  border-color: rgba(var(--accent-glow-rgb), 0.4);
 }
 :root[data-theme="light"] .partner-logo { color: var(--ink); }
-:root[data-theme="light"] .partner-meta { color: rgba(0, 0, 0, 0.6); }
+:root[data-theme="light"] .partner-meta { color: var(--black-a60); }
 :root[data-theme="light"] .partner-card--brw .brw-djs-names li {
   color: var(--ink);
-  background: rgba(220, 20, 48, 0.08);
-  border-color: rgba(220, 20, 48, 0.35);
+  background: rgba(var(--accent-glow-rgb), 0.08);
+  border-color: var(--amber-glow);
 }
 
 :root[data-theme="light"] .featured-card {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.10);
+  background: var(--gray-0);
+  border-color: var(--black-a10);
   color: var(--ink);
 }
-:root[data-theme="light"] .featured-card p:last-child { color: rgba(0, 0, 0, 0.7); }
-:root[data-theme="light"] .featured-cover { background: #f0f0f0; border-color: rgba(0, 0, 0, 0.08); }
+:root[data-theme="light"] .featured-card p:last-child { color: var(--black-a70); }
+:root[data-theme="light"] .featured-cover { background: var(--gray-100); border-color: var(--black-a08); }
 
 :root[data-theme="light"] .site-footer {
-  background: #f5f5f5;
+  background: var(--gray-60);
   color: var(--ink);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--black-a08);
 }
 
+
+/* Le dégradé du hero doit s'éclaircir lui aussi : sans ça il finit en noir. */
+:root[data-theme="light"] { --hero-gradient-end: var(--gray-140); }

@@ -145,7 +145,7 @@
 @media (max-width: 380px) {
   /* Si l'espace manque vraiment : le bouton install se cache (reste accessible
      via le menu ⋯ et la bannière "Installer l'app") */
-  .install-pwa-btn { display: none !important; }
+  .install-pwa-btn { display: none; }
   /* Et la pastille présence (👥/🎧) : reste visible dans le footer/stats */
-  .presence-badge { display: none !important; }
+  .presence-badge { display: none; }
 }

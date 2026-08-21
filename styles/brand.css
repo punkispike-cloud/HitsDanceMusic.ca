@@ -11,4 +11,11 @@
   --shadow-warm: 0 12px 40px rgba(220, 20, 48, 0.14);
   --shadow-glow-play: 0 12px 40px rgba(220, 20, 48, 0.52);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(220, 20, 48, 0.9);
+
+  /* Canaux RGB — indispensables aux usages en rgba(var(--x), α) des composants.
+     Sans eux, ces halos et lueurs resteraient figés sur la couleur de la
+     baseline quelle que soit la marque bâtie. */
+  --accent-rgb: 200, 16, 46;
+  --accent-bright-rgb: 232, 25, 46;
+  --accent-glow-rgb: 220, 20, 48;
 }

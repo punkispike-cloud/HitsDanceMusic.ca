@@ -27,6 +27,6 @@
   max-width: 360px;
 }
 .toast.is-shown { transform: translateX(0); opacity: 1; }
-.toast--ok    { border-left-color: #22c55e; }
-.toast--warn  { border-left-color: #f59e0b; }
+.toast--ok    { border-left-color: var(--green-500); }
+.toast--warn  { border-left-color: var(--warn-500); }
 .toast--error { border-left-color: var(--accent); }
