@@ -5,62 +5,99 @@
    ===================================================== */
 [hidden] { display: none !important; }
 
+/* ============================================================================
+   COUCHE SÉMANTIQUE — Phase 5, étape 3a
+   ============================================================================
+   Étage 2 sur 3. Chaque token dit un RÔLE (« le fond », « l'accent ») et
+   pointe sur une valeur de styles/00-tokens-primitive.css (étage 1), importé
+   juste avant. Aucune valeur littérale ne doit réapparaître ici : c'est ce qui
+   permet de changer une couleur en un seul endroit plutôt que dans 32 fichiers.
+
+   Mapping strictement 1:1 — aucune valeur calculée n'a changé par rapport à ce
+   qui était écrit en dur ici (prouvé par `npm run snap:check`, diff vide).
+
+   Les marques surchargent une partie de ces tokens via styles/brand.css, généré
+   par scripts/build-brand.mjs et importé EN DERNIER dans styles.css.
+   ========================================================================== */
+
 :root {
-  /* Black / anthracite backgrounds */
-  --bg: #0a0a0a;
-  --bg-elevated: #0f0f0f;
-  --surface: #1a1a1a;
-  --surface-glass: rgba(255, 255, 255, 0.03);
-  --surface-warm: #242424;
-  --vinyl: #080808;
-  /* Text */
-  --ink: #f5f5f5;
-  /* WCAG 2.2 AA ≥4.5:1 sur --surface (#1a1a1a) et --bg (#0a0a0a) */
-  --muted: #9a9a9a;
-  /* Borders */
-  --line: rgba(255, 255, 255, 0.08);
-  --gold-border: rgba(255, 255, 255, 0.13);
-  /* Red accent (primary) */
-  --accent: #c8102e;
-  --accent-bright: #e8192e;
-  --accent-glow: rgba(220, 20, 48, 0.42);
-  /* Red highlights (replaces amber role) */
-  --amber: #e8192e;
-  --amber-soft: #ff3349;
-  --amber-glow: rgba(220, 20, 48, 0.35);
-  --amber-slot: #e8192e;
-  /* Night */
-  --night: #060606;
-  /* Shadows */
-  --shadow: 0 28px 80px rgba(0, 0, 0, 0.65);
-  --shadow-rest: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lift: 0 18px 52px rgba(0, 0, 0, 0.55);
-  --shadow-warm: 0 12px 40px rgba(220, 20, 48, 0.14);
-  --shadow-glow-play: 0 12px 40px rgba(220, 20, 48, 0.52);
-  /* Easing */
-  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 0.15s;
-  --duration-normal: 0.25s;
-  --duration-slow: 0.4s;
-  /* Focus ring */
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(220, 20, 48, 0.9);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-  --font-display: "Syne", Inter, system-ui, sans-serif;
-  --font-ui: Inter, ui-sans-serif, system-ui, sans-serif;
+  /* Fonds — du plus profond au plus élevé. */
+  --bg: var(--gray-970);
+  --bg-elevated: var(--gray-960);
+  --surface: var(--gray-900);
+  --surface-glass: var(--white-a03);
+  --surface-warm: var(--gray-820);
+  --vinyl: var(--gray-980);
+  --night: var(--gray-985);
+
+  /* Texte. --muted doit rester ≥ 4.5:1 (WCAG 2.2 AA) sur --surface ET sur --bg :
+     toute redéfinition par une marque doit revérifier ce rapport. */
+  --ink: var(--gray-60);
+  --muted: var(--gray-500);
+
+  /* Bordures. */
+  --line: var(--white-a08);
+  --gold-border: var(--white-a13);
+
+  /* Accent de marque.
+     ⚠ Deux rouges DIFFÉRENTS cohabitent ici, et ce n'est pas un accident de
+     transcription : --accent est #c8102e (--red-700) tandis que toute la lueur
+     est bâtie sur rgb(220,20,48) = #dc1430 (--red-650 / --red-a*). Le mapping
+     ci-dessous préserve cet écart tel quel. La décision de les unifier — qui
+     CHANGERAIT l'apparence — appartient à l'étape 4. */
+  --accent: var(--red-700);
+  --accent-bright: var(--red-600);
+  --accent-glow: var(--red-a42);
+
+  /* ⚠ NOMS HÉRITÉS TROMPEURS : ces quatre tokens s'appellent « amber » mais
+     contiennent des ROUGES depuis le changement de marque. Ils sont conservés
+     tels quels parce que build-brand.mjs les génère et que du CSS les consomme
+     — les renommer est un refactor à part entière, pas un effet de bord de la
+     tokenisation. Idem pour --gold-border ci-dessus, qui est un blanc translucide. */
+  --amber: var(--red-600);
+  --amber-soft: var(--red-550);
+  --amber-glow: var(--red-a35);
+  --amber-slot: var(--red-600);
+
+  /* Ombres — la géométrie reste littérale (elle n'est pas thématisable),
+     seule la couleur est tokenisée. */
+  --shadow: 0 28px 80px var(--black-a65);
+  --shadow-rest: 0 4px 24px var(--black-a40);
+  --shadow-lift: 0 18px 52px var(--black-a55);
+  --shadow-warm: 0 12px 40px var(--red-a14);
+  --shadow-glow-play: 0 12px 40px var(--red-a52);
+
+  /* Mouvement. */
+  --ease-out: var(--ease-decelerate);
+  --ease-soft: var(--ease-standard);
+  --duration-fast: var(--dur-1);
+  --duration-normal: var(--dur-4);
+  --duration-slow: var(--dur-8);
+
+  /* Focus. */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--red-a90);
+
+  /* Rayons. */
+  --radius-sm: var(--rad-8);
+  --radius-md: var(--rad-12);
+  --radius-lg: var(--rad-16);
+  --radius-xl: var(--rad-20);
+
+  /* Espacement. */
+  --space-1: var(--size-1);
+  --space-2: var(--size-2);
+  --space-3: var(--size-3);
+  --space-4: var(--size-4);
+  --space-5: var(--size-5);
+  --space-6: var(--size-6);
+  --space-8: var(--size-8);
+  --space-10: var(--size-10);
+  --space-12: var(--size-12);
+  --space-16: var(--size-16);
+
+  /* Typographie. */
+  --font-display: var(--family-display);
+  --font-ui: var(--family-ui);
   --grain-svg: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
 }
 
