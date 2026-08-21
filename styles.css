@@ -2,6 +2,10 @@
    Découpée en sections importées dans leur ordre cascade d'origine.
    Ne pas modifier l'ordre des @import sans audit visuel. */
 
+/* Couche primitive (Phase 5, étape 2) — DOIT rester en tête : les étages
+   sémantique (00-base) puis composant s'y référeront. Purement déclarative
+   aujourd'hui, elle ne produit aucune règle et ne change donc rien au rendu. */
+@import url("styles/00-tokens-primitive.css");
 @import url("styles/00-base.css");
 @import url("styles/01-components-lounge.css");
 @import url("styles/02-hero.css");
