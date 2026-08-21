@@ -21,6 +21,7 @@ import { createCheckoutSession, createPortalSession, BILLABLE_TIERS, tierToPrice
 import { hashPassword } from "../lib/password.js";
 import { createAuthToken } from "../services/auth-tokens.js";
 import { sendEmail, inviteEmailHtml } from "../services/email.js";
+import { isTuneInConfigured } from "../services/tunein.js";
 import { randomBytes } from "node:crypto";
 import type { AppBindings } from "../types.js";
 
@@ -324,11 +325,23 @@ ownerRoutes.get("/radios/:id/distribution", requireItOrOwner, async (c) => {
       label: ch.label,
       done: !!checklistState[ch.key],
     })),
+    /* Id de station TuneIn : une fois renseigné, le now-playing de cette radio
+       part vers l'API AIR à chaque changement de titre (services/tunein.ts). */
+    tuneinStationId: (dist.tuneinStationId as string | undefined) ?? "",
+    tuneinPushReady: isTuneInConfigured() && typeof dist.tuneinStationId === "string" && dist.tuneinStationId !== "",
   });
 });
 
 const distributionPatch = z.object({
   checklist: z.record(z.boolean()).optional(),
+  /* Id de station TuneIn (préfixe « s » compris, ex. s123456). Une fois posé,
+     services/tunein.ts pousse le now-playing de cette radio vers l'API AIR.
+     Chaîne vide = on débranche. */
+  tuneinStationId: z
+    .string()
+    .trim()
+    .regex(/^(s\d+)?$/i, "Format attendu : s suivi de chiffres (ex. s123456), ou vide")
+    .optional(),
 });
 
 /* PATCH /v1/owner/radios/:id/distribution — enregistre l'état coché (jsonb merge
@@ -347,6 +360,13 @@ ownerRoutes.patch("/radios/:id/distribution", requireItOrOwner, async (c) => {
     ...dist,
     checklist: { ...existingChecklist, ...(body.checklist ?? {}) },
   };
+  // `undefined` = champ non envoyé (on ne touche à rien) ; chaîne vide = on
+  // débranche explicitement. Les deux cas doivent rester distincts, sinon un
+  // PATCH de checklist effacerait l'id de station au passage.
+  if (body.tuneinStationId !== undefined) {
+    if (body.tuneinStationId === "") delete merged.tuneinStationId;
+    else merged.tuneinStationId = body.tuneinStationId;
+  }
   const [row] = await db
     .update(radios)
     .set({ distribution: merged, updatedAt: new Date() })
@@ -360,6 +380,7 @@ ownerRoutes.patch("/radios/:id/distribution", requireItOrOwner, async (c) => {
       label: ch.label,
       done: !!newChecklist[ch.key],
     })),
+    tuneinStationId: (newDist?.tuneinStationId as string | undefined) ?? "",
   });
 });
 

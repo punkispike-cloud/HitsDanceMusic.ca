@@ -49,14 +49,14 @@
     border-radius: 50%;
     background:
       radial-gradient(circle at 50% 50%, rgba(16, 12, 7, 0.95) 11.5%, transparent 12%),
-      radial-gradient(circle at 50% 50%, rgba(220, 20, 48, 0.12) 19.5%, transparent 20%),
-      radial-gradient(circle at 50% 50%, transparent 29%, rgba(220, 20, 48, 0.04) 29.5%, transparent 30%),
+      radial-gradient(circle at 50% 50%, rgba(var(--accent-glow-rgb), 0.12) 19.5%, transparent 20%),
+      radial-gradient(circle at 50% 50%, transparent 29%, rgba(var(--accent-glow-rgb), 0.04) 29.5%, transparent 30%),
       radial-gradient(circle at 50% 50%, transparent 38%, rgba(255, 255, 255, 0.02) 38.5%, transparent 39%),
-      conic-gradient(from 0deg, #1c1c1c, #222222, #1c1c1c, #202020, #1c1c1c, #2a2a2a, #1c1c1c);
+      conic-gradient(from 0deg, var(--gray-880), var(--gray-840), var(--gray-880), var(--gray-850), var(--gray-880), var(--gray-800), var(--gray-880));
     box-shadow:
       0 0 80px rgba(0, 0, 0, 0.75),
-      0 0 0 1px rgba(220, 20, 48, 0.18),
-      inset 0 0 30px rgba(0, 0, 0, 0.6);
+      0 0 0 1px rgba(var(--accent-glow-rgb), 0.18),
+      inset 0 0 30px var(--black-a60);
     animation: vinylSpin 14s linear infinite;
     animation-play-state: paused;
     flex-shrink: 0;
@@ -70,7 +70,7 @@
     background:
       radial-gradient(circle at 50% 50%,
         var(--vinyl) 18%,
-        rgba(220, 20, 48, 0.06) 32%,
+        rgba(var(--accent-glow-rgb), 0.06) 32%,
         var(--vinyl) 35%,
         rgba(255, 255, 255, 0.025) 52%,
         var(--vinyl) 55%
@@ -144,8 +144,8 @@
   height: 40px;
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
-  background: rgba(220, 20, 48, 0.1);
-  border: 1px solid rgba(220, 20, 48, 0.20);
+  background: rgba(var(--accent-glow-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.20);
   color: var(--amber-soft);
   flex-shrink: 0;
 }
@@ -157,19 +157,19 @@
 
 /* Slot type color-coding (schedule) */
 .slot--morning .slot-time { color: var(--amber-soft); }
-.slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(220, 20, 48, 0.22); }
-.slot--morning { background: rgba(220, 20, 48, 0.03); }
+.slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(var(--accent-glow-rgb), 0.22); }
+.slot--morning { background: rgba(var(--accent-glow-rgb), 0.03); }
 
-.slot--drive .slot-time { color: #e08040; }
-.slot--drive::before { background: #e08040; box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }
+.slot--drive .slot-time { color: var(--orange-500); }
+.slot--drive::before { background: var(--orange-500); box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }
 .slot--drive { background: rgba(224, 112, 48, 0.03); }
 
-.slot--limelight .slot-time { color: #b080e0; }
-.slot--limelight::before { background: #9060c8; box-shadow: 0 0 0 3px rgba(144, 96, 200, 0.22); }
+.slot--limelight .slot-time { color: var(--violet-400); }
+.slot--limelight::before { background: var(--violet-600); box-shadow: 0 0 0 3px rgba(144, 96, 200, 0.22); }
 .slot--limelight { background: rgba(124, 68, 168, 0.04); }
 
-.slot--night .slot-time { color: #6090c8; }
-.slot--night::before { background: #3a6ea0; box-shadow: 0 0 0 3px rgba(58, 110, 160, 0.22); }
+.slot--night .slot-time { color: var(--blue-400); }
+.slot--night::before { background: var(--blue-700); box-shadow: 0 0 0 3px rgba(58, 110, 160, 0.22); }
 .slot--night { background: rgba(26, 60, 100, 0.06); }
 
 .slot--special .slot-time { color: #60b0a0; }
@@ -230,7 +230,7 @@
     transition:
       transform 0.35s var(--ease-out),
       opacity 0.28s;
-    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5);
+    box-shadow: -20px 0 60px var(--black-a50);
   }
 
   .site-header.is-open .main-nav {
@@ -302,12 +302,12 @@
 .static-form textarea:focus {
   outline: none;
   border-color: var(--amber);
-  box-shadow: 0 0 0 3px rgba(220, 20, 48, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--accent-glow-rgb), 0.18);
 }
 
 /* Info band warm */
 .info-band {
-  background: linear-gradient(160deg, var(--night) 0%, #090909 100%);
+  background: linear-gradient(160deg, var(--night) 0%, var(--gray-975) 100%);
   color: var(--ink);
 }
 

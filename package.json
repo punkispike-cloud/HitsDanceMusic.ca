@@ -20,6 +20,7 @@
     "check:migrations": "node api/scripts/check-migrations.mjs",
     "check:nginx-deny": "node scripts/check-nginx-deny.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
+    "check:skills": "node scripts/check-skills.mjs",
     "setup:rls": "node scripts/setup-rls-role.mjs",
     "test:visual": "playwright test --config=tests/visual/playwright.config.mjs",
     "snap:baseline": "playwright test --config=tests/visual/playwright.config.mjs --update-snapshots",

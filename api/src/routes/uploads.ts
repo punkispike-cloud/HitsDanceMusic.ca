@@ -11,7 +11,7 @@ import { db } from "../db/client.js";
 import { uploadIntents, episodes, mixes, tracks, mediaAssets } from "../db/schema.js";
 import { env } from "../env.js";
 import { badRequest, notFound, forbidden, AppError } from "../lib/errors.js";
-import { presignPut, headObject, publicUrl, isS3Configured } from "../lib/s3.js";
+import { presignPut, headObject, publicUrl, deleteObject, isS3Configured } from "../lib/s3.js";
 import { requireRole, assertCanActAs, isEditorialAdmin } from "../middleware/rbac.js";
 import { requireRadioId } from "../services/tenant.js";
 import type { AppBindings } from "../types.js";
@@ -106,13 +106,30 @@ uploadRoutes.post("/confirm", requireRole("animateur", "superadmin", "owner"), a
 
   const head = await headObject(intent.objectKey);
   if (!head) throw badRequest("Objet absent sur S3 — upload incomplet ?");
-  if (head.size > intent.maxBytes) throw badRequest("Taille réelle dépasse la limite");
+
+  // L'URL pré-signée ne borne QUE la clé et le Content-Type : rien n'empêche le
+  // client d'y pousser un objet plus gros que `sizeBytes` déclaré au presign.
+  // On le détecte ici — et on SUPPRIME l'objet fautif tout de suite plutôt que
+  // de le laisser occuper le bucket jusqu'à la purge d'entretien (24 h), sinon
+  // un compte éditorial peut faire enfler le stockage par rejets successifs.
+  const reject = async (message: string): Promise<never> => {
+    await deleteObject(intent.objectKey).catch((err) => {
+      console.warn(`[uploads] suppression de l'objet rejeté "${intent.objectKey}" échouée`, err);
+    });
+    await db
+      .update(uploadIntents)
+      .set({ status: "aborted" })
+      .where(eq(uploadIntents.id, intent.id));
+    throw badRequest(message);
+  };
+
+  if (head.size > intent.maxBytes) await reject("Taille réelle dépasse la limite");
   // Vérif du Content-Type RÉEL stocké vs celui déclaré à l'intention (défense en
   // profondeur : la signature présignée lie déjà le type, mais on ne fait pas
   // confiance au stockage). On compare sans les paramètres éventuels (; charset…).
   const actualType = head.contentType.split(";")[0]?.trim().toLowerCase();
   if (actualType !== intent.contentType.toLowerCase()) {
-    throw badRequest("Le type réel du fichier ne correspond pas à l'upload déclaré");
+    await reject("Le type réel du fichier ne correspond pas à l'upload déclaré");
   }
 
   await db

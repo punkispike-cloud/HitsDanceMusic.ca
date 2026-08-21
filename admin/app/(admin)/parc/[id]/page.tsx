@@ -289,8 +289,94 @@ function Row({ label, value }: { label: string; value: string | null }) {
 /* Carte « Distribution » : colis de métadonnées copiable (TuneIn, Radio Garden,
    Alexa, podcasts) + checklist d'inscription persistée dans radios.distribution.
    Console owner/it (le hook pointe vers /v1/owner/...). */
+/* Envoi du now-playing vers TuneIn (API AIR). Une fois l'id de station posé,
+   chaque changement de titre part vers TuneIn — les auditeurs qui écoutent
+   depuis TuneIn voient le vrai morceau au lieu du seul nom de station.
+   `ready` vient du serveur : l'id ne suffit pas, il faut aussi que les
+   identifiants partenaire soient configurés côté API. */
+function TuneInPush({
+  stationId,
+  ready,
+  onSave,
+}: {
+  stationId: string;
+  ready: boolean;
+  onSave: (v: string) => Promise<void>;
+}) {
+  const [value, setValue] = useState(stationId);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const dirty = value.trim() !== stationId;
+  const invalid = value.trim() !== "" && !/^s\d+$/i.test(value.trim());
+
+  const submit = async () => {
+    if (invalid) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await onSave(value.trim());
+    } catch {
+      setErr("Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <strong style={{ fontSize: 13 }}>Envoi du titre vers TuneIn</strong>
+        <span style={{ fontSize: 12, color: ready ? "var(--ok, #22c55e)" : "var(--txt-dim)" }}>
+          {ready ? "● actif" : "○ inactif"}
+        </span>
+      </div>
+      <p style={{ color: "var(--txt-dim)", fontSize: 12, margin: "6px 0 8px" }}>
+        Id de station TuneIn (ex. <code>s123456</code>). Vide = débranché. Les identifiants
+        partenaire se configurent côté serveur ; sans eux, l&apos;envoi reste inactif même avec un id.
+      </p>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <div style={{ flex: 1 }}>
+          <label htmlFor="tunein-station" className="sr-only">
+            Id de station TuneIn
+          </label>
+          <input
+            id="tunein-station"
+            className="field"
+            style={{ width: "100%" }}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="s123456"
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? "tunein-err" : undefined}
+            disabled={saving}
+          />
+          {invalid && (
+            <p id="tunein-err" role="alert" style={{ color: "var(--danger, #f87171)", fontSize: 12, margin: "4px 0 0" }}>
+              Format attendu : <code>s</code> suivi de chiffres.
+            </p>
+          )}
+          {err && (
+            <p role="alert" style={{ color: "var(--danger, #f87171)", fontSize: 12, margin: "4px 0 0" }}>
+              {err}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => void submit()}
+          disabled={!dirty || invalid || saving}
+        >
+          {saving ? "…" : "Enregistrer"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Carte « Distribution ». */
 function DistributionCard({ id }: { id: string }) {
-  const { data, error, save } = useDistribution(id);
+  const { data, error, save, saveTuneIn } = useDistribution(id);
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   if (error) {
@@ -355,6 +441,12 @@ function DistributionCard({ id }: { id: string }) {
       <CopyRow label="Flux audio" value={pkg.streamUrl} />
       <CopyRow label="Now-playing" value={pkg.nowPlayingUrl} />
       <CopyRow label="Domaines" value={(pkg.domains ?? []).join(", ") || null} />
+
+      <TuneInPush
+        stationId={data.tuneinStationId}
+        ready={data.tuneinPushReady}
+        onSave={saveTuneIn}
+      />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <strong style={{ fontSize: 13 }}>Inscriptions</strong>
