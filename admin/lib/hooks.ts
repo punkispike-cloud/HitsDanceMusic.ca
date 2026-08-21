@@ -492,7 +492,15 @@ export function useDistribution(id: string | null | undefined) {
     else await mutate();
     return updated;
   };
-  return { data, error, save, mutate, isValidating };
+  /* Enregistre l'id de station TuneIn. Séparé de `save` : le PATCH distingue
+     « champ non envoyé » de « chaîne vide », sans quoi cocher une case
+     effacerait l'id au passage. On revalide au lieu de recomposer localement —
+     `tuneinPushReady` dépend d'une config serveur qu'on ne connaît pas ici. */
+  const saveTuneIn = async (tuneinStationId: string): Promise<void> => {
+    await api.patch(`/v1/owner/radios/${id}/distribution`, { tuneinStationId });
+    await mutate();
+  };
+  return { data, error, save, saveTuneIn, mutate, isValidating };
 }
 
 /* ─────────────────────── Billing / Stripe (parc/[id]) ────────────────────── */
