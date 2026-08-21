@@ -35,7 +35,7 @@
 }
 .player-2026 .player-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  background: linear-gradient(90deg, rgb(var(--accent-glow-rgb)), #b40e26);
+  background: linear-gradient(90deg, rgb(var(--accent-glow-rgb)), var(--red-deep-a));
   color: var(--gray-0); font-weight: 800; font-size: 0.72rem; letter-spacing: 0.16em;
   padding: 5px 10px; border-radius: 999px; text-transform: uppercase;
   box-shadow: 0 4px 14px -4px rgba(var(--accent-glow-rgb), 0.6);
@@ -282,7 +282,7 @@
   border: 1px solid rgba(var(--accent-glow-rgb), 0.45);
   background:
     radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, #ec1f3f 0%, #b00020 100%);
+    linear-gradient(135deg, var(--red-vivid) 0%, var(--red-deep-b) 100%);
   box-shadow:
     0 6px 16px rgba(var(--accent-glow-rgb), 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
@@ -318,7 +318,7 @@
 .site-header .header-play.is-playing {
   background:
     radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, #18b657 0%, #04863a 100%);
+    linear-gradient(135deg, var(--green-550) 0%, var(--green-850) 100%);
   border-color: rgba(34, 197, 94, 0.55);
   box-shadow:
     0 6px 18px rgba(22, 163, 74, 0.5),
@@ -367,7 +367,7 @@
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--accent-glow);
-  background: #2a0a10;
+  background: var(--maroon-950);
   color: var(--gray-0);
   font-size: 0.82rem;
   font-weight: 600;

@@ -35,7 +35,7 @@
 .hero-vinyl::before {
   width: 22%;
   height: 22%;
-  background: radial-gradient(circle at 35% 35%, var(--accent-bright) 0%, var(--accent) 60%, #5a000d 100%);
+  background: radial-gradient(circle at 35% 35%, var(--accent-bright) 0%, var(--accent) 60%, var(--red-darkest) 100%);
   box-shadow: 0 0 40px rgba(var(--accent-glow-rgb), 0.4), inset 0 -4px 12px var(--black-a50);
 }
 

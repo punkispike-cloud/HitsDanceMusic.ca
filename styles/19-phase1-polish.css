@@ -73,7 +73,7 @@ body[data-player-state="buffering"] .live-tag-dot {
 body[data-player-state="buffering"] .player-live-badge {
   background: rgba(74, 163, 255, 0.18);
   border-color: rgba(74, 163, 255, 0.45);
-  color: #9bc8ff;
+  color: var(--info-300);
 }
 body[data-player-state="buffering"] .player-live-badge::after {
   content: "BUFFER";
@@ -258,7 +258,7 @@ body[data-player-state="buffering"] .player-status::before {
 /* Watch mode (fullscreen) — V2 cinematic */
 .watch-mode {
   position: fixed; inset: 0; z-index: 200;
-  background: radial-gradient(ellipse at top, #1a0410 0%, #050507 70%);
+  background: radial-gradient(ellipse at top, var(--maroon-980) 0%, #050507 70%);
   display: grid;
   grid-template-rows: auto 1fr auto auto auto auto;
   gap: 16px;
@@ -303,7 +303,7 @@ body.watch-open { overflow: hidden; }
 .watch-brand { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; }
 .watch-live-dot {
   width: 10px; height: 10px; border-radius: 50%;
-  background: #ff2d55; box-shadow: 0 0 0 0 rgba(255,45,85,0.6);
+  background: var(--red-hot); box-shadow: 0 0 0 0 rgba(255,45,85,0.6);
   animation: liveDot 1.6s ease-out infinite;
 }
 @keyframes liveDot { 0% { box-shadow: 0 0 0 0 rgba(255,45,85,0.7); } 100% { box-shadow: 0 0 0 12px rgba(255,45,85,0); } }
@@ -401,7 +401,7 @@ body.watch-open { overflow: hidden; }
   background: var(--dynamic-accent, var(--accent)); border-color: transparent;
   box-shadow: 0 14px 36px rgba(var(--accent-rgb), 0.5);
 }
-.watch-btn--play:hover { background: var(--dynamic-accent, #e0173a); transform: scale(1.08); box-shadow: 0 20px 50px rgba(var(--accent-rgb), 0.65); }
+.watch-btn--play:hover { background: var(--dynamic-accent, var(--red-warm)); transform: scale(1.08); box-shadow: 0 20px 50px rgba(var(--accent-rgb), 0.65); }
 
 /* Volume */
 .watch-volume {

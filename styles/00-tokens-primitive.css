@@ -59,6 +59,29 @@
      « 220, 20, 48 » à la main dans ~90 déclarations. */
   --red-glow-rgb: 220, 20, 48;
 
+  /* ------------------------------------------------------------------------
+     NUANCES DE DÉGRADÉ — extrémités choisies à la main, pas calculées.
+     ⚠ LIMITE MULTI-MARQUE CONNUE : ces valeurs restent ROUGES sur une marque
+     dorée. Contrairement à --accent, aucune formule ne les reproduit à partir
+     de la couleur de marque (#5a000d n'est pas un assombrissement uniforme de
+     #c8102e — chaque teinte a été choisie à l'œil). Les rendre paramétrables
+     exige soit de les redéfinir par marque dans brand/<slug>.json, soit de les
+     recalculer en color-mix() — les deux CHANGENT le rendu actuel. C'est donc
+     une décision, pas un refactor. Nommées ici pour être trouvables et
+     comptables en attendant. */
+  --red-vivid: #ec1f3f;          /* début de dégradé du player 2026            */
+  --red-hot: #ff2d55;            /* point « en direct »                        */
+  --red-warm: #e0173a;           /* survol du bouton plein écran               */
+  --red-deep-a: #b40e26;         /* fin de dégradé — player 2026               */
+  --red-deep-b: #b00020;         /* fin de dégradé — player                    */
+  --red-deep-c: #a80020;         /* fin de dégradé — bandeau d'installation    */
+  --red-darkest: #5a000d;        /* fin de dégradé — orbe du hero              */
+  --pink-300: #ffd6dd;           /* texte de présence                          */
+  --pink-400: #ff8aa0;           /* icône de présence                          */
+  --pink-500: #ff7a92;           /* partenaires                                */
+  --maroon-950: #2a0a10;         /* fond teinté rouge très sombre              */
+  --maroon-980: #1a0410;         /* fond du mode plein écran                   */
+
   /* ==========================================================================
      2. NEUTRES OPAQUES
      --------------------------------------------------------------------------
@@ -98,6 +121,28 @@
   --slate-960: #131218;          /*  4x — violacé sombre                       */
   --slate-940: #15151a;          /*  2x                                        */
   --slate-30: #f8f8fa;           /*  2x — blanc bleuté                         */
+
+  /* ------------------------------------------------------------------------
+     COULEURS D'ÉTAT — succès, avertissement, information, hors-ligne.
+     Elles ne sont PAS des couleurs de marque : un succès reste vert sur une
+     radio dorée comme sur une rouge. Les isoler ici évite qu'un futur passage
+     de tokenisation les avale dans la famille d'accent.
+
+     ⚠ Trois verts distincts disent la même chose (--green-500/600/650), et deux
+     bleus d'information aussi. Les fusionner CHANGERAIT le rendu : c'est une
+     décision, pas un refactor. Ils sont nommés séparément pour la rendre
+     visible et outillée. */
+  --green-300: #6ee7b7;          /* action dans la palette de recherche        */
+  --green-500: #22c55e;          /* toast succès                               */
+  --green-550: #18b657;          /* dégradé succès (début)                     */
+  --green-600: #16a34a;          /* dégradé succès (début, variante)           */
+  --green-800: #047a2c;          /* dégradé succès (fin)                       */
+  --green-850: #04863a;          /* dégradé succès (fin, variante)             */
+  --warn-400: #ffd166;           /* contour d'avertissement                    */
+  --warn-500: #f59e0b;           /* toast avertissement                        */
+  --info-300: #9bc8ff;
+  --info-400: #6cb1ff;
+  --offline-600: #b8341a;        /* bandeau hors-ligne                         */
 
   /* Teintes hors-marque (rails, partenaires, badges de créneaux). Isolées ici
      pour qu'on voie qu'elles ne participent PAS au système d'accent. */

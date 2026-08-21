@@ -5,7 +5,7 @@
   position: fixed;
   top: 0; left: 0; right: 0;
   padding: 10px 16px;
-  background: #b8341a;
+  background: var(--offline-600);
   color: var(--gray-0);
   font-size: 0.85rem;
   font-weight: 700;
