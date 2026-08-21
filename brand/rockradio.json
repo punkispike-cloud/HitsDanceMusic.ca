@@ -16,6 +16,23 @@
     "themeColor": "#14100b",
     "bgColor": "#0b0908"
   },
+  "palette": {
+    "semantic": {
+      "dark": {
+        "bg": "#0b0908",
+        "bgElevated": "#100d0b",
+        "surface": "#1a1512",
+        "surfaceGlass": "rgba(255, 248, 235, 0.03)",
+        "surfaceWarm": "#241d18",
+        "vinyl": "#080605",
+        "night": "#060505",
+        "ink": "#f5f0ea",
+        "muted": "#a09488",
+        "line": "rgba(255, 248, 235, 0.08)",
+        "goldBorder": "rgba(207, 155, 63, 0.20)"
+      }
+    }
+  },
   "stream": {
     "url": "https://CHANGEME/stream",
     "panel": "https://CHANGEME/panel/",
