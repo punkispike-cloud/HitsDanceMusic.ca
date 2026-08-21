@@ -72,13 +72,13 @@
 .live-dot {
   width: 9px; height: 9px; border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(220, 20, 48, 0.6);
+  box-shadow: 0 0 0 0 rgba(var(--red-glow-rgb), 0.6);
   animation: live-pulse 2s infinite;
 }
 @keyframes live-pulse {
   0% { box-shadow: 0 0 0 0 var(--red-a55); }
-  70% { box-shadow: 0 0 0 8px rgba(220, 20, 48, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 20, 48, 0); }
+  70% { box-shadow: 0 0 0 8px rgba(var(--red-glow-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--red-glow-rgb), 0); }
 }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 

@@ -42,7 +42,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .suggest-list li:last-child { border-bottom: none; }
-.suggest-list li:hover { background: rgba(220,20,48,0.15); }
+.suggest-list li:hover { background: rgba(var(--red-glow-rgb), 0.15); }
 
 .hp-field {
   position: absolute !important;

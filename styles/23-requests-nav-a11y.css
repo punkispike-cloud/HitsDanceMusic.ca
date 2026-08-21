@@ -12,7 +12,7 @@
   background:
     radial-gradient(circle at 0% 0%, var(--red-a18), transparent 60%),
     linear-gradient(160deg, rgba(20,18,22,0.95), rgba(10,10,10,0.95));
-  border: 1px solid rgba(220,20,48,0.28);
+  border: 1px solid rgba(var(--red-glow-rgb), 0.28);
   box-shadow: 0 30px 70px -30px var(--red-a50);
 }
 .requests-text h2 { margin: 8px 0 12px; font-size: clamp(1.4rem, 2.5vw, 2rem); color: #fff; }
