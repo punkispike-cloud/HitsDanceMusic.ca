@@ -7,6 +7,7 @@ import { db } from "../db/client.js";
 import { trackHistory, radios } from "../db/schema.js";
 import { env } from "../env.js";
 import { withAdvisoryLock } from "./lock.js";
+import { pushNowPlaying } from "./tunein.js";
 
 const POLL_MS = 30_000;
 
@@ -77,6 +78,10 @@ async function pollRadio(radioId: string, url: string): Promise<void> {
       .limit(1);
     if (last && last.artist === parsed.artist && last.title === parsed.title) return;
     await db.insert(trackHistory).values({ radioId, artist: parsed.artist, title: parsed.title });
+    // Distribution TuneIn : c'est ICI, et nulle part ailleurs, que le titre
+    // change vraiment — or l'API AIR exige une soumission unique au début du
+    // morceau, sans minuterie. Best-effort : jamais attendu, jamais bloquant.
+    void pushNowPlaying(radioId, parsed.artist, parsed.title);
   } catch {
     /* best-effort — on ne fait jamais échouer le process pour le now-playing */
   } finally {

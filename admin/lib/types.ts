@@ -118,6 +118,12 @@ export interface DistributionChannel {
 export interface DistributionPackage {
   package: DistributionMetadata;
   checklist: DistributionChannel[];
+  /** Id de station TuneIn (ex. s123456). Renseigné → le now-playing de cette
+   *  radio part vers l'API AIR à chaque changement de titre. Vide = débranché. */
+  tuneinStationId: string;
+  /** Vrai quand l'id de station ET les identifiants partenaire (côté serveur)
+   *  sont réunis : l'envoi est réellement actif. */
+  tuneinPushReady: boolean;
 }
 
 /** Abonnement (miroir Stripe) renvoyé par GET /v1/owner/radios/:id/billing. */
