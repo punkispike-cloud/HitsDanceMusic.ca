@@ -50,8 +50,51 @@ export const BRAND = {
 `;
 }
 
+/* Neutres surchargeables par marque (Phase 5, étape 3b).
+   Clé JSON (brand/<slug>.json → palette.semantic.dark) → variable CSS.
+
+   Ces tokens n'étaient PAS paramétrables avant : ils étaient figés dans
+   styles/00-base.css pour toutes les marques, si bien qu'un client ne pouvait
+   changer que son accent — jamais la profondeur de ses fonds.
+
+   Les ombres n'y figurent volontairement pas : leur géométrie appartient au
+   CSS, seule leur couleur serait thématisable, et aucun besoin réel ne le
+   justifie aujourd'hui.
+
+   ⚠ PAS exporté : ce fichier s'exécute au chargement (build à effet de bord).
+   L'importer pour lire cette table déclencherait un build parasite. */
+const SEMANTIC_TOKENS = {
+  bg: "--bg",
+  bgElevated: "--bg-elevated",
+  surface: "--surface",
+  surfaceGlass: "--surface-glass",
+  surfaceWarm: "--surface-warm",
+  vinyl: "--vinyl",
+  night: "--night",
+  ink: "--ink",
+  muted: "--muted",
+  line: "--line",
+  goldBorder: "--gold-border",
+};
+
 function genBrandCss(b) {
   const rgb = b.colors.accentGlowRgb;
+
+  /* Bloc neutres — n'est émis QUE si la marque déclare palette.semantic.dark.
+     Absent (cas de hitsdance, la baseline) ⇒ rien n'est émis et 00-base.css
+     garde la main avec ses var(--primitive) : la tokenisation de l'étape 3a
+     reste vivante au lieu d'être ré-aplatie en littéraux. Une marque peut
+     n'en surcharger qu'une partie — les clés absentes retombent sur la baseline. */
+  const semantic = b.palette?.semantic?.dark;
+  const semanticBlock = semantic
+    ? "\n" +
+      Object.entries(SEMANTIC_TOKENS)
+        .filter(([key]) => semantic[key])
+        .map(([key, cssVar]) => `  ${cssVar}: ${semantic[key]};`)
+        .join("\n") +
+      "\n"
+    : "";
+
   return `/* GÉNÉRÉ par scripts/build-brand.mjs — NE PAS ÉDITER À LA MAIN.
    Override des variables de couleur de la marque (importé en dernier). */
 :root {
@@ -65,7 +108,7 @@ function genBrandCss(b) {
   --shadow-warm: 0 12px 40px rgba(${rgb}, 0.14);
   --shadow-glow-play: 0 12px 40px rgba(${rgb}, 0.52);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(${rgb}, 0.9);
-}
+${semanticBlock}}
 `;
 }
 
