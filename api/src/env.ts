@@ -247,3 +247,28 @@ export function isReplayEnabled(): boolean {
     Boolean(env.AZURACAST_BASE_URL && env.AZURACAST_API_KEY)
   );
 }
+
+/* ── Armement de l'observabilité (audit 2026-08-21) ───────────────────────────
+   Ces deux défauts étaient SILENCIEUX en production : rien, ni dans les logs ni
+   dans /health, ne disait que la chaîne d'alerte était coupée. C'est exactement
+   ce qui leur a permis d'exister sans être remarqués.
+
+   On AVERTIT sans refuser de démarrer — contrairement à JWT_SECRET ou
+   ALLOWED_ORIGINS='*', qui sont des failles. Ici, une radio qui diffuse ne doit
+   jamais s'arrêter pour un défaut de courriel : le mauvais correctif serait de
+   transformer un angle mort en panne d'antenne. */
+if (isProd) {
+  if (isMonitorEnabled() && !isResendConfigured()) {
+    console.error(
+      "[api] ⚠️  ANGLE MORT : surveillance des flux ACTIVE mais RESEND_API_KEY absent — " +
+        "un dead-air sera détecté (radios.health_status) et n'alertera PERSONNE. " +
+        "Poser RESEND_API_KEY (domaine vérifié chez Resend, cf. PLAN-PRODUCTION-READY.md §A1).",
+    );
+  }
+  if (!isSentryConfigured()) {
+    console.error(
+      "[api] ⚠️  SENTRY_DSN absent — aucune exception de production ne sera capturée. " +
+        "Vérification : POST /v1/admin/health/sentry-test.",
+    );
+  }
+}

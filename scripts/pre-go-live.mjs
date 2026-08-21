@@ -9,6 +9,10 @@
  *   6. DB — abonnement : une ligne subscriptions existe pour la radio.
  *   7. API santé       : GET <api>/health → ok (depuis clients.json domains.api ou --api-url).
  *   8. DNS             : le domaine site résout (dns.lookup).
+ *   9. Observabilité   : /health expose alerts=true ET sentry=true — saura-t-on
+ *                        que la radio est tombée ? (bloquant : les 8 checks
+ *                        ci-dessus prouvent qu'elle peut diffuser, aucun ne
+ *                        prouve qu'on sera prévenu quand elle s'arrêtera).
  *
  Chaque check : ✓ ok / ✗ fail (bloquant) / ⚠ warn (non bloquant). Exit 0 si aucun
  fail, 1 sinon. Les checks DB/API/DNS sont skippés (warn) si la config manque.
@@ -121,10 +125,12 @@ if (dbUrl) {
   warn("DB — radio/superadmin/abonnement", "DATABASE_URL absent — checks DB ignorés");
 }
 
-// 7. API santé
+// 7. API santé — on garde le corps : le check #9 le relit sans second appel.
+let health = null;
 if (apiUrl) {
   try {
     const res = await fetch(`${apiUrl.replace(/\/$/, "")}/health`, { signal: AbortSignal.timeout(8000) });
+    health = await res.json().catch(() => null);
     if (res.ok) ok("API santé", `${apiUrl}/health → ${res.status}`);
     else fail("API santé", `${apiUrl}/health → HTTP ${res.status}`);
   } catch (err) {
@@ -145,6 +151,25 @@ if (siteDomain) {
   }
 } else {
   warn("DNS (site)", "domaine site absent dans clients.json");
+}
+
+// 9. Observabilité — saura-t-on que la radio est tombée ? (audit 2026-08-21)
+//    Les 8 checks précédents prouvent que la radio PEUT diffuser. Aucun ne
+//    prouve qu'on sera prévenu quand elle s'arrêtera. `monitor:true` +
+//    `alerts:false` = détection active qui n'alerte personne : bloquant.
+if (health && typeof health === "object") {
+  if (health.alerts === true) ok("Observabilité — alertes", "canal courriel armé (Resend)");
+  else if (health.monitor === true)
+    fail("Observabilité — alertes", "surveillance ACTIVE mais aucun canal d'alerte — un dead-air ne préviendra personne (poser RESEND_API_KEY)");
+  else fail("Observabilité — alertes", "ni surveillance ni canal d'alerte (MONITOR_ENABLED + RESEND_API_KEY)");
+
+  if (health.sentry === true) ok("Observabilité — erreurs", "Sentry armé");
+  else fail("Observabilité — erreurs", "SENTRY_DSN absent — aucune exception de production capturée");
+} else if (apiUrl) {
+  // /health répond mais sans les champs d'armement ⇒ API antérieure au correctif.
+  warn("Observabilité", "champs monitor/alerts/sentry absents de /health — API à redéployer");
+} else {
+  warn("Observabilité", "URL API absente — check ignoré");
 }
 
 if (pool) await pool.end().catch(() => {});
