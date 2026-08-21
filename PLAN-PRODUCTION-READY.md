@@ -10,15 +10,15 @@
 
 ## Lecture rapide
 
-| Lot | Ce que ça corrige | Bloquant ? | Effort | Dépend de |
-|---|---|---|---|---|
-| **A** | La panne d'antenne est invisible | 🔴 oui | ~3 h + DNS | toi (comptes) |
-| **B** | Le parcours auditeur n'est pas testé | 🟠 plafonne à 84 | ~4 h | — |
-| **C** | Reprise après incident non rejouée | 🟠 | ~3 h | accès prod |
-| **D** | Durcissements 2ᵉ client | 🟢 non | ~6 h | décisions |
+| Lot | Ce que ça corrige | Bloquant ? | État |
+|---|---|---|---|
+| **A** | La panne d'antenne est invisible | 🔴 oui | code ✅ · **variables + drill : toi** |
+| **B** | Le parcours auditeur n'est pas testé | 🟠 plafonne à 84 | ✅ fait |
+| **C** | Reprise après incident non rejouée | 🟠 | garde + runbook ✅ · **drill : toi** |
+| **D** | Durcissements 2ᵉ client | 🟢 non | D2 ✅ résolu · D1/D3 en attente |
 
-Lot A d'abord, seul, et fusionné avant tout le reste. Les lots B, C, D sont
-indépendants entre eux et parallélisables.
+Branche `fix/observabilite-armee`, 3 commits. Tout ce qui ne demandait ni compte
+tiers ni accès production est fait ; ce qui reste est listé en fin de document.
 
 ---
 
@@ -45,7 +45,7 @@ renvoie `false` et l'appelant n'a aucun moyen de le savoir.
 Second angle mort : `SENTRY_DSN` absent, donc aucune exception de production
 n'est capturée. Le code est branché dès le boot ([index.ts:44](api/src/index.ts#L44)).
 
-### A1 — Resend (⚠️ pas « deux minutes »)
+### A1 — Resend (⚠️ pas « deux minutes ») — ⏳ à toi
 
 `EMAIL_FROM` vaut par défaut `no-reply@hitsdancemusic.ca`. Resend **refuse
 d'expédier depuis un domaine non vérifié** : il faut poser les enregistrements
@@ -60,7 +60,7 @@ donc **à démarrer en premier**, même si le reste attend.
 Vérification : déclencher une invitation d'équipe réelle depuis la console admin
 et constater la réception. Pas de « la variable est posée » comme preuve.
 
-### A2 — Sentry
+### A2 — Sentry — ⏳ à toi
 
 Deux DSN distincts, deux services :
 
@@ -74,7 +74,7 @@ Vérification : `POST /v1/admin/health/sentry-test` existe déjà pour ça
 `{ sentry: true }` si le DSN est posé ; l'événement doit apparaître dans le
 dashboard sous ~1 min. Réservé aux rôles `it`/`superadmin`/`owner`.
 
-### A3 — Code : que l'absence de canal ne puisse plus passer inaperçue
+### A3 — Code : que l'absence de canal ne puisse plus passer inaperçue — ✅ fait
 
 C'est la partie « créer ce qui manque ». Aujourd'hui, une configuration
 d'observabilité vide est **silencieuse** — c'est exactement ce qui a permis à
@@ -104,7 +104,7 @@ paperasse, radio active, superadmin, abonnement, santé API, DNS). Il ne vérifi
 pas qu'on saura si la radio tombe. Nouveau check, lu depuis `/health` :
 `alerts` et `sentry` à `false` ⇒ **fail bloquant**, pas warn.
 
-### A4 — Le drill dead-air
+### A4 — Le drill dead-air — ⏳ à toi (procédure écrite : RUNBOOK § Vague 1.6)
 
 Poser les variables ne prouve pas que l'alerte arrive. Sur staging, pointer
 `now_playing_url` vers une URL morte, attendre un cycle de 2 min, constater :
@@ -116,7 +116,7 @@ critère de sortie du lot A.
 
 ---
 
-## Lot B — Tester le parcours qui porte le produit 🟠
+## Lot B — Tester le parcours qui porte le produit — ✅ fait
 
 ### Le défaut
 
@@ -152,7 +152,7 @@ l'hébergeur », pas « corriger le code ».
 acquitter la bannière Loi 25 (`audience-ack`) dans l'initScript, sinon elle
 décale la page.
 
-### B3 — Parcours admin (optionnel, à décider)
+### B3 — Parcours admin (optionnel, à décider) — ⏳ décision
 
 Connexion → parc → modification d'une émission. Demande un compte de test
 dédié en staging. À faire seulement si tu veux couvrir la console ; le lot B
@@ -170,21 +170,26 @@ sans B3 couvre déjà le risque principal.
 migration. Et l'incident du 17 août — restauration PITR à moitié appliquée, base
 repartie vide — prouve que ce chemin n'est pas théorique.
 
-### C1 — Rollback ciblé, seulement là où c'est utile
+### C1 — Empêcher la dette de se former — ✅ fait
 
-Écrire 32 fichiers `down` rétroactivement serait du travail mort : la plupart
-sont additives et s'annulent par un `DROP` évident. Ce qui coûte cher, ce sont
-les migrations **destructives** (suppression de colonne, changement de type,
-backfill). Donc :
+**La lecture des 32 corrige le constat de l'audit : aucune ne détruit de
+donnée.** Les seuls `DROP` sont dans `0009`, qui supprime sept index pour les
+recréer portés sur `(radio_id, slug)` — un index se reconstruit, il ne se perd
+pas. `0022`/`0025` (RLS) et `0031` (agrégat analytics), que je soupçonnais, sont
+purement additives.
 
-1. Relire les 32 et marquer celles qui perdent de la donnée. À vue, `0022`,
-   `0025` (RLS) et `0031` (agrégat analytics) méritent l'examen.
-2. Adopter la convention `api/migrations/down/NNNN_*.sql`, **obligatoire pour
-   toute nouvelle migration destructive**, pas pour les additives.
-3. Documenter dans `RUNBOOK-PRODUCTION.md` : instantané avant migration
-   destructive, et comment le restaurer.
+Écrire rétroactivement 32 fichiers `down` aurait donc été du travail mort : leur
+annulation est un `DROP` évident, et un fichier jamais exécuté n'est pas un
+rollback, c'est une intention. Le vrai risque n'est pas derrière nous mais
+devant — la **première** migration destructive écrite un jour de pression.
 
-### C2 — Rejouer le drill contre la prod actuelle
+D'où un garde plutôt qu'une archive : `api/scripts/check-migrations.mjs` refuse
+en CI toute migration destructive sans son `api/migrations/down/`. Il démarre
+vert et le reste tant que personne n'en écrit — un garde qui naît rouge est un
+garde qu'on apprend à ignorer. `DROP INDEX`/`CONSTRAINT`/`POLICY`/`TRIGGER` sont
+délibérément exclus : objets dérivés, reconstructibles.
+
+### C2 — Rejouer le drill contre la prod actuelle — ⏳ à toi (accès prod)
 
 `restore-drill.mjs` existe mais n'a pas tourné depuis la migration vers le
 service `db`. Une sauvegarde jamais restaurée n'est pas une sauvegarde.
@@ -192,7 +197,7 @@ Restaurer le dernier dump dans une base jetable, compter les lignes des tables
 critiques (`radios`, `users`, `track_history`, `subscriptions`), consigner la
 date du drill.
 
-### C3 — Rollback applicatif documenté
+### C3 — Rollback applicatif documenté — ✅ fait
 
 Railway permet de redéployer une version antérieure. Trois lignes dans le
 runbook : où cliquer, quel est le délai, et ce qui *ne* revient *pas* en arrière
@@ -213,10 +218,10 @@ plutôt que `postgres` — n'est pas activé. `verify-rls-cutover.mjs` et
 `test-rls.mjs` sont déjà écrits. Séquence : `npm run test:rls` vert sur base
 jetable, puis bascule staging, puis prod. **Avant le 2ᵉ client, sans discussion.**
 
-**D2 — Le hub En Ondes est-il déployé hors CI ?** Mes notes disent qu'il l'a été
-en CLI seule. Si c'est encore le cas, une correction fusionnée sur `main`
-n'atteint jamais le hub — et personne ne s'en apercevrait. À vérifier, à
-brancher sur GitHub si confirmé.
+**D2 — Le hub En Ondes ✅ résolu.** Mon inquiétude tombe : `RUNBOOK-PRODUCTION.md`
+§ Vague 1.5 établit que le repo est branché sur GitHub depuis le 15-08 avec
+`rootDirectory = enondes-site` (prod + staging). Une correction fusionnée
+atteint bien le hub. Rien à faire.
 
 **D3 — Stripe (décision produit, pas technique).** `STRIPE_SECRET` et
 `STRIPE_WEBHOOK_SECRET` sont absents de la prod : la facturation n'existe pas
@@ -228,34 +233,39 @@ qu'éteint.
 
 ---
 
-## Ordre d'exécution
+## Ce qui reste
 
-```
-Jour 0   A1 (DNS Resend — délai externe, à lancer en premier)
-         A2 (Sentry, 15 min)          ─┐
-Jour 0-1 A3 (code : /health, boot, pre-go-live)  ├─ 1 PR
-         B1 + B2 (E2E parcours auditeur)         ─┘ 1 PR
-Jour 1   A4 (drill dead-air) ← DNS propagé, critère de sortie du lot A
-Jour 2   C2 (drill restauration), C1 (rollback), C3 (runbook)
-Puis     D1 avant le 2ᵉ client · D2 à vérifier · D3 à décider
-```
+Tout ce qui suit demande un compte tiers, un accès production, ou une décision —
+rien qui puisse être écrit depuis le dépôt.
+
+| # | Action | Pourquoi c'est toi |
+|---|---|---|
+| 1 | **Resend** : vérifier le domaine (SPF/DKIM), poser `RESEND_API_KEY` | délai DNS externe — à lancer en premier |
+| 2 | **Sentry** : `SENTRY_DSN` (api) + `NEXT_PUBLIC_SENTRY_DSN` (admin, **rebuild**) | comptes tiers, secrets |
+| 3 | **Drill dead-air** sur staging | accès prod ; procédure : RUNBOOK § Vague 1.6 |
+| 4 | **Drill de restauration** (`npm run restore-drill`) | n'a pas tourné depuis la migration vers `db` |
+| 5 | **D1 — bascule RLS runtime** | avant le 2ᵉ client ; `npm run test:rls` d'abord |
 
 ## Ce qui compte comme « fait »
 
-| Lot | Critère de sortie |
-|---|---|
-| A | Un dead-air simulé sur staging produit un **courriel reçu**, et une erreur synthétique apparaît dans Sentry |
-| B | `npm run test:e2e` échoue si on casse le bouton lecture — **prouvé en le cassant** |
-| C | Une base restaurée depuis le dernier dump, comptée, datée |
-| D | `test:rls` vert et bascule staging tenue 48 h |
+| Lot | Critère de sortie | État |
+|---|---|---|
+| A | Un dead-air simulé produit un **courriel reçu**, et `/health` répond `alerts:true, sentry:true` | ⏳ |
+| B | La suite échoue si on casse le bouton lecture | ✅ prouvé par sabotage |
+| C | Le garde refuse une migration destructive nue | ✅ prouvé (5 tests) |
+| C | Une base restaurée depuis le dernier dump, comptée, datée | ⏳ |
+| D | `test:rls` vert et bascule staging tenue 48 h | ⏳ |
 
 > Règle de test héritée de ce dépôt : **prouver qu'un test peut échouer avant de
-> le garder.** Un test qui n'a jamais viré au rouge n'a rien démontré. Elle
-> s'applique intégralement au lot B.
+> le garder.** Elle a été appliquée aux trois lots livrés. Le sabotage du lot B
+> est le plus instructif : en retirant `await audio.play()`, `is-playing-radio`
+> et l'`aria-label` sont **restés verts** — le player s'annonce « En direct »
+> sans rien jouer. Seul `currentTime` a attrapé la panne. Un test bâti sur les
+> classes CSS aurait donné une fausse assurance.
 
 ## Décisions qui t'appartiennent
 
 1. **B3** — couvre-t-on la console admin en E2E, ou seulement le site auditeur ?
-2. **D3** — facturation Stripe au 1er client, ou hors-bande ?
-3. **C1** — rollback ciblé sur les migrations destructives (recommandé), ou les
-   32 rétroactivement ?
+2. **D3** — facturation Stripe au 1er client, ou hors-bande ? Si hors-bande, ne
+   pas poser les clés : du code de paiement à moitié configuré est pire
+   qu'éteint.
