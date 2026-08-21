@@ -118,6 +118,23 @@ Dépendance npm : `lightningcss` (build CSS) + `@playwright/test` (tests visuels
 - `build-html` : remplace le contenu entre `<!--#include name="X"-->` et `<!--#endinclude-->` par `_partials/X.html`.
 - `build-sw` : régénère `const CACHE` dans `sw.js` à partir du hash du contenu réel des ressources du SHELL — invalidation auto à toute modif de JS/CSS/HTML/asset. Avertit aussi si un module `js/*.js` n'est pas dans le SHELL (drift) ou si un fichier listé est manquant.
 
+## Skills projet (Claude Code)
+
+`.claude/skills/` contient des **runbooks exécutables** : du savoir opérationnel que Claude Code charge automatiquement quand le sujet s'y prête. Contrairement au reste de `.claude/` (local à chaque machine), ce dossier **suit le dépôt** — c'est du savoir d'équipe.
+
+| Skill | Se déclenche sur |
+|---|---|
+| `flux-radio` | Mises en tampon, coupures, dead-air, now-playing figé — **mesurer avant de corriger** |
+| `nouvelle-radio` | Ajouter/rebâtir/déployer une radio cliente ; le piège du build qui réécrit l'arbre |
+| `azuracast-station` | Provisionner et exploiter une station AzuraCast (AutoDJ, mounts, storage) |
+| `degel-css` | Toute retouche du CSS gelé : tokens, cascade, filet de captures, état de la Phase 5 |
+
+```sh
+npm run check:skills   # valide le frontmatter des skills (aussi joué par npm test)
+```
+
+Ce contrôle existe parce que le mode d'échec est **silencieux** : une skill dont le frontmatter est invalide n'est pas signalée, elle est simplement ignorée au chargement — on croit disposer d'un runbook qui ne se déclenchera jamais.
+
 ## Sitemap & SEO
 
 `sitemap.xml` liste les pages indexables (accueil, animateurs, horaire, emissions, podcasts, contact, confidentialite). Les pages `noindex` (`stats.html`, `404.html`) en sont exclites. Référencé depuis `robots.txt`. `sw.js` précache `styles.bundle.css` (et non l'ancienne chaîne `styles.css` + partials).
