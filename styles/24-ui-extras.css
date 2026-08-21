@@ -53,7 +53,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--red-a50);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.5);
   background: rgba(15,15,18,0.92);
   color: var(--gray-0);
   display: grid;
@@ -143,7 +143,7 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
   height: auto;
   object-fit: contain;
   margin: 0 auto 6px;
-  filter: drop-shadow(0 4px 12px var(--red-a35));
+  filter: drop-shadow(0 4px 12px var(--amber-glow));
 }
 
 /* ============================================================
@@ -157,9 +157,9 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
   margin-left: auto;
   margin-right: 12px;
   padding: 9px 16px 9px 14px;
-  border: 1px solid var(--red-a55);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.55);
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--red-650) 0%, #a80020 100%);
+  background: linear-gradient(135deg, rgb(var(--accent-glow-rgb)) 0%, #a80020 100%);
   color: var(--gray-0);
   font: 600 0.78rem/1 "Inter", system-ui, sans-serif;
   letter-spacing: 0.08em;
@@ -172,7 +172,7 @@ body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
 .header-play:hover {
   transform: translateY(-1px);
   filter: brightness(1.08);
-  box-shadow: 0 8px 22px var(--red-a50), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 22px rgba(var(--accent-glow-rgb), 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .header-play:active { transform: translateY(0); }
 .header-play:focus-visible {

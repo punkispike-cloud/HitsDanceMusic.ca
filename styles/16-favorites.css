@@ -15,7 +15,7 @@
   z-index: 2;
 }
 .fav-btn:hover { transform: scale(1.08); border-color: var(--accent); color: var(--accent-bright); }
-.fav-btn.is-on { color: var(--accent-bright); border-color: var(--accent); background: var(--red-a18); }
+.fav-btn.is-on { color: var(--accent-bright); border-color: var(--accent); background: rgba(var(--accent-glow-rgb), 0.18); }
 .fav-btn.is-on svg { fill: currentColor; }
 .fav-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 

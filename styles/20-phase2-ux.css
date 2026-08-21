@@ -97,7 +97,7 @@
   box-shadow:
     0 30px 80px var(--black-a70),
     0 0 0 1px var(--white-a08),
-    0 0 60px color-mix(in srgb, var(--dynamic-accent, var(--red-700)) 30%, transparent);
+    0 0 60px color-mix(in srgb, var(--dynamic-accent, var(--accent)) 30%, transparent);
 }
 .np-drawer .np-meta { color: var(--gray-0); }
 .np-drawer .np-tag {
@@ -108,8 +108,8 @@
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--tag-color, var(--red-700)) 25%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tag-color, var(--red-700)) 55%, transparent);
+  background: color-mix(in srgb, var(--tag-color, var(--accent)) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, var(--accent)) 55%, transparent);
   color: var(--gray-0);
   margin-bottom: 12px;
 }
@@ -150,9 +150,9 @@
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .np-drawer .btn-primary {
-  background: var(--dynamic-accent, var(--red-700));
+  background: var(--dynamic-accent, var(--accent));
   color: var(--gray-0);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, var(--red-700)) 45%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, var(--accent)) 45%, transparent);
 }
 .np-drawer .btn-ghost {
   background: var(--white-a08);

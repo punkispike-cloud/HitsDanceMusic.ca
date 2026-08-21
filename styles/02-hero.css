@@ -36,7 +36,7 @@
   width: 22%;
   height: 22%;
   background: radial-gradient(circle at 35% 35%, var(--accent-bright) 0%, var(--accent) 60%, #5a000d 100%);
-  box-shadow: 0 0 40px var(--red-a40), inset 0 -4px 12px var(--black-a50);
+  box-shadow: 0 0 40px rgba(var(--accent-glow-rgb), 0.4), inset 0 -4px 12px var(--black-a50);
 }
 
 .hero-vinyl::after {
@@ -67,7 +67,7 @@
   transform: translate(-50%, -50%);
   width: 80px;
   height: 80px;
-  border: 2px solid var(--red-a50);
+  border: 2px solid rgba(var(--accent-glow-rgb), 0.5);
   border-radius: 50%;
   opacity: 0;
   animation: heroWavePulse 4s ease-out infinite;
@@ -103,7 +103,7 @@
   flex: 1;
   height: 100%;
   border-radius: 3px 3px 0 0;
-  background: linear-gradient(to top, var(--accent-bright) 0%, var(--red-a10) 100%);
+  background: linear-gradient(to top, var(--accent-bright) 0%, rgba(var(--accent-glow-rgb), 0.1) 100%);
   transform-origin: bottom;
   animation: heroEqFloor var(--d, 1s) ease-in-out infinite alternate;
 }
