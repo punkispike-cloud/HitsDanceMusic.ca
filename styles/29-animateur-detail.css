@@ -2,7 +2,7 @@
    carte .talent-card). Reprend la charte sombre du site. */
 
 .talent-card { cursor: pointer; }
-.talent-card:focus-visible { outline: 2px solid var(--accent, #c8102e); outline-offset: 3px; }
+.talent-card:focus-visible { outline: 2px solid var(--accent, var(--red-700)); outline-offset: 3px; }
 
 .adetail-overlay {
   position: fixed;
@@ -43,7 +43,7 @@
   border-radius: 50%;
   border: 1px solid var(--white-a16);
   background: var(--white-a05);
-  color: #fff;
+  color: var(--gray-0);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -57,7 +57,7 @@
   border-radius: 16px;
   flex-shrink: 0;
   overflow: hidden;
-  background: linear-gradient(135deg, #c8102e, #0a0a0a);
+  background: linear-gradient(135deg, var(--red-700), var(--gray-970));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,7 +68,7 @@
 }
 .adetail-photo img { width: 100%; height: 100%; object-fit: cover; }
 .adetail-head h2 { margin: 0 0 4px; font-size: 1.5rem; }
-.adetail-show { margin: 0; font-weight: 700; color: #e8b84b; }
+.adetail-show { margin: 0; font-weight: 700; color: var(--amber-500); }
 .adetail-sched { margin: 4px 0 0; color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; }
 
 .adetail-bio { color: rgba(255, 255, 255, 0.85); line-height: 1.6; margin: 0 0 18px; }
@@ -82,7 +82,7 @@
   border-radius: 999px;
   border: 1px solid var(--white-a16);
   background: var(--white-a04);
-  color: #fff;
+  color: var(--gray-0);
   font-weight: 700;
   font-size: 0.84rem;
   text-decoration: none;
@@ -105,7 +105,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--white-a03);
-  border-left: 3px solid var(--li-accent, #c8102e);
+  border-left: 3px solid var(--li-accent, var(--red-700));
 }
 .adetail-list .li-time { font-variant-numeric: tabular-nums; font-weight: 700; color: rgba(255, 255, 255, 0.6); min-width: 96px; }
 .adetail-list .li-title { font-weight: 600; }

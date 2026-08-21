@@ -100,7 +100,7 @@
     0 0 0 1px rgba(var(--red-glow-rgb), 0.30),
     0 12px 32px var(--black-a65),
     0 0 24px rgba(var(--red-glow-rgb), 0.15);
-  background: #0a0a0a;
+  background: var(--gray-970);
 }
 
 .player-cover img {
@@ -128,7 +128,7 @@
   width: 3px;
   height: 100%;
   border-radius: 2px;
-  background: #fff;
+  background: var(--gray-0);
   box-shadow: 0 0 4px rgba(var(--red-glow-rgb), 0.8);
   transform-origin: bottom;
   transform: scaleY(0.2);
@@ -173,9 +173,9 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tag-color, #c8102e) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tag-color, #c8102e) 50%, transparent);
-  color: var(--tag-color, #c8102e);
+  background: color-mix(in srgb, var(--tag-color, var(--red-700)) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, var(--red-700)) 50%, transparent);
+  color: var(--tag-color, var(--red-700));
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -193,7 +193,7 @@
 
 .player-onair-title {
   display: block;
-  color: #fff;
+  color: var(--gray-0);
   font-family: var(--font-display, Syne, Inter, sans-serif);
   font-size: clamp(1.05rem, 2vw, 1.35rem);
   font-weight: 800;
@@ -323,7 +323,7 @@
 
 .stream-link:hover {
   background: var(--red-a12);
-  color: #fff;
+  color: var(--gray-0);
   border-color: rgba(var(--red-glow-rgb), 0.45);
 }
 

@@ -48,7 +48,7 @@
 .np-drawer .np-bg {
   position: absolute;
   inset: 0;
-  background-color: #0a0a0a;
+  background-color: var(--gray-970);
   background-size: cover;
   background-position: center;
   filter: blur(38px) brightness(0.45) saturate(1.2);
@@ -63,7 +63,7 @@
   border-radius: 50%;
   border: 1px solid var(--white-a18);
   background: rgba(0,0,0,0.45);
-  color: #fff;
+  color: var(--gray-0);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -97,9 +97,9 @@
   box-shadow:
     0 30px 80px var(--black-a70),
     0 0 0 1px var(--white-a08),
-    0 0 60px color-mix(in srgb, var(--dynamic-accent, #c8102e) 30%, transparent);
+    0 0 60px color-mix(in srgb, var(--dynamic-accent, var(--red-700)) 30%, transparent);
 }
-.np-drawer .np-meta { color: #fff; }
+.np-drawer .np-meta { color: var(--gray-0); }
 .np-drawer .np-tag {
   display: inline-block;
   padding: 4px 12px;
@@ -108,9 +108,9 @@
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--tag-color, #c8102e) 25%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tag-color, #c8102e) 55%, transparent);
-  color: #fff;
+  background: color-mix(in srgb, var(--tag-color, var(--red-700)) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color, var(--red-700)) 55%, transparent);
+  color: var(--gray-0);
   margin-bottom: 12px;
 }
 .np-drawer .np-title {
@@ -150,19 +150,19 @@
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .np-drawer .btn-primary {
-  background: var(--dynamic-accent, #c8102e);
-  color: #fff;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, #c8102e) 45%, transparent);
+  background: var(--dynamic-accent, var(--red-700));
+  color: var(--gray-0);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dynamic-accent, var(--red-700)) 45%, transparent);
 }
 .np-drawer .btn-ghost {
   background: var(--white-a08);
-  color: #fff;
+  color: var(--gray-0);
   border: 1px solid rgba(255,255,255,0.14);
 }
 .np-drawer .btn-primary:hover,
 .np-drawer .btn-ghost:hover { transform: translateY(-1px); filter: brightness(1.1); }
 
-[data-theme="light"] .np-drawer .np-bg { background-color: #1a1a1a; }
+[data-theme="light"] .np-drawer .np-bg { background-color: var(--gray-900); }
 
 @media (prefers-reduced-motion: reduce) {
   .np-drawer, .np-drawer .np-inner, .player-cover.just-muted::after {

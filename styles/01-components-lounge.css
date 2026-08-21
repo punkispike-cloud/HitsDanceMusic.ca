@@ -52,7 +52,7 @@
       radial-gradient(circle at 50% 50%, var(--red-a12) 19.5%, transparent 20%),
       radial-gradient(circle at 50% 50%, transparent 29%, rgba(var(--red-glow-rgb), 0.04) 29.5%, transparent 30%),
       radial-gradient(circle at 50% 50%, transparent 38%, rgba(255, 255, 255, 0.02) 38.5%, transparent 39%),
-      conic-gradient(from 0deg, #1c1c1c, #222222, #1c1c1c, #202020, #1c1c1c, #2a2a2a, #1c1c1c);
+      conic-gradient(from 0deg, var(--gray-880), var(--gray-840), var(--gray-880), var(--gray-850), var(--gray-880), var(--gray-800), var(--gray-880));
     box-shadow:
       0 0 80px rgba(0, 0, 0, 0.75),
       0 0 0 1px var(--red-a18),
@@ -160,16 +160,16 @@
 .slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(var(--red-glow-rgb), 0.22); }
 .slot--morning { background: rgba(var(--red-glow-rgb), 0.03); }
 
-.slot--drive .slot-time { color: #e08040; }
-.slot--drive::before { background: #e08040; box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }
+.slot--drive .slot-time { color: var(--orange-500); }
+.slot--drive::before { background: var(--orange-500); box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }
 .slot--drive { background: rgba(224, 112, 48, 0.03); }
 
-.slot--limelight .slot-time { color: #b080e0; }
-.slot--limelight::before { background: #9060c8; box-shadow: 0 0 0 3px rgba(144, 96, 200, 0.22); }
+.slot--limelight .slot-time { color: var(--violet-400); }
+.slot--limelight::before { background: var(--violet-600); box-shadow: 0 0 0 3px rgba(144, 96, 200, 0.22); }
 .slot--limelight { background: rgba(124, 68, 168, 0.04); }
 
-.slot--night .slot-time { color: #6090c8; }
-.slot--night::before { background: #3a6ea0; box-shadow: 0 0 0 3px rgba(58, 110, 160, 0.22); }
+.slot--night .slot-time { color: var(--blue-400); }
+.slot--night::before { background: var(--blue-700); box-shadow: 0 0 0 3px rgba(58, 110, 160, 0.22); }
 .slot--night { background: rgba(26, 60, 100, 0.06); }
 
 .slot--special .slot-time { color: #60b0a0; }
@@ -307,7 +307,7 @@
 
 /* Info band warm */
 .info-band {
-  background: linear-gradient(160deg, var(--night) 0%, #090909 100%);
+  background: linear-gradient(160deg, var(--night) 0%, var(--gray-975) 100%);
   color: var(--ink);
 }
 

@@ -6,7 +6,7 @@
   top: 0; left: 0; right: 0;
   padding: 10px 16px;
   background: #b8341a;
-  color: #fff;
+  color: var(--gray-0);
   font-size: 0.85rem;
   font-weight: 700;
   text-align: center;
@@ -37,18 +37,18 @@
    Theme : light mode (override scoped)
    ===================================================== */
 :root[data-theme="light"] {
-  --bg: #fafafa;
-  --bg-elevated: #ffffff;
-  --surface: #f3f3f3;
+  --bg: var(--gray-40);
+  --bg-elevated: var(--gray-0);
+  --surface: var(--gray-80);
   --surface-glass: rgba(0,0,0,0.03);
   --surface-warm: #ececec;
   --vinyl: #e8e8e8;
   --ink: #141414;
-  /* WCAG 2.2 AA ≥4.5:1 sur --bg (#fafafa) et --surface (#f3f3f3) */
+  /* WCAG 2.2 AA ≥4.5:1 sur --bg (var(--gray-40)) et --surface (var(--gray-80)) */
   --muted: #525252;
   --line: var(--black-a10);
   --gold-border: rgba(0,0,0,0.13);
-  --night: #f0f0f0;
+  --night: var(--gray-100);
   --shadow: 0 28px 80px var(--black-a18);
   --shadow-rest: 0 4px 24px var(--black-a10);
   --shadow-lift: 0 18px 52px var(--black-a15);
@@ -60,9 +60,9 @@
 }
 :root[data-theme="light"] .mini-show { color: var(--accent); }
 :root[data-theme="light"] .toast { background: rgba(255,255,255,0.95); color: var(--ink); }
-:root[data-theme="light"] .history-drawer { background: #fff; color: var(--ink); }
+:root[data-theme="light"] .history-drawer { background: var(--gray-0); color: var(--ink); }
 :root[data-theme="light"] .search-box,
-:root[data-theme="light"] .sleep-menu { background: #fff; color: var(--ink); }
+:root[data-theme="light"] .sleep-menu { background: var(--gray-0); color: var(--ink); }
 :root[data-theme="light"] .header-tool { color: var(--ink); }
 
 /* === Layout : pousser footer si banner offline === */

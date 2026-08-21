@@ -40,7 +40,7 @@
   transition: background 0.18s, color 0.18s;
 }
 .fav-filter:hover { color: var(--ink); }
-.fav-filter.is-active { background: var(--accent); color: #fff; }
+.fav-filter.is-active { background: var(--accent); color: var(--gray-0); }
 .fav-count { font-weight: 600; opacity: 0.8; margin-left: 4px; }
 
 .header-tool.is-on { color: var(--accent-bright); border-color: var(--accent); }

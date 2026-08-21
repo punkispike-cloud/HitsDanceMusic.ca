@@ -33,7 +33,7 @@
   font-size: 0.68rem; font-weight: 800;
   letter-spacing: 0.08em; text-transform: uppercase;
   padding: 3px 9px; border-radius: 999px;
-  color: #fff; background: var(--accent);
+  color: var(--gray-0); background: var(--accent);
 }
 .od-body h3 { font-family: var(--font-display); font-size: 1.15rem; margin: 0; }
 .od-body p { color: var(--muted); font-size: 0.85rem; margin: 0; }
@@ -43,7 +43,7 @@
   font-weight: 800; font-size: 0.85rem;
   padding: 9px 16px; border-radius: 999px;
   border: 1px solid var(--accent);
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--gray-0);
   cursor: pointer; transition: filter 0.2s;
 }
 .od-play:hover { filter: brightness(1.1); }
@@ -87,7 +87,7 @@
   font-weight: 800; font-size: 0.85rem;
   padding: 11px 18px; border-radius: 999px;
   border: 1px solid var(--line);
-  background: var(--surface); color: var(--txt, #fff);
+  background: var(--surface); color: var(--txt, var(--gray-0));
   cursor: pointer; transition: border-color 0.2s, transform 0.2s;
 }
 .push-optin:hover { border-color: var(--accent); transform: translateY(-1px); }
