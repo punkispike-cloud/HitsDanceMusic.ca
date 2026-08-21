@@ -44,7 +44,8 @@
   --surface-warm: #ececec;
   --vinyl: #e8e8e8;
   --ink: #141414;
-  /* WCAG 2.2 AA ≥4.5:1 sur --bg (var(--gray-40)) et --surface (var(--gray-80)) */
+  /* WCAG 2.2 AA ≥4.5:1 sur --bg et --surface du thème clair — vérifié par
+     scripts/check-contrast.mjs (couples « light »). */
   --muted: #525252;
   --line: var(--black-a10);
   --gold-border: rgba(0,0,0,0.13);

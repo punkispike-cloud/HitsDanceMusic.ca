@@ -38,7 +38,7 @@
   background: linear-gradient(90deg, var(--red-650), #b40e26);
   color: var(--gray-0); font-weight: 800; font-size: 0.72rem; letter-spacing: 0.16em;
   padding: 5px 10px; border-radius: 999px; text-transform: uppercase;
-  box-shadow: 0 4px 14px -4px rgba(var(--red-glow-rgb), 0.6);
+  box-shadow: 0 4px 14px -4px rgba(var(--accent-glow-rgb), 0.6);
 }
 .player-2026 .player-live-badge .live-tag-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--gray-0);
@@ -152,7 +152,7 @@
   display: inline-flex; align-items: center; gap: 8px;
   margin: 8px 0 0; padding: 8px 12px;
   background: var(--red-a12);
-  border: 1px solid rgba(var(--red-glow-rgb), 0.28);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.28);
   border-radius: 10px;
   color: var(--gray-0); font-size: 0.85rem; font-weight: 600;
   max-width: 100%; overflow: hidden;
@@ -189,14 +189,14 @@
   background: linear-gradient(135deg, var(--red-650), var(--red-450)) !important;
   color: var(--gray-0); border: none; cursor: pointer;
   box-shadow:
-    0 12px 32px -8px rgba(var(--red-glow-rgb), 0.6),
+    0 12px 32px -8px rgba(var(--accent-glow-rgb), 0.6),
     0 0 0 4px var(--red-a12);
   transition: transform .2s ease, box-shadow .2s ease;
 }
 .player-2026 .play-button:hover {
   transform: scale(1.06);
   box-shadow:
-    0 16px 40px -8px rgba(var(--red-glow-rgb), 0.8),
+    0 16px 40px -8px rgba(var(--accent-glow-rgb), 0.8),
     0 0 0 6px var(--red-a18);
 }
 .player-2026 .p26-status { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -279,12 +279,12 @@
   margin-left: auto;
   margin-right: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(var(--red-glow-rgb), 0.45);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.45);
   background:
     radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
     linear-gradient(135deg, #ec1f3f 0%, #b00020 100%);
   box-shadow:
-    0 6px 16px rgba(var(--red-glow-rgb), 0.45),
+    0 6px 16px rgba(var(--accent-glow-rgb), 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
   display: inline-flex;
   align-items: center;

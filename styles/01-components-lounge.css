@@ -50,7 +50,7 @@
     background:
       radial-gradient(circle at 50% 50%, rgba(16, 12, 7, 0.95) 11.5%, transparent 12%),
       radial-gradient(circle at 50% 50%, var(--red-a12) 19.5%, transparent 20%),
-      radial-gradient(circle at 50% 50%, transparent 29%, rgba(var(--red-glow-rgb), 0.04) 29.5%, transparent 30%),
+      radial-gradient(circle at 50% 50%, transparent 29%, rgba(var(--accent-glow-rgb), 0.04) 29.5%, transparent 30%),
       radial-gradient(circle at 50% 50%, transparent 38%, rgba(255, 255, 255, 0.02) 38.5%, transparent 39%),
       conic-gradient(from 0deg, var(--gray-880), var(--gray-840), var(--gray-880), var(--gray-850), var(--gray-880), var(--gray-800), var(--gray-880));
     box-shadow:
@@ -70,7 +70,7 @@
     background:
       radial-gradient(circle at 50% 50%,
         var(--vinyl) 18%,
-        rgba(var(--red-glow-rgb), 0.06) 32%,
+        rgba(var(--accent-glow-rgb), 0.06) 32%,
         var(--vinyl) 35%,
         rgba(255, 255, 255, 0.025) 52%,
         var(--vinyl) 55%
@@ -145,7 +145,7 @@
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
   background: var(--red-a10);
-  border: 1px solid rgba(var(--red-glow-rgb), 0.20);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.20);
   color: var(--amber-soft);
   flex-shrink: 0;
 }
@@ -157,8 +157,8 @@
 
 /* Slot type color-coding (schedule) */
 .slot--morning .slot-time { color: var(--amber-soft); }
-.slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(var(--red-glow-rgb), 0.22); }
-.slot--morning { background: rgba(var(--red-glow-rgb), 0.03); }
+.slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(var(--accent-glow-rgb), 0.22); }
+.slot--morning { background: rgba(var(--accent-glow-rgb), 0.03); }
 
 .slot--drive .slot-time { color: var(--orange-500); }
 .slot--drive::before { background: var(--orange-500); box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }

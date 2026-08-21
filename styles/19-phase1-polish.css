@@ -399,9 +399,9 @@ body.watch-open { overflow: hidden; }
 .watch-btn--play {
   width: 84px; height: 84px; font-size: 1.9rem;
   background: var(--dynamic-accent, var(--red-700)); border-color: transparent;
-  box-shadow: 0 14px 36px rgba(200,16,46,0.5);
+  box-shadow: 0 14px 36px rgba(var(--accent-rgb), 0.5);
 }
-.watch-btn--play:hover { background: var(--dynamic-accent, #e0173a); transform: scale(1.08); box-shadow: 0 20px 50px rgba(200,16,46,0.65); }
+.watch-btn--play:hover { background: var(--dynamic-accent, #e0173a); transform: scale(1.08); box-shadow: 0 20px 50px rgba(var(--accent-rgb), 0.65); }
 
 /* Volume */
 .watch-volume {
@@ -485,7 +485,7 @@ body.watch-open { overflow: hidden; }
 
 /* Couleur dynamique : utilise --dynamic-accent quand dispo, sinon rouge HR */
 :root { --dynamic-accent: var(--red-700); }
-.player-panel--signature { box-shadow: 0 30px 80px -30px var(--dynamic-accent, rgba(200,16,46,0.4)); transition: box-shadow .6s ease; }
+.player-panel--signature { box-shadow: 0 30px 80px -30px var(--dynamic-accent, rgba(var(--accent-rgb), 0.4)); transition: box-shadow .6s ease; }
 .player-live-badge { background: linear-gradient(90deg, var(--dynamic-accent, var(--red-700)), rgba(255,58,110,0.85)) !important; transition: background .6s ease; }
 .play-button { background: var(--dynamic-accent, var(--red-700)) !important; transition: background .6s ease; }
 
@@ -542,7 +542,7 @@ body.watch-open { overflow: hidden; }
 
 /* === V5b === Logo image */
 .brand-mark--img { padding: 0; background: #0d0a10; border: 1.5px solid var(--red-a50); object-fit: contain; box-shadow: 0 0 24px rgba(255,200,80,0.25); }
-[data-theme="light"] .brand-mark--img { background: var(--slate-30); border-color: rgba(200,16,46,0.35); }
+[data-theme="light"] .brand-mark--img { background: var(--slate-30); border-color: rgba(var(--accent-rgb), 0.35); }
 .player-cover img { object-fit: cover; }
 
 
@@ -551,9 +551,9 @@ body.watch-open { overflow: hidden; }
 
 /* Logo plus grand avec halo */
 .brand-mark:not(.brand-mark--final) { width: 56px !important; height: 56px !important; border-radius: 14px !important; padding: 4px; }
-.brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(200,16,46,0.45) 0%, rgba(15,12,18,1) 70%) !important; box-shadow: 0 0 32px rgba(255,80,120,0.45), 0 0 0 1px rgba(255,80,120,0.3) inset !important; transition: transform .3s ease, box-shadow .3s ease; }
+.brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.45) 0%, rgba(15,12,18,1) 70%) !important; box-shadow: 0 0 32px rgba(255,80,120,0.45), 0 0 0 1px rgba(255,80,120,0.3) inset !important; transition: transform .3s ease, box-shadow .3s ease; }
 .brand:hover .brand-mark--img { transform: scale(1.06) rotate(-3deg); box-shadow: 0 0 48px rgba(255,80,120,0.7), 0 0 0 2px rgba(255,80,120,0.5) inset !important; }
-[data-theme="light"] .brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(200,16,46,0.18) 0%, var(--slate-30) 70%) !important; }
+[data-theme="light"] .brand-mark--img { background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.18) 0%, var(--slate-30) 70%) !important; }
 
 /* Logo final : grande image rectangulaire, sort du header */
 .site-header .brand .brand-mark--final {

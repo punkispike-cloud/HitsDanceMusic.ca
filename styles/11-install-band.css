@@ -9,8 +9,8 @@
   align-items: center;
   padding: 28px 32px;
   border-radius: 22px;
-  background: linear-gradient(135deg, rgba(200,16,46,0.18), rgba(124,68,168,0.18));
-  border: 1px solid rgba(200,16,46,0.35);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(124,68,168,0.18));
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -19,7 +19,7 @@
   position: absolute;
   inset: -40% -10% auto auto;
   width: 320px; height: 320px;
-  background: radial-gradient(circle, rgba(200,16,46,0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.35), transparent 70%);
   filter: blur(40px);
   pointer-events: none;
 }

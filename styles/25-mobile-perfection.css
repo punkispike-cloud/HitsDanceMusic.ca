@@ -350,8 +350,8 @@ html, body { overflow-x: hidden; }
 }
 @keyframes presencePulse {
   0%   { box-shadow: 0 0 0 0 var(--red-a55); }
-  70%  { box-shadow: 0 0 0 6px rgba(var(--red-glow-rgb), 0); }
-  100% { box-shadow: 0 0 0 0 rgba(var(--red-glow-rgb), 0); }
+  70%  { box-shadow: 0 0 0 6px rgba(var(--accent-glow-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0); }
 }
 
 .presence-pill {
@@ -374,7 +374,7 @@ html, body { overflow-x: hidden; }
 }
 .presence-visitors .presence-ic { color: var(--white-a70); }
 .presence-listeners {
-  background: linear-gradient(135deg, rgba(var(--red-glow-rgb), 0.28), var(--red-a12));
+  background: linear-gradient(135deg, rgba(var(--accent-glow-rgb), 0.28), var(--red-a12));
   color: #ffd6dd;
   box-shadow: inset 0 0 0 1px var(--red-a35);
 }

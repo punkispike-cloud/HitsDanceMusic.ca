@@ -41,13 +41,23 @@
 
   /* Accent de marque.
      ⚠ Deux rouges DIFFÉRENTS cohabitent ici, et ce n'est pas un accident de
-     transcription : --accent est var(--red-700) (--red-700) tandis que toute la lueur
-     est bâtie sur rgb(220,20,48) = var(--red-650) (--red-650 / --red-a*). Le mapping
-     ci-dessous préserve cet écart tel quel. La décision de les unifier — qui
-     CHANGERAIT l'apparence — appartient à l'étape 4. */
+     transcription : --accent vaut --red-700, tandis que toute la lueur est
+     bâtie sur --red-650 / --red-a* — une teinte qui n'en dérive pas. Le mapping
+     préserve cet écart tel quel. La décision de les unifier — qui CHANGERAIT
+     l'apparence — reste ouverte et appartient au porteur du projet. */
   --accent: var(--red-700);
   --accent-bright: var(--red-600);
   --accent-glow: var(--red-a42);
+
+  /* Canaux RGB de l'accent, pour les usages en rgba(var(--x), α) où l'opacité
+     varie trop pour justifier un token par palier. SANS eux, un composant qui
+     écrit les canaux en dur reste ROUGE sur une marque dorée : l'accent ne le
+     traverse pas. Ces trois-là sont surchargés par styles/brand.css, qui les
+     dérive des couleurs de la marque — c'est ce qui rend la lueur et les halos
+     réellement paramétrables. */
+  --accent-rgb: 200, 16, 46;
+  --accent-bright-rgb: 232, 25, 46;
+  --accent-glow-rgb: var(--red-glow-rgb);
 
   /* ⚠ NOMS HÉRITÉS TROMPEURS : ces quatre tokens s'appellent « amber » mais
      contiennent des ROUGES depuis le changement de marque. Ils sont conservés
@@ -138,7 +148,7 @@ body {
 }
 
 ::selection {
-  background: rgba(var(--red-glow-rgb), 0.28);
+  background: rgba(var(--accent-glow-rgb), 0.28);
   color: var(--ink);
 }
 
@@ -452,7 +462,7 @@ body.is-scrolled .site-header {
   height: 9px;
   border-radius: 999px;
   background: var(--amber-soft);
-  box-shadow: 0 0 0 1px rgba(255, 220, 100, 0.3), 0 0 0 6px rgba(var(--red-glow-rgb), 0.20);
+  box-shadow: 0 0 0 1px rgba(255, 220, 100, 0.3), 0 0 0 6px rgba(var(--accent-glow-rgb), 0.20);
   animation: livePulse 2.4s var(--ease-soft) infinite;
 }
 
@@ -463,7 +473,7 @@ body.is-scrolled .site-header {
     transform: scale(1);
     box-shadow:
       0 0 0 1px rgba(255, 220, 100, 0.3),
-      0 0 0 6px rgba(var(--red-glow-rgb), 0.20);
+      0 0 0 6px rgba(var(--accent-glow-rgb), 0.20);
   }
   50% {
     opacity: 0.85;
@@ -569,7 +579,7 @@ h2 {
   display: flex;
   flex-direction: column;
   width: min(100%, 52rem);
-  border: 1px solid rgba(var(--red-glow-rgb), 0.30);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.30);
   border-radius: var(--radius-xl);
   overflow: hidden;
   background:
@@ -615,8 +625,8 @@ h2 {
   color: var(--gray-0);
   cursor: pointer;
   box-shadow:
-    0 0 0 5px rgba(var(--red-glow-rgb), 0.15),
-    0 8px 28px rgba(var(--red-glow-rgb), 0.45);
+    0 0 0 5px rgba(var(--accent-glow-rgb), 0.15),
+    0 8px 28px rgba(var(--accent-glow-rgb), 0.45);
   transition:
     transform var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-soft);
@@ -625,12 +635,12 @@ h2 {
 .play-button:hover {
   transform: scale(1.08);
   box-shadow:
-    0 0 0 8px rgba(var(--red-glow-rgb), 0.20),
-    0 12px 40px rgba(var(--red-glow-rgb), 0.65);
+    0 0 0 8px rgba(var(--accent-glow-rgb), 0.20),
+    0 12px 40px rgba(var(--accent-glow-rgb), 0.65);
 }
 
 .play-button:focus-visible {
-  box-shadow: var(--focus-ring), 0 12px 40px rgba(var(--red-glow-rgb), 0.65);
+  box-shadow: var(--focus-ring), 0 12px 40px rgba(var(--accent-glow-rgb), 0.65);
   outline: none;
 }
 
@@ -646,8 +656,8 @@ h2 {
   }
   50% {
     box-shadow:
-      0 0 0 12px rgba(var(--red-glow-rgb), 0.09),
-      0 12px 42px rgba(var(--red-glow-rgb), 0.70);
+      0 0 0 12px rgba(var(--accent-glow-rgb), 0.09),
+      0 12px 42px rgba(var(--accent-glow-rgb), 0.70);
   }
 }
 
@@ -711,7 +721,7 @@ h2 {
   border: 0;
   border-radius: 50%;
   background: var(--gray-0);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(232, 25, 46, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(var(--accent-bright-rgb), 0.6);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -720,7 +730,7 @@ h2 {
 .volume-control input[type="range"]:focus-visible::-webkit-slider-thumb,
 .volume-control input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.12);
-  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(232, 25, 46, 0.95);
+  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(var(--accent-bright-rgb), 0.95);
 }
 
 .volume-control input[type="range"]::-moz-range-thumb {
@@ -729,7 +739,7 @@ h2 {
   border: 0;
   border-radius: 50%;
   background: var(--gray-0);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(232, 25, 46, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px var(--black-a55), 0 0 14px rgba(var(--accent-bright-rgb), 0.6);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -738,7 +748,7 @@ h2 {
 .volume-control input[type="range"]:focus-visible::-moz-range-thumb,
 .volume-control input[type="range"]:active::-moz-range-thumb {
   transform: scale(1.12);
-  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(232, 25, 46, 0.95);
+  box-shadow: 0 0 0 1px var(--black-a50), 0 2px 14px var(--black-a65), 0 0 22px rgba(var(--accent-bright-rgb), 0.95);
 }
 
 .volume-control input[type="range"]::-webkit-slider-runnable-track {
@@ -898,7 +908,7 @@ h2 {
   padding: var(--space-6) var(--space-6);
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.02) 0%, rgba(var(--red-glow-rgb), 0.02) 100%);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.02) 0%, rgba(var(--accent-glow-rgb), 0.02) 100%);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-rest);
@@ -1064,9 +1074,9 @@ h2 {
   border-radius: 50%;
   border: 1px solid var(--red-a07);
   box-shadow:
-    0 0 0 28px rgba(var(--red-glow-rgb), 0.04),
-    0 0 0 56px rgba(var(--red-glow-rgb), 0.025),
-    0 0 0 84px rgba(var(--red-glow-rgb), 0.01);
+    0 0 0 28px rgba(var(--accent-glow-rgb), 0.04),
+    0 0 0 56px rgba(var(--accent-glow-rgb), 0.025),
+    0 0 0 84px rgba(var(--accent-glow-rgb), 0.01);
   pointer-events: none;
 }
 
@@ -1238,7 +1248,7 @@ h2 {
   font-size: 1.1rem;
   letter-spacing: 0.02em;
   border-left: 4px solid var(--amber);
-  background: rgba(var(--red-glow-rgb), 0.04);
+  background: rgba(var(--accent-glow-rgb), 0.04);
   transition: background 0.2s var(--ease-soft);
 }
 
@@ -1275,7 +1285,7 @@ h2 {
   list-style: none;
   display: grid;
   gap: 0;
-  border-left: 2px solid rgba(var(--red-glow-rgb), 0.20);
+  border-left: 2px solid rgba(var(--accent-glow-rgb), 0.20);
 }
 
 .slot-list li {
@@ -1291,7 +1301,7 @@ h2 {
 }
 
 .slot-list li:hover {
-  background: rgba(var(--red-glow-rgb), 0.04);
+  background: rgba(var(--accent-glow-rgb), 0.04);
 }
 
 .slot-list li::before {
