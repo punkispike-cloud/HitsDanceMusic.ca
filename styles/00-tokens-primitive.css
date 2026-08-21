@@ -83,6 +83,10 @@
   --gray-820: #242424;           /*  1x — = --surface-warm (dark)              */
   --gray-800: #2a2a2a;           /*  2x                                        */
   --gray-500: #9a9a9a;           /*  1x — = --muted (dark)                     */
+  --gray-930: #141414;           /*  = --ink (light)                           */
+  --gray-700: #525252;           /*  = --muted (light) — AA vérifié            */
+  --gray-140: #e8e8e8;           /*  = --vinyl (light)                         */
+  --gray-120: #ececec;           /*  = --surface-warm (light)                  */
   --gray-100: #f0f0f0;           /*  3x — = --night (light)                    */
   --gray-80: #f3f3f3;            /*  2x — = --surface (light)                  */
   --gray-60: #f5f5f5;            /*  2x — = --ink (dark) ET --surface (light)  */
@@ -128,9 +132,19 @@
   --white-a18: rgba(255, 255, 255, 0.18);   /* 13x                              */
   --white-a20: rgba(255, 255, 255, 0.2);    /*  6x                              */
   --white-a70: rgba(255, 255, 255, 0.7);    /*  7x — texte secondaire sur image */
+  /* Voiles quasi opaques — surfaces flottantes du thème clair (mini-lecteur,
+     toasts, nav) qui doivent laisser deviner le fond sans le laisser lire. */
+  --white-a92: rgba(255, 255, 255, 0.92);
+  --white-a95: rgba(255, 255, 255, 0.95);
+  --white-a97: rgba(255, 255, 255, 0.97);
 
-  /* Ombres et voiles sombres. */
+  /* Ombres et voiles sombres. Les paliers très faibles (03→13) servent surtout
+     au thème clair, où le voile passe du blanc au noir. */
+  --black-a03: rgba(0, 0, 0, 0.03);
+  --black-a04: rgba(0, 0, 0, 0.04);
+  --black-a08: rgba(0, 0, 0, 0.08);
   --black-a10: rgba(0, 0, 0, 0.1);
+  --black-a13: rgba(0, 0, 0, 0.13);
   --black-a12: rgba(0, 0, 0, 0.12);         /*  6x                              */
   --black-a15: rgba(0, 0, 0, 0.15);
   --black-a18: rgba(0, 0, 0, 0.18);

@@ -365,7 +365,7 @@ html, body { overflow-x: hidden; }
   line-height: 1;
   white-space: nowrap;
   background: var(--white-a05);
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--white-a92);
 }
 .presence-ic {
   flex: 0 0 auto;

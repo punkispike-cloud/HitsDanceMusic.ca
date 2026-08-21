@@ -150,6 +150,32 @@ for (const name of PAGES) {
    (`.player-panel--signature` et `.player-2026` cohabitent sur `#player`, cf.
    §2 du plan « composants redéfinis N× »). C'est la zone la plus exposée aux
    étapes 4 (consolidation des couleurs) et 5 (dé-importantage). */
+/* Thème clair — capturé alors qu'il n'est PAS activable par l'auditeur.
+   `assets/theme-init.js` fige data-theme="dark" avant le rendu et js/theme.js le
+   réapplique : le CSS de styles/15- et 27- ne s'exécute donc jamais en vrai.
+   C'était du code mort non testé — un piège pour qui voudrait le dégeler.
+
+   On force l'attribut APRÈS le boot, ce qui suffit puisque toutes les règles
+   sont scopées `:root[data-theme="light"]`. Le thème est ainsi prouvé rendu
+   correctement, et son dégel devient une décision produit à une ligne plutôt
+   qu'un saut dans le vide. */
+for (const name of ["index", "contact"]) {
+  test(`page ${name} — thème clair (dormant mais vérifié)`, async ({ page }) => {
+    await openPage(page, name);
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "light";
+      document.documentElement.dataset.themeMode = "light";
+    });
+    await page.waitForTimeout(200);
+    await settle(page);
+    await expect(page).toHaveScreenshot(`${name}-light.png`, {
+      fullPage: true,
+      mask: masks(page),
+      timeout: 15_000,
+    });
+  });
+}
+
 test("index — player en lecture (is-playing)", async ({ page }) => {
   await openPage(page, "index");
   // Le contrat exact, relevé sur les sélecteurs `.X.is-playing` de styles/ et sur

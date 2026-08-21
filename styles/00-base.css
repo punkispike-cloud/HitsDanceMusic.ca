@@ -1,7 +1,8 @@
 /* =====================================================
    Fix global : l'attribut HTML [hidden] doit toujours cacher l'élément.
-   Sans, n'importe quelle règle .x { display: flex/grid/... }
+   Sans le !important, n'importe quelle règle .x { display: flex/grid/... }
    écrasait display:none et empêchait les menus/panneaux de se fermer.
+   C'est l'un des rares !important légitimes — ne pas le retirer.
    ===================================================== */
 [hidden] { display: none !important; }
 
@@ -68,6 +69,12 @@
   --amber-soft: var(--red-550);
   --amber-glow: var(--red-a35);
   --amber-slot: var(--red-600);
+
+  /* Étage 3 — tokens de COMPOSANT : dérivés des deux couches ci-dessus pour un
+     usage précis. Celui-ci existe parce que .page-hero mélangeait un token
+     sémantique (--night) et une primitive figée : en thème clair, son dégradé
+     partait du clair pour finir en NOIR. */
+  --hero-gradient-end: var(--gray-975);
 
   /* Ombres — la géométrie reste littérale (elle n'est pas thématisable),
      seule la couleur est tokenisée. */
@@ -521,7 +528,7 @@ body.is-scrolled .site-header {
   font-weight: 800;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--white-a92);
   margin-bottom: 0.35em;
 }
 
@@ -1472,7 +1479,7 @@ h2 {
 
 .page-hero {
   padding: clamp(64px, 10vw, 120px) clamp(18px, 6vw, 80px);
-  background: linear-gradient(160deg, var(--night) 0%, var(--gray-975) 100%);
+  background: linear-gradient(160deg, var(--night) 0%, var(--hero-gradient-end) 100%);
   color: var(--ink);
 }
 

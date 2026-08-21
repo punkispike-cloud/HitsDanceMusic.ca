@@ -40,15 +40,15 @@
   --bg: var(--gray-40);
   --bg-elevated: var(--gray-0);
   --surface: var(--gray-80);
-  --surface-glass: rgba(0,0,0,0.03);
-  --surface-warm: #ececec;
-  --vinyl: #e8e8e8;
-  --ink: #141414;
+  --surface-glass: var(--black-a03);
+  --surface-warm: var(--gray-120);
+  --vinyl: var(--gray-140);
+  --ink: var(--gray-930);
   /* WCAG 2.2 AA ≥4.5:1 sur --bg et --surface du thème clair — vérifié par
      scripts/check-contrast.mjs (couples « light »). */
-  --muted: #525252;
+  --muted: var(--gray-700);
   --line: var(--black-a10);
-  --gold-border: rgba(0,0,0,0.13);
+  --gold-border: var(--black-a13);
   --night: var(--gray-100);
   --shadow: 0 28px 80px var(--black-a18);
   --shadow-rest: 0 4px 24px var(--black-a10);
@@ -56,11 +56,11 @@
 }
 :root[data-theme="light"] body { background: var(--bg); color: var(--ink); }
 :root[data-theme="light"] .mini-player {
-  background: rgba(255,255,255,0.92);
+  background: var(--white-a92);
   color: var(--ink);
 }
 :root[data-theme="light"] .mini-show { color: var(--accent); }
-:root[data-theme="light"] .toast { background: rgba(255,255,255,0.95); color: var(--ink); }
+:root[data-theme="light"] .toast { background: var(--white-a95); color: var(--ink); }
 :root[data-theme="light"] .history-drawer { background: var(--gray-0); color: var(--ink); }
 :root[data-theme="light"] .search-box,
 :root[data-theme="light"] .sleep-menu { background: var(--gray-0); color: var(--ink); }

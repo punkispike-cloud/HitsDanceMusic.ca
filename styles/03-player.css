@@ -260,7 +260,7 @@
 }
 
 .player-status {
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--white-a92);
   font-size: 0.86rem;
   font-weight: 700;
   white-space: nowrap;
