@@ -8,7 +8,10 @@ desktop.ini
 .env.local
 .vscode/
 .idea/
-.claude/
+# Config Claude Code : local par machine, SAUF les skills du projet, qui sont
+# du savoir d'équipe (runbooks exécutables) et doivent suivre le dépôt.
+.claude/*
+!.claude/skills/
 
 # Documents privés En Ondes (prix, contrats, business) — NE JAMAIS pousser
 _private/

@@ -126,6 +126,13 @@ export const env = {
   STREAM_SILENCE_MIN: intOpt("STREAM_SILENCE_MIN", 30), // titre inchangé > N min ⇒ dead-air suspecté
   ALERT_DEBOUNCE_MIN: intOpt("ALERT_DEBOUNCE_MIN", 60), // pas de ré-alerte avant N min
 
+  // Distribution TuneIn (API AIR) — identifiants du PARTENAIRE, communs à
+  // toutes les radios, obtenus auprès de broadcaster-support@tunein.com.
+  // L'id de station, lui, est par radio : radios.distribution.tuneinStationId.
+  // Inactif tant que les deux ne sont pas fournis (aucun appel sortant).
+  TUNEIN_PARTNER_ID: optional("TUNEIN_PARTNER_ID", ""),
+  TUNEIN_PARTNER_KEY: optional("TUNEIN_PARTNER_KEY", ""),
+
   // Sentry (monitoring d'erreurs) — inactif tant que le DSN n'est pas fourni.
   SENTRY_DSN: optional("SENTRY_DSN", ""),
 
