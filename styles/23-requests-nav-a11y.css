@@ -10,12 +10,12 @@
   padding: clamp(22px, 3vw, 40px);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(220,20,48,0.18), transparent 60%),
+    radial-gradient(circle at 0% 0%, rgba(var(--accent-glow-rgb), 0.18), transparent 60%),
     linear-gradient(160deg, rgba(20,18,22,0.95), rgba(10,10,10,0.95));
-  border: 1px solid rgba(220,20,48,0.28);
-  box-shadow: 0 30px 70px -30px rgba(220,20,48,0.5);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.28);
+  box-shadow: 0 30px 70px -30px rgba(var(--accent-glow-rgb), 0.5);
 }
-.requests-text h2 { margin: 8px 0 12px; font-size: clamp(1.4rem, 2.5vw, 2rem); color: #fff; }
+.requests-text h2 { margin: 8px 0 12px; font-size: clamp(1.4rem, 2.5vw, 2rem); color: var(--gray-0); }
 .requests-text p { margin: 0; color: rgba(255,255,255,0.78); font-size: 1rem; line-height: 1.55; }
 .requests-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .requests-actions .button { white-space: nowrap; }
@@ -32,14 +32,14 @@
   padding: 16px 18px;
   border-radius: 14px;
   background: rgba(15,15,18,0.85);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--white-a08);
   text-decoration: none; color: inherit;
   transition: transform .25s ease, border-color .25s ease, background .25s ease;
 }
-.stream-chip:hover { transform: translateY(-2px); border-color: rgba(220,20,48,0.5); background: rgba(20,18,22,0.95); }
+.stream-chip:hover { transform: translateY(-2px); border-color: rgba(var(--accent-glow-rgb), 0.5); background: rgba(20,18,22,0.95); }
 .stream-chip-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
 .stream-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.stream-chip-text strong { color: #fff; font-size: 0.98rem; }
+.stream-chip-text strong { color: var(--gray-0); font-size: 0.98rem; }
 .stream-chip-text span { color: rgba(255,255,255,0.72); font-size: 0.82rem; }
 
 @media (max-width: 760px) {
@@ -47,9 +47,9 @@
   .requests-actions { flex-direction: column; align-items: stretch; }
   .requests-actions .button { width: 100%; justify-content: center; }
   /* Hero mobile : degrade doux entre image et contenu */
-  .hero-image { mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%); }
+  .hero-image { mask-image: linear-gradient(180deg, var(--gray-1000) 0%, var(--gray-1000) 88%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, var(--gray-1000) 0%, var(--gray-1000) 88%, transparent 100%); }
   /* Menu mobile : fond plus opaque + ombre */
-  .site-header.is-open .main-nav { background: rgba(8,8,10,0.99); box-shadow: 0 30px 60px rgba(0,0,0,0.6); }
+  .site-header.is-open .main-nav { background: rgba(8,8,10,0.99); box-shadow: 0 30px 60px var(--black-a60); }
 }
 
 /* =====================================================
@@ -61,17 +61,17 @@
   left: 12px;
   z-index: 10000;
   padding: 12px 18px;
-  background: #dc1430;
-  color: #fff;
+  background: rgb(var(--accent-glow-rgb));
+  color: var(--gray-0);
   font-weight: 700;
   text-decoration: none;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px var(--black-a50);
   transition: top .2s ease;
 }
 .skip-link:focus {
   top: 12px;
-  outline: 3px solid #fff;
+  outline: 3px solid var(--gray-0);
   outline-offset: 2px;
 }
 
@@ -84,8 +84,8 @@ main:focus { outline: none; }
   font-size: 0.78rem;
   font-weight: 600;
   color: rgba(255,255,255,0.85);
-  background: rgba(220,20,48,0.18);
-  border: 1px solid rgba(220,20,48,0.4);
+  background: rgba(var(--accent-glow-rgb), 0.18);
+  border: 1px solid rgba(var(--accent-glow-rgb), 0.4);
   border-radius: 999px;
 }
 .mini-session {
@@ -126,11 +126,11 @@ main:focus { outline: none; }
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f0f0f0;
+  border: 1px solid var(--white-a20);
+  background: var(--white-a06);
+  color: var(--gray-100);
 }
-.req-status--new { border-color: rgba(220, 20, 48, 0.5); }
+.req-status--new { border-color: rgba(var(--accent-glow-rgb), 0.5); }
 .req-status--read { border-style: dashed; }
 .req-status--queued { border-color: rgba(42, 122, 106, 0.55); }
 .req-status--played { border-color: rgba(42, 122, 106, 0.75); background: rgba(42, 122, 106, 0.15); }

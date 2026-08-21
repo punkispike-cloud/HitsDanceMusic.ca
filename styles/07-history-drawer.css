@@ -32,7 +32,7 @@
   cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.icon-btn:hover { background: rgba(255,255,255,0.08); }
+.icon-btn:hover { background: var(--white-a08); }
 .icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .history-list {
   list-style: none;
@@ -75,7 +75,7 @@
   border-radius: 50%;
   transition: background 0.2s, color 0.2s;
 }
-.history-search:hover { color: var(--accent-bright); background: rgba(255,255,255,0.05); }
+.history-search:hover { color: var(--accent-bright); background: var(--white-a05); }
 .history-empty {
   text-align: center; color: var(--muted); font-size: 0.85rem;
   padding: 30px 10px;

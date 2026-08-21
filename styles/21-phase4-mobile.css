@@ -4,7 +4,7 @@
 
 /* sr-only : visible uniquement par les lecteurs d'écran */
 .sr-only {
-  position: absolute !important;
+  position: absolute;
   width: 1px; height: 1px;
   padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0);
@@ -38,8 +38,8 @@
 .mini-player button:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px #000,
-    0 0 0 4px var(--dynamic-accent, #c8102e);
+    0 0 0 2px var(--gray-1000),
+    0 0 0 4px var(--dynamic-accent, var(--accent));
 }
 
 /* =====================================================

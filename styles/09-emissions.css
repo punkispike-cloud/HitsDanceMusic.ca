@@ -14,14 +14,14 @@
   display: flex; flex-direction: column; gap: 10px;
   transition: transform 0.3s var(--ease-out), border-color 0.2s;
 }
-.show-detail:hover { transform: translateY(-3px); border-color: rgba(220,20,48,0.4); }
+.show-detail:hover { transform: translateY(-3px); border-color: rgba(var(--accent-glow-rgb), 0.4); }
 .show-detail .badge {
   align-self: flex-start;
   font-size: 0.7rem; font-weight: 800;
   letter-spacing: 0.08em; text-transform: uppercase;
   padding: 4px 10px;
   border-radius: 999px;
-  color: #fff;
+  color: var(--gray-0);
   background: var(--accent);
 }
 .show-detail h3 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
@@ -42,7 +42,7 @@
   color: var(--muted);
   font-style: italic;
 }
-.slot-list li.is-now .slot-host { color: rgba(255,255,255,0.7); }
+.slot-list li.is-now .slot-host { color: var(--white-a70); }
 
 /* === Bouton install PWA (apparaît si supporté) === */
 #installPwaBtn { display: none; }
