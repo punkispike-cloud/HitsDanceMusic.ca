@@ -16,6 +16,8 @@
     "verify:system": "node scripts/verify-system.mjs both",
     "verify:rls-cutover": "node scripts/verify-rls-cutover.mjs",
     "verify:stripe": "node scripts/verify-stripe.mjs https://patient-endurance-production-21c8.up.railway.app",
+    "check:stream": "node scripts/check-stream.mjs",
+    "check:migrations": "node api/scripts/check-migrations.mjs",
     "check:nginx-deny": "node scripts/check-nginx-deny.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:skills": "node scripts/check-skills.mjs",

@@ -41,6 +41,10 @@ jobs:
       # bindRequestDb pose la GUC). Activer DATABASE_URL=enondes_app seulement après
       # npm run test:rls vert sur une base jetable — pas encore en CI.
       - run: RLS_STRICT=1 npm run tenant:guard
+      # Garde des migrations : une migration destructive (DROP TABLE/COLUMN,
+      # DELETE, TRUNCATE, ALTER … TYPE) doit livrer son api/migrations/down/.
+      # Vert aujourd'hui : aucune des 32 ne détruit de donnée.
+      - run: npm run migrations:guard
 
   frontend-unit:
     name: Site (tests unitaires)
@@ -67,10 +71,30 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Smoke accueil + schedule API
+      # Inclut tests/smoke/player.spec.mjs (parcours auditeur, flux SIMULÉ donc
+      # sans dépendance à l'hébergeur — doit rester vert en permanence).
+      - name: Smoke accueil + schedule API + parcours lecture
         run: npx playwright test --config=tests/smoke/playwright.config.mjs
         env:
           SMOKE_API_URL: https://patient-endurance-production-21c8.up.railway.app
+
+  stream-health:
+    name: Santé du flux réel (hébergeur — informatif)
+    runs-on: ubuntu-latest
+    # NON BLOQUANT, et c'est délibéré : ce job mesure l'hébergeur du flux, pas
+    # notre code. Un rouge ici veut dire « appeler AsuraHosting », jamais
+    # « corriger le dépôt » — le faire bloquer un merge rendrait la CI otage
+    # d'un tiers déjà mesuré instable (~10 % de sous-livraison).
+    # Le pendant bloquant est le parcours lecture du job `smoke` (flux simulé).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Pur Node, zéro dépendance → pas de npm ci.
+      - name: Mesurer le débit réellement livré (ratio audio/horloge)
+        run: node scripts/check-stream.mjs
 
   admin:
     name: Admin (typecheck · test · build)

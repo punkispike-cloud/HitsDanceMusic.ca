@@ -81,8 +81,11 @@ const checks = [
   {
     name: "Webhook Stripe /v1/webhooks/stripe (gated safe)",
     run: async () => {
-      // POST attendu : 503 = stripe_disabled (scaffold safe tant que
-      // STRIPE_WEBHOOK_SECRET absent). On ne vérifie jamais un payload non signé.
+      // POST non signé attendu. Deux états sains, selon la configuration :
+      //   503 = stripe_disabled (STRIPE_WEBHOOK_SECRET absent — scaffold safe)
+      //   400 = configuré et la signature manquante est REJETÉE (le bon réflexe)
+      // Tout autre code (200 surtout) voudrait dire qu'un payload non signé a
+      // été accepté. On ne fabrique jamais de signature ici.
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), TIMEOUT);
       try {
@@ -92,7 +95,7 @@ const checks = [
           headers: { "content-type": "application/json" },
           body: "{}",
         });
-        return p.status === 503;
+        return p.status === 503 || p.status === 400;
       } catch {
         return false;
       } finally {
@@ -116,6 +119,32 @@ for (const c of checks) {
     } catch { /* ignore */ }
   }
   console.log(`  ${ok ? "✅" : "❌"}  ${c.name}${extra}`);
+}
+
+/* Armement de l'observabilité — AVERTISSEMENT, pas échec (audit 2026-08-21).
+   Ce script répond à « le déploiement est-il fonctionnel ? » ; c'est
+   pre-go-live.mjs (check #9) qui répond à « peut-on mettre en ondes ? » et qui
+   BLOQUE dessus. Le distinguer évite de rendre le job staging rouge en
+   permanence : une vérification toujours rouge finit par être ignorée, ce qui
+   est précisément le mécanisme qui a laissé l'angle mort s'installer. */
+try {
+  const h = await get("/health");
+  const j = h.json;
+  if (j && typeof j === "object" && typeof j.alerts === "boolean") {
+    if (!j.alerts) {
+      console.log(
+        j.monitor
+          ? "\n  ⚠️   Observabilité : surveillance ACTIVE sans canal d'alerte — un dead-air ne préviendra personne (RESEND_API_KEY)."
+          : "\n  ⚠️   Observabilité : ni surveillance ni canal d'alerte (MONITOR_ENABLED + RESEND_API_KEY).",
+      );
+    }
+    if (!j.sentry) console.log("  ⚠️   Observabilité : SENTRY_DSN absent — exceptions non capturées.");
+    if (j.alerts && j.sentry) console.log("\n  ✅  Observabilité armée (alertes + Sentry).");
+  } else {
+    console.log("\n  ⚠️   /health n'expose pas monitor/alerts/sentry — API antérieure au correctif, à redéployer.");
+  }
+} catch {
+  /* /health déjà couvert par le premier check — on n'ajoute pas de bruit ici. */
 }
 
 console.log(

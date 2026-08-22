@@ -16,8 +16,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
     "vapid": "node -e \"const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)\"",
-    "test": "node --test --import tsx --import ./tests/_setup.ts tests/schedule.test.ts tests/jwt.test.ts tests/rbac.test.ts tests/validation.test.ts tests/tenant.test.ts tests/http-rbac.test.ts tests/stripe.test.ts tests/analytics-bus.test.ts tests/analytics-ingest.test.ts tests/analytics-admin.test.ts tests/analytics-top-tracks.test.ts tests/beacon-limit.test.ts tests/geo-db.test.ts tests/tunein.test.ts tests/azuracast-sync.test.ts",
+    "test": "node --test --import tsx --import ./tests/_setup.ts tests/schedule.test.ts tests/jwt.test.ts tests/rbac.test.ts tests/validation.test.ts tests/tenant.test.ts tests/http-rbac.test.ts tests/stripe.test.ts tests/analytics-bus.test.ts tests/analytics-ingest.test.ts tests/analytics-admin.test.ts tests/analytics-top-tracks.test.ts tests/beacon-limit.test.ts tests/geo-db.test.ts tests/tunein.test.ts tests/azuracast-sync.test.ts tests/health.test.ts",
     "tenant:guard": "node scripts/check-tenant-queries.mjs",
+    "migrations:guard": "node scripts/check-migrations.mjs",
     "test:rls": "node scripts/test-rls.mjs"
   },
   "dependencies": {
