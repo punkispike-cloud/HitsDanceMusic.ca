@@ -167,6 +167,12 @@ function initCritical() {
       void startPlayback();
     });
   });
+  $("#heroListenCta")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    $("#player")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await startPlayback();
+    $("#playToggle")?.focus({ preventScroll: true });
+  });
 
   // Nav, contact form, ICS, history
   bindNav();

@@ -108,14 +108,43 @@ export function setPlayingUI(isPlaying, label) {
   }
   // Bandeau d'état sous le panneau (reconnexion / hors ligne). #playerBanner
   // n'existe que sur l'accueil → no-op ailleurs.
+  // Durci : on ne wipe jamais le bouton retry via textContent — label dans un
+  // span dédié, bouton créé une seule fois et réutilisé (pas de flicker).
   const banner = document.getElementById("playerBanner");
   if (banner) {
     if (s === "buffering" || s === "offline") {
       banner.hidden = false;
-      banner.textContent = label || "";
+      let labelSpan = banner.querySelector("[data-banner-label]");
+      if (!labelSpan) {
+        labelSpan = document.createElement("span");
+        labelSpan.dataset.bannerLabel = "1";
+        banner.textContent = "";
+        banner.appendChild(labelSpan);
+      }
+      labelSpan.textContent = label || "";
+      let retryBtn = banner.querySelector("[data-retry]");
+      if (s === "offline") {
+        if (!retryBtn) {
+          retryBtn = document.createElement("button");
+          retryBtn.type = "button";
+          retryBtn.dataset.retry = "1";
+          retryBtn.className = "button ghost-light btn-xs";
+          retryBtn.style.marginLeft = ".6rem";
+          retryBtn.textContent = "↻ Reconnecter";
+          retryBtn.addEventListener("click", () => void startPlayback());
+          banner.appendChild(document.createTextNode(" "));
+          banner.appendChild(retryBtn);
+        }
+        retryBtn.hidden = false;
+      } else if (retryBtn) {
+        retryBtn.hidden = true;
+      }
     } else {
       banner.hidden = true;
-      banner.textContent = "";
+      const labelSpan = banner.querySelector("[data-banner-label]");
+      if (labelSpan) labelSpan.textContent = "";
+      const retryBtn = banner.querySelector("[data-retry]");
+      if (retryBtn) retryBtn.hidden = true;
     }
   }
   const vinyl = $("#vinylDisc");
@@ -447,16 +476,26 @@ export function updateMediaSession() {
   const title = state.currentTrack ? (state.currentTrack.title || BRAND.name) : (slot.title || BRAND.name);
   const artist = state.currentTrack ? (state.currentTrack.artist || slot.host || BRAND.name) : (slot.host || "Programmation");
   const artworkSrc = state.currentCover || fallbackCoverDataUri(slot);
+  const isData = artworkSrc.startsWith("data:");
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title, artist, album: `${BRAND.name} — La radio`,
       artwork: [
-        { src: artworkSrc, sizes: "300x300", type: artworkSrc.startsWith("data:") ? "image/svg+xml" : "image/jpeg" },
+        { src: artworkSrc, sizes: "96x96", type: isData ? "image/svg+xml" : "image/jpeg" },
+        { src: artworkSrc, sizes: "128x128", type: isData ? "image/svg+xml" : "image/jpeg" },
+        { src: artworkSrc, sizes: "192x192", type: isData ? "image/svg+xml" : "image/jpeg" },
+        { src: artworkSrc, sizes: "300x300", type: isData ? "image/svg+xml" : "image/jpeg" },
+        { src: artworkSrc, sizes: "512x512", type: isData ? "image/svg+xml" : "image/jpeg" },
       ],
     });
+    try { navigator.mediaSession.playbackState = audio && !audio.paused ? "playing" : "paused"; } catch { /* noop */ }
     navigator.mediaSession.setActionHandler("play", () => void startPlayback());
     navigator.mediaSession.setActionHandler("pause", () => pausePlayback());
     navigator.mediaSession.setActionHandler("stop", () => pausePlayback());
+    // Direct live : pas de piste précédente/suivante — on neutralise pour éviter
+    // le handler par défaut du navigateur qui ferait un seek cassé.
+    try { navigator.mediaSession.setActionHandler("previoustrack", null); } catch { /* noop */ }
+    try { navigator.mediaSession.setActionHandler("nexttrack", null); } catch { /* noop */ }
   } catch { /* noop */ }
 }
 

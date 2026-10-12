@@ -3623,12 +3623,12 @@ body.is-playing-radio .site-footer {
   position: relative;
 }
 
-.install-cta {
+.install-card-actions .install-cta {
   align-items: center;
   gap: 8px;
   padding: 14px 22px;
   font-size: 1.05rem;
-  display: inline-flex !important;
+  display: inline-flex;
 }
 
 .install-hint {
@@ -4275,10 +4275,10 @@ body.is-playing-radio .site-footer {
   outline: none;
 }
 
-.btn-xs {
+.btn-xs.btn, .button.btn-xs {
+  padding: 6px 10px;
+  font-size: .72rem;
   font-weight: 700;
-  padding: 6px 10px !important;
-  font-size: .72rem !important;
 }
 
 .show-detail.is-highlighted {
@@ -6760,13 +6760,13 @@ main:focus {
     var(--white-a06) 0%,
     var(--white-a16) 50%,
     var(--white-a06) 100%);
+  color: #0000;
   background-size: 200% 100%;
   border-radius: 6px;
   min-width: 140px;
   min-height: 1em;
   animation: 1.4s ease-in-out infinite hr-skeleton-shimmer;
   display: inline-block;
-  color: #0000 !important;
 }
 
 @keyframes hr-skeleton-shimmer {
@@ -6830,11 +6830,11 @@ main:focus {
 }
 
 .site-header {
-  top: var(--hr-ticker-h) !important;
+  top: var(--hr-ticker-h);
 }
 
 .hero {
-  margin-top: calc(110px + var(--hr-ticker-h)) !important;
+  margin-top: calc(110px + var(--hr-ticker-h));
 }
 
 body.is-offline .site-header {

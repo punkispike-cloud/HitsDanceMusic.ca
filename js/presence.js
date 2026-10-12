@@ -26,8 +26,10 @@ function presenceGetUrl() {
 // initPresence n'est appelé qu'après consentement (cf. main.js → startAudience).
 
 function presenceUpdateUI(visitors, listeners) {
+  visitors = Math.max(0, Math.min(99999, visitors | 0));
+  listeners = Math.max(0, Math.min(99999, listeners | 0));
   const badge = document.getElementById("presenceBadge");
-  if (!badge) return;
+  if (badge) {
   if (!presenceBadgeShown) {
     badge.hidden = false;
     requestAnimationFrame(() => badge.classList.add("is-live"));
@@ -46,6 +48,12 @@ function presenceUpdateUI(visitors, listeners) {
     const pill = lEl.closest(".presence-pill");
     if (pill) { pill.classList.remove("is-bumped"); void pill.offsetWidth; pill.classList.add("is-bumped"); }
     presenceLastListeners = listeners;
+  }
+  }
+  const heroTxt = document.getElementById("heroProofText");
+  if (heroTxt) {
+    if (listeners > 0) heroTxt.textContent = `En direct — ${listeners} à l’écoute · ${visitors} en ligne`;
+    else if (visitors > 0) heroTxt.textContent = `En direct — ${visitors} en ligne, rejoins l’antenne`;
   }
 }
 

@@ -13,7 +13,7 @@ function popHeart(btn) {
   ], { duration: 220, easing: "ease-out" });
 }
 
-function getFavs() { return new Set(store.getJSON(STORAGE.favs, [])); }
+function getFavs() { const raw = store.getJSON(STORAGE.favs, []); return new Set(Array.isArray(raw) ? raw : []); }
 function setFavs(set) { store.setJSON(STORAGE.favs, [...set]); }
 
 function toggleFav(key, label) {
