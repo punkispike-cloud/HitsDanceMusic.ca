@@ -74,13 +74,41 @@ function cardHtml(item, kind) {
   </article>`;
 }
 
+function odPosKey(src) {
+  let h = 0;
+  for (let i = 0; i < src.length; i++) h = (h * 31 + src.charCodeAt(i)) >>> 0;
+  return "hr.odPos." + h.toString(36);
+}
+function getOdPos(src) { try { const v = parseFloat(localStorage.getItem(odPosKey(src))); return Number.isFinite(v) && v > 5 ? v : 0; } catch { return 0; } }
+function setOdPos(src, t) { try { localStorage.setItem(odPosKey(src), String(Math.floor(t))); } catch { /* noop */ } }
+
 function wirePlayButtons(root) {
   const audio = getOnDemandAudio();
+  // Reprise + vitesse + enchaîné : branchés une seule fois sur l'audio partagé.
+  if (!audio.dataset.odWired) {
+    audio.dataset.odWired = "1";
+    audio.addEventListener("loadedmetadata", () => {
+      const pos = getOdPos(audio.src);
+      if (pos > 5 && audio.duration && pos < audio.duration - 10) {
+        try { audio.currentTime = pos; } catch { /* noop */ }
+      }
+      const rate = parseFloat(localStorage.getItem("hr.odRate") || "1") || 1;
+      try { audio.playbackRate = rate; } catch { /* noop */ }
+    });
+    audio.addEventListener("timeupdate", () => {
+      if (!audio.src || audio.paused) return;
+      if (Math.floor(audio.currentTime) % 5 === 0) setOdPos(audio.src, audio.currentTime);
+    });
+    audio.addEventListener("pause", () => { if (audio.src) setOdPos(audio.src, audio.currentTime); });
+  }
   root.querySelectorAll(".od-play").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const src = btn.getAttribute("data-audio");
       if (!src) return;
+      const card = btn.closest(".od-card");
+      const slug = card?.dataset.slug || "";
+      const pos = getOdPos(src);
       const isSame = audio.src === src;
       if (isSame && !audio.paused) {
         audio.pause();
@@ -95,7 +123,9 @@ function wirePlayButtons(root) {
       if (!isSame) audio.src = src;
       audio.play().then(() => {
         btn.classList.add("playing");
-        btn.textContent = btn.textContent.replace("▶", "⏸");
+        const label = pos > 5 ? `⏸ Reprise ${fmtDur(pos)}` : btn.textContent.replace("▶", "⏸");
+        btn.textContent = label;
+        // Vitesse : cycle 1 → 1.25 → 1.5 → 2 → 1 sur double-clic droit ? Bouton dédié dans la modale.
       }).catch(() => {});
     });
   });
@@ -104,6 +134,11 @@ function wirePlayButtons(root) {
       b.classList.remove("playing");
       b.textContent = b.textContent.replace("⏸", "▶");
     });
+    // Enchaîné : joue le suivant de la liste filtrée.
+    const plays = [...root.querySelectorAll(".od-play")];
+    const idx = plays.findIndex((b) => b.getAttribute("data-audio") === audio.src);
+    const next = plays[idx + 1];
+    if (next) next.click();
   });
 }
 
@@ -123,11 +158,23 @@ function openEpisodeModal(item, kind) {
       <h2>${escapeHtml(item.title)}</h2>
       ${item.description ? `<p class="adetail-bio">${escapeHtml(item.description)}</p>` : ""}
       ${item.durationSec ? `<p class="muted">Durée : ${fmtDur(item.durationSec)}</p>` : ""}
-      ${audio ? `<button type="button" class="button primary od-modal-play" data-audio="${escapeHtml(audio)}">▶ Écouter</button>` : ""}
+      ${audio ? `<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center"><button type="button" class="button primary od-modal-play" data-audio="${escapeHtml(audio)}">▶ Écouter</button><button type="button" class="button ghost-light btn-xs od-rate" aria-label="Vitesse de lecture">Vitesse : 1x</button></div>` : ""}
       <a class="text-link" href="podcasts.html#${encodeURIComponent(item.slug)}">Lien direct</a>
     </div>`;
   overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) overlay.remove(); });
   overlay.querySelector(".adetail-close")?.addEventListener("click", () => overlay.remove());
+  const rateBtn = overlay.querySelector(".od-rate");
+  if (rateBtn) {
+    const rates = [1, 1.25, 1.5, 2];
+    let ri = rates.indexOf(parseFloat(localStorage.getItem("hr.odRate") || "1"));
+    if (ri < 0) ri = 0;
+    rateBtn.textContent = `Vitesse : ${rates[ri]}x`;
+    rateBtn.addEventListener("click", () => {
+      ri = (ri + 1) % rates.length;
+      try { localStorage.setItem("hr.odRate", String(rates[ri])); getOnDemandAudio().playbackRate = rates[ri]; } catch { /* noop */ }
+      rateBtn.textContent = `Vitesse : ${rates[ri]}x`;
+    });
+  }
   overlay.querySelector(".od-modal-play")?.addEventListener("click", () => {
     const src = overlay.querySelector(".od-modal-play")?.getAttribute("data-audio");
     if (!src) return;

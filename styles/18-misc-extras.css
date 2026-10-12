@@ -17,9 +17,10 @@
   font-size: 0.82rem;
 }
 .history-search input:focus { outline: none; border-color: var(--accent); }
-.btn-xs {
-  padding: 6px 10px !important;
-  font-size: 0.72rem !important;
+.btn-xs.btn,
+.button.btn-xs {
+  padding: 6px 10px;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 

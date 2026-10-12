@@ -22,6 +22,19 @@ export async function shareCurrent() {
     await navigator.clipboard.writeText(`${text}\n${url}`);
     toast("Lien copié dans le presse-papiers !", "ok");
   } catch {
-    toast("Partage non supporté sur ce navigateur.", "warn");
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = `${text}\n${url}`;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      toast("Lien copié dans le presse-papiers !", "ok");
+    } catch {
+      toast("Partage non supporté sur ce navigateur.", "warn");
+    }
   }
 }

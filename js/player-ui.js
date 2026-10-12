@@ -5,8 +5,9 @@ import { $, $$, safeAnimate, EASE_OUT } from "./util.js";
 import { state } from "./state.js";
 import { SLOT_TAGS } from "./schedule.js";
 import {
-  playerUIs, togglePlayback, setVolume, toggleMute,
+  playerUIs, togglePlayback, setVolume, toggleMute, startPlayback,
 } from "./player.js";
+import { toggleSleepMenu } from "./sleep.js";
 import { fallbackCoverDataUri } from "./now-playing.js";
 import { BRAND } from "./brand.generated.js";
 
@@ -58,6 +59,30 @@ export function makeFullPanelUI() {
 
   playBtn?.addEventListener("click", (e) => { e.preventDefault(); pulsePlay(playBtn); void togglePlayback(); });
   vol?.addEventListener("input", (e) => setVolume(Number(e.target.value)));
+
+  // Rangée d'actions secondaires du panneau plein : sleep + historique + partage.
+  // Créée en JS pour ne toucher ni au HTML gelé ni au CSS (classes existantes).
+  if (panel && !$("#playerActions", panel)) {
+    const row = document.createElement("div");
+    row.id = "playerActions";
+    row.className = "player-actions";
+    row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem";
+    row.innerHTML = `
+      <button type="button" class="button ghost-light btn-xs" id="sleepBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Minuteur de sommeil">🌙 Sleep</button>
+      <button type="button" class="button ghost-light btn-xs" id="fullHistoryBtn" aria-label="Historique des morceaux">🎵 Derniers morceaux</button>
+      <button type="button" class="button ghost-light btn-xs" id="fullShareBtn" aria-label="Partager le direct">↗ Partager</button>`;
+    panel.appendChild(row);
+    const sleepBtn = $("#sleepBtn", row);
+    sleepBtn?.addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      const menu = document.getElementById("sleepMenu");
+      const willOpen = menu?.hidden !== false;
+      toggleSleepMenu(btn);
+      btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+    $("#fullHistoryBtn", row)?.addEventListener("click", () => _historyHook());
+    $("#fullShareBtn", row)?.addEventListener("click", () => _shareHook());
+  }
 
   return {
     syncVolume(v, muted) {

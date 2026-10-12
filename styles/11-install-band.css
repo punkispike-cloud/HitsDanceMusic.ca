@@ -46,8 +46,8 @@
   align-items: flex-start;
   position: relative;
 }
-.install-cta {
-  display: inline-flex !important;
+.install-card-actions .install-cta {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 1.05rem;

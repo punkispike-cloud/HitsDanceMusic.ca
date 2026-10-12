@@ -92,7 +92,7 @@
     var(--white-a06) 100%);
   background-size: 200% 100%;
   animation: hr-skeleton-shimmer 1.4s ease-in-out infinite;
-  color: transparent !important;
+  color: transparent;
 }
 @keyframes hr-skeleton-shimmer {
   0%   { background-position: 200% 0; }
@@ -126,8 +126,8 @@
 }
 .hr-ticker-track { line-height: var(--hr-ticker-h); }
 
-.site-header { top: var(--hr-ticker-h) !important; }
-.hero { margin-top: calc(110px + var(--hr-ticker-h)) !important; }
+.site-header { top: var(--hr-ticker-h); }
+.hero { margin-top: calc(110px + var(--hr-ticker-h)); }
 body.is-offline .site-header { margin-top: calc(38px + var(--hr-ticker-h)); }
 
 @media (max-width: 760px) {

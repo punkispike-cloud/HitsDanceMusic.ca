@@ -113,7 +113,8 @@ export async function renderHistory() {
   const list = $("#historyList", d);
   const empty = $("#historyEmpty", d);
   try {
-    _apiTracks = await fetchRecentTracks(30);
+    const fetched = await fetchRecentTracks(30);
+    _apiTracks = Array.isArray(fetched) ? fetched : [];
   } catch {
     _apiTracks = [];
   }

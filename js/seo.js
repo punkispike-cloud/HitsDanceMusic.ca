@@ -12,21 +12,52 @@ const fmtPhone = (p) => {
 
 export function injectJsonLd() {
   if ($("#hr-jsonld")) return;
+  const base = location.origin + "/";
   const data = {
     "@context": "https://schema.org",
-    "@type": "RadioStation",
-    "name": `${BRAND.name} — La radio`,
-    "url": location.origin + "/",
-    "logo": location.origin + "/assets/favicon.svg",
-    "broadcastDisplayName": BRAND.name,
-    "broadcastTimezone": "America/Toronto",
-    "inLanguage": "fr-CA",
-    "genre": ["Dance", "House", "Hits"],
-    "telephone": fmtPhone(BRAND.contact.phone),
-    "potentialAction": {
-      "@type": "ListenAction",
-      "target": STREAM_URL,
-    },
+    "@graph": [
+      {
+        "@type": "RadioStation",
+        "name": `${BRAND.name} — La radio`,
+        "url": base,
+        "logo": location.origin + "/assets/favicon.svg",
+        "broadcastDisplayName": BRAND.name,
+        "broadcastTimezone": "America/Toronto",
+        "inLanguage": "fr-CA",
+        "genre": ["Dance", "House", "Hits"],
+        "telephone": fmtPhone(BRAND.contact.phone),
+        "potentialAction": { "@type": "ListenAction", "target": STREAM_URL },
+      },
+      {
+        "@type": "BroadcastService",
+        "name": `${BRAND.name} — Direct`,
+        "broadcastDisplayName": BRAND.name,
+        "broadcastTimezone": "America/Toronto",
+        "inLanguage": "fr-CA",
+        "broadcastAffiliateOf": { "@type": "RadioStation", "name": `${BRAND.name} — La radio` },
+        "potentialAction": { "@type": "ListenAction", "target": `${base}#player` },
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Comment écouter Hits Dance Music en direct ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Clique sur Écouter le direct sur hitsdancemusic.ca, ou ajoute la radio à ton écran d’accueil via Installer l’app. Flux MP3 192 kbps compatible mobile, voiture et enceintes." },
+          },
+          {
+            "@type": "Question",
+            "name": "Où voir la grille des émissions 2026 ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "La programmation hebdomadaire est sur la page Horaire 2026 et en un clic Ajouter à mon agenda (.ics)." },
+          },
+          {
+            "@type": "Question",
+            "name": "Comment réécouter un mix ou un podcast ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Tous les DJ sets et émissions sont sur la page Podcasts & Mixes, filtrables et partageables." },
+          },
+        ],
+      },
+    ],
   };
   const s = document.createElement("script");
   s.type = "application/ld+json";

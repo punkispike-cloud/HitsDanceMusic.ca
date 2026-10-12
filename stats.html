@@ -22,6 +22,8 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://itunes.apple.com" />
+    <link rel="dns-prefetch" href="https://cast5.asurahosting.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Syne:wght@700;800&display=swap"
       rel="stylesheet"
@@ -65,7 +67,11 @@
         <a href="animateurs.html">Équipe</a>
       </nav>
       <!--#include name="presence-badge"-->
-<!-- presence-badge retiré du visuel (compteur masqué) -->
+<!-- presence-badge : compteur anonymisé (visiteurs/auditeurs, sans IP) -->
+<div id="presenceBadge" class="presence-badge" hidden role="status" aria-live="polite" aria-label="Audience en direct">
+  <span class="presence-pill presence-listeners"><span class="presence-live-dot" aria-hidden="true"></span><strong class="presence-count" data-presence="listeners">0</strong>&nbsp;à l’écoute</span>
+  <span class="presence-pill presence-visitors"><strong class="presence-count" data-presence="visitors">0</strong>&nbsp;en ligne</span>
+</div>
 <!--#endinclude-->
       <!--#include name="header-tools"-->
       <div class="header-tools">
