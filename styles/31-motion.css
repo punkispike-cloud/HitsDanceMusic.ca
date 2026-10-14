@@ -1,0 +1,70 @@
+/* =====================================================================
+   31 — MOUVEMENT : visualiseur du direct + entrée du hero
+   Tout ce fichier ne s'active qu'en prefers-reduced-motion: no-preference.
+   Un auditeur qui a demandé moins de mouvement voit la page exactement comme
+   avant — et le filet visuel (tests/visual, joué en « reduce ») reste iso-rendu.
+   Aucune couleur littérale : tokens uniquement.
+   ===================================================================== */
+
+/* Visualiseur — canvas posé par js/visualizer.js en premier enfant de #player.
+   Hors flux (absolu) : lancer la lecture ne décale rien dans la page.
+   z-index -1 dans le contexte d'empilement du panneau (isolation) : le spectre
+   passe au-dessus du fond du player mais SOUS tout son contenu. */
+.player-2026 .p26-visualizer {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .player-2026 {
+    isolation: isolate;
+  }
+
+  .player-2026 .p26-visualizer {
+    display: block;
+    position: absolute;
+    inset: auto 0 0 0;
+    width: 100%;
+    height: 46%;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-9) var(--ease-standard);
+    /* Fondu vers le haut : les barres s'éteignent avant d'atteindre le texte. */
+    -webkit-mask-image: linear-gradient(to top, black 30%, transparent);
+            mask-image: linear-gradient(to top, black 30%, transparent);
+  }
+
+  .player-2026.is-playing .p26-visualizer {
+    opacity: 0.6;
+  }
+
+  /* Entrée du hero — cascade courte (≤ 0,4 s de décalage cumulé) pour ne pas
+     retarder la lecture. L'image de fond ne fait que « se poser » : jamais
+     d'opacité animée sur elle, c'est le candidat LCP. */
+  .hero-content > .eyebrow,
+  .hero-content > .hero-title,
+  .hero-content > .hero-copy,
+  .hero-content > .hero-proof,
+  .hero-content > .hero-cta,
+  .hero-content > .player-2026 {
+    animation: hd-rise var(--dur-9) var(--ease-decelerate) both;
+  }
+  .hero-content > .hero-title  { animation-delay: 70ms; }
+  .hero-content > .hero-copy   { animation-delay: 140ms; }
+  .hero-content > .hero-proof  { animation-delay: 200ms; }
+  .hero-content > .hero-cta    { animation-delay: 260ms; }
+  .hero-content > .player-2026 { animation-delay: 340ms; }
+
+  .hero-media .hero-image {
+    animation: hd-settle 1.8s var(--ease-decelerate) both;
+  }
+}
+
+@keyframes hd-rise {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+@keyframes hd-settle {
+  from { transform: scale(1.06); }
+}

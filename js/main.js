@@ -49,6 +49,7 @@ import { injectBottomNav } from "./bottom-nav.js";
 
 import { initUiExtras, initPhase2UX } from "./ui-extras.js";
 import { initMultiTabSync } from "./multi-tab.js";
+import { initVisualizer } from "./visualizer.js";
 
 import { initPresence } from "./presence.js";
 import { initAnalytics } from "./analytics.js";
@@ -122,6 +123,9 @@ function initCritical() {
   // Player audio + UI
   ensureAudio();
   bindAudioEvents();
+  // Avant tout startPlayback : le visualiseur doit poser le mode CORS sur
+  // l'<audio> avant la première connexion au flux.
+  initVisualizer();
   const fullUI = makeFullPanelUI();
   if (fullUI) playerUIs.add(fullUI);
   const miniUI = makeMiniPlayerUI();
