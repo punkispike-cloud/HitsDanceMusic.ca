@@ -28,6 +28,12 @@ export function setWatchSyncHook(fn) { watchSyncHook = fn; }
 let announceTrackHook = null;
 export function setAnnounceTrackHook(fn) { announceTrackHook = fn; }
 
+// Hook optionnel : un échec de démarrage que le hook sait corriger est relancé
+// aussitôt, sans faire recliquer l'auditeur. Câblé par visualizer.js, qui retire
+// le mode CORS si le flux le refuse. Renvoie true une seule fois par correction.
+let playRetryHook = null;
+export function setPlayRetryHook(fn) { playRetryHook = fn; }
+
 // Dernier état player annoncé (a11y) : on ne réannonce que sur CHANGEMENT d'état,
 // sinon « Reconnexion… (3) », « Reconnexion… (4) » spammeraient le lecteur d'écran
 // à chaque tentative du watchdog.
@@ -309,6 +315,7 @@ export async function startPlayback() {
     void requestWakeLock();
     startSessionClock();
   } catch (err) {
+    if (playRetryHook?.()) { await startPlayback(); return; }
     console.warn("[HitRadio] play error", err);
     setPlayingUI(false, "Lecture bloquée — clique à nouveau");
     toast("Lecture bloquée par le navigateur. Clique sur ▶ pour démarrer.", "warn");

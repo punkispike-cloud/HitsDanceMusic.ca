@@ -8819,6 +8819,76 @@ html, body {
   color: var(--accent-bright);
 }
 
+.player-2026 .p26-visualizer {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .player-2026 {
+    isolation: isolate;
+  }
+
+  .player-2026 .p26-visualizer {
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    width: 100%;
+    height: 46%;
+    transition: opacity var(--dur-9) var(--ease-standard);
+    display: block;
+    position: absolute;
+    inset: auto 0 0;
+    -webkit-mask-image: linear-gradient(to top, #000 30%, #0000);
+    mask-image: linear-gradient(to top, #000 30%, #0000);
+  }
+
+  .player-2026.is-playing .p26-visualizer {
+    opacity: .6;
+  }
+
+  .hero-content > .eyebrow, .hero-content > .hero-title, .hero-content > .hero-copy, .hero-content > .hero-proof, .hero-content > .hero-cta, .hero-content > .player-2026 {
+    animation: hd-rise var(--dur-9) var(--ease-decelerate) both;
+  }
+
+  .hero-content > .hero-title {
+    animation-delay: 70ms;
+  }
+
+  .hero-content > .hero-copy {
+    animation-delay: .14s;
+  }
+
+  .hero-content > .hero-proof {
+    animation-delay: .2s;
+  }
+
+  .hero-content > .hero-cta {
+    animation-delay: .26s;
+  }
+
+  .hero-content > .player-2026 {
+    animation-delay: .34s;
+  }
+
+  .hero-media .hero-image {
+    animation: hd-settle 1.8s var(--ease-decelerate) both;
+  }
+}
+
+@keyframes hd-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes hd-settle {
+  from {
+    transform: scale(1.06);
+  }
+}
+
 :root {
   --accent: #c8102e;
   --accent-bright: #e8192e;
