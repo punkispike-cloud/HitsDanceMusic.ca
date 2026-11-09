@@ -105,6 +105,12 @@
   .back-to-top { bottom: 100px; right: 12px; width: 40px; height: 40px; }
 }
 
+/* Mini-lecteur affiché (bas: 64 px + ~66 px de haut) : le bouton « remonter »
+   le recouvrait (son ✕ en particulier). On le pose juste au-dessus. */
+@media (max-width: 760px) {
+  body:has(#miniPlayer.is-shown) .back-to-top { bottom: calc(142px + env(safe-area-inset-bottom, 0px)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hr-ticker-track { animation: none; padding-left: 0; }
   .hr-reveal { opacity: 1; transform: none; }

@@ -1,6 +1,6 @@
 /* Hits Dance Music — Service Worker
    Cache-first pour le shell statique. NE jamais cacher le flux audio. */
-const CACHE = "hitradio-6cbedfa93647";
+const CACHE = "hitradio-12bc9d7fb91b";
 /* SHELL — liste des ressources précachées pour l'offline.
    ⚠ Maintenance manuelle : ce tableau est la source unique du précache.
    build-sw.mjs en rehash le contenu (→ bump auto de CACHE) et avertit si un
@@ -66,6 +66,7 @@ const SHELL = [
   "./js/pip.js",
   "./js/dynamic-accent.js",
   "./js/emoji-float.js",
+  "./js/icons.js",
   "./js/rails.js",
   "./js/weather.js",
   "./js/bottom-nav.js",
@@ -204,6 +205,11 @@ self.addEventListener("fetch", (event) => {
           return res;
         }).catch(async () => {
           if (cached) return cached;
+          // Hors ligne : le HTML réclame styles.bundle.css?v=<hash> (empreinte
+          // posée par build-html) alors que le précache stocke l'URL nue. Repli
+          // ignoreSearch UNIQUEMENT ici — en ligne, l'empreinte force le CSS neuf.
+          const loose = await cache.match(req, { ignoreSearch: true });
+          if (loose) return loose;
           return Response.error();
         });
         return cached || network;

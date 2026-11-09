@@ -21,6 +21,10 @@
 .header-tool:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .install-pwa-btn { display: none; }
 .install-pwa-btn.is-available { display: inline-flex; color: var(--accent-text); border-color: var(--accent); animation: installPulse 2.4s ease-in-out infinite; }
+/* Le gros bouton du bloc « App mobile » partage la classe install-pwa-btn :
+   la règle ci-dessus (pensée pour l'icône de l'en-tête) lui donnait un texte
+   rouge sur son fond rouge. Texte blanc = 7:1 sur --accent-btn. */
+.button.primary.install-cta.is-available { color: var(--gray-0); }
 @keyframes installPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.45); }
   50% { box-shadow: 0 0 0 8px rgba(var(--accent-rgb), 0); }

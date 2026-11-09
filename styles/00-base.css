@@ -501,7 +501,7 @@ body.is-scrolled .site-header {
 }
 
 .eyebrow.light {
-  color: var(--amber-slot);
+  color: var(--accent-text); /* --amber-slot brut : 4,4:1 */
 }
 
 .eyebrow span:not(.eyebrow-live-dot) {
@@ -908,7 +908,7 @@ button.text-link {
 }
 
 .text-link.light {
-  color: var(--amber-slot);
+  color: var(--accent-text); /* --amber-slot brut : sous le AA */
 }
 
 /* Sections partagées */
@@ -1166,8 +1166,9 @@ button.text-link {
   margin-bottom: var(--space-5);
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(145deg, var(--gray-800), var(--vinyl));
-  color: var(--amber-soft);
+  /* départ #1c1c1c (au lieu de #2a2a2a) + --accent-text : initiales à 5:1 (AA) */
+  background: linear-gradient(145deg, var(--gray-880), var(--vinyl));
+  color: var(--accent-text);
   font-weight: 900;
   font-size: 0.88rem;
   letter-spacing: 0.04em;
@@ -1231,7 +1232,8 @@ button.text-link {
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.5;
-  opacity: 0.85;
+  /* plus d'opacity 0.85 : --muted est déjà calibré AAA, la double atténuation
+     le faisait retomber à 5,6:1 sur les cartes. */
 }
 
 /* Programmation */

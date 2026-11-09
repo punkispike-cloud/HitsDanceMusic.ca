@@ -34,7 +34,7 @@ function ensureNowPlayingDrawer() {
       <div class="np-actions">
         <button type="button" class="np-play" id="npPlay">▶ Lecture</button>
         <button type="button" class="np-share" id="npShare" aria-label="Partager">🔗</button>
-        <button type="button" class="np-hist" id="npHist" aria-label="Historique"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+        <button type="button" class="np-hist" id="npHist" aria-label="Historique"><svg class="ic" width="1.15em" height="1.15em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
       </div>
     </article>`;
   document.body.appendChild(d);

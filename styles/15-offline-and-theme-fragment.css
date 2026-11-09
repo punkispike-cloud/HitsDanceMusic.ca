@@ -31,7 +31,7 @@
   width: 8px; height: 8px; border-radius: 50%;
   flex-shrink: 0;
 }
-.talent-next strong { color: var(--accent-bright); font-weight: 800; }
+.talent-next strong { color: var(--accent-text); font-weight: 800; } /* rouge brut : 3,8:1 */
 
 /* =====================================================
    Theme : light mode (override scoped)

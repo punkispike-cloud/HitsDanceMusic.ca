@@ -2,15 +2,16 @@
 
 import { $, escapeHtml, fetchWithTimeout, NET_TIMEOUTS } from "./util.js";
 import { store } from "./store.js";
+import { icon } from "./icons.js";
 
 const WEATHER_CODES = {
-  0: ["☀️", "Ciel clair"], 1: ["🌤", "Peu nuageux"], 2: ["⛅", "Partiellement nuageux"], 3: ["☁️", "Couvert"],
-  45: ["🌫", "Brouillard"], 48: ["🌫", "Brouillard givrant"],
-  51: ["🌦", "Bruine légère"], 53: ["🌦", "Bruine"], 55: ["🌧", "Bruine forte"],
-  61: ["🌧", "Pluie faible"], 63: ["🌧", "Pluie"], 65: ["🌧", "Pluie forte"],
-  71: ["🌨", "Neige faible"], 73: ["🌨", "Neige"], 75: ["❄️", "Neige forte"],
-  80: ["🌦", "Averses"], 81: ["🌧", "Averses"], 82: ["⛈", "Averses violentes"],
-  95: ["⛈", "Orage"], 96: ["⛈", "Orage grêle"], 99: ["⛈", "Orage violent"],
+  0: ["sun", "Ciel clair"], 1: ["cloudSun", "Peu nuageux"], 2: ["cloudSun", "Partiellement nuageux"], 3: ["cloud", "Couvert"],
+  45: ["cloudFog", "Brouillard"], 48: ["cloudFog", "Brouillard givrant"],
+  51: ["cloudDrizzle", "Bruine légère"], 53: ["cloudDrizzle", "Bruine"], 55: ["cloudRain", "Bruine forte"],
+  61: ["cloudRain", "Pluie faible"], 63: ["cloudRain", "Pluie"], 65: ["cloudRain", "Pluie forte"],
+  71: ["cloudSnow", "Neige faible"], 73: ["cloudSnow", "Neige"], 75: ["cloudSnow", "Neige forte"],
+  80: ["cloudDrizzle", "Averses"], 81: ["cloudRain", "Averses"], 82: ["cloudLightning", "Averses violentes"],
+  95: ["cloudLightning", "Orage"], 96: ["cloudLightning", "Orage grêle"], 99: ["cloudLightning", "Orage violent"],
 };
 const WEATHER_DEFAULT = { lat: 46.8139, lon: -71.2080, name: "Québec" };
 
@@ -78,11 +79,11 @@ export async function loadWeather() {
     const code = Number(c.weather_code);
     const temp = Number(c.temperature_2m);
     if (!Number.isFinite(temp)) throw new Error("weather payload");
-    const [emoji, label] = WEATHER_CODES[code] || ["🌡", "—"];
+    const [iconName, label] = WEATHER_CODES[code] || ["thermometer", "—"];
     host.hidden = false;
     host.title = `Météo ${geo.name} · mise à jour toutes les 10 min`;
     host.innerHTML = `
-      <span class="weather-emoji" aria-hidden="true">${emoji}</span>
+      <span class="weather-emoji" aria-hidden="true">${icon(iconName)}</span>
       <span class="weather-temp">${Math.round(temp)}°</span>
       <span class="weather-meta"><strong>${escapeHtml(geo.name)}</strong> · ${escapeHtml(label)}</span>`;
   } catch {
