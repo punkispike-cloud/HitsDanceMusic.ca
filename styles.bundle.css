@@ -8257,16 +8257,21 @@ html, body {
 }
 
 .site-header .header-play {
-  border: 1px solid rgba(var(--accent-glow-rgb), .45);
-  background: radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, var(--red-vivid) 0%, var(--red-deep-b) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-btn) 94%, var(--gray-0)) 0%, var(--accent-btn) 100%);
   width: 44px;
   height: 44px;
-  box-shadow: 0 6px 16px rgba(var(--accent-glow-rgb), .45),
-    inset 0 1px 0 #ffffff38;
+  min-height: 0;
+  box-shadow: inset 0 0 0 1px var(--white-a10),
+    0 1px 2px var(--black-a50),
+    0 8px 20px -10px rgba(var(--accent-glow-rgb), .7);
   letter-spacing: normal;
   text-transform: none;
   font: 0/0 a;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: transform, box-shadow, filter;
+  transition-duration: .18s;
+  transition-timing-function: var(--ease-out, ease-out);
+  border: 0;
   border-radius: 50%;
   justify-content: center;
   align-items: center;
@@ -8274,20 +8279,27 @@ html, body {
   margin-left: auto;
   margin-right: 10px;
   padding: 0;
-  transition: transform .18s, box-shadow .18s, filter .18s, background .25s, border-color .25s;
   display: inline-flex;
   position: relative;
   overflow: visible;
 }
 
 .site-header .header-play:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 10px 24px rgba(var(--accent-glow-rgb), .55), inset 0 1px 0 #ffffff47;
-  transform: translateY(-1px) scale(1.04);
+  filter: brightness(1.1);
+  box-shadow: inset 0 0 0 1px var(--white-a18),
+    0 1px 2px var(--black-a50),
+    0 12px 24px -10px rgba(var(--accent-glow-rgb), .85);
+  transform: translateY(-1px);
 }
 
 .site-header .header-play:active {
-  transform: translateY(0) scale(.98);
+  filter: none;
+  transform: scale(.96);
+}
+
+.site-header .header-play:focus-visible {
+  box-shadow: var(--focus-ring), 0 1px 2px var(--black-a50);
+  outline: none;
 }
 
 .site-header .header-play .hp-label, .site-header .header-play .hp-pulse {
@@ -8295,79 +8307,71 @@ html, body {
 }
 
 .site-header .header-play .hp-ico {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   color: var(--gray-0);
-  filter: drop-shadow(0 1px 1px #00000059);
 }
 
 .site-header .header-play .hp-ico svg {
-  width: 16px;
-  height: 16px;
-}
-
-.site-header .header-play .hp-ico--play svg {
-  transform: translateX(1px);
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .site-header .header-play.is-playing {
-  background: radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, var(--green-550) 0%, var(--green-850) 100%);
-  border-color: #22c55e8c;
-  box-shadow: 0 6px 18px #16a34a80, inset 0 1px #ffffff38;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-btn) 94%, var(--gray-0)) 0%, var(--accent-btn) 100%);
+  box-shadow: inset 0 0 0 1px var(--white-a18),
+    0 1px 2px var(--black-a50),
+    0 8px 20px -10px rgba(var(--accent-glow-rgb), .7);
 }
 
 .site-header .header-play:after {
   content: "";
   pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), .55);
   opacity: 0;
+  box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), .5);
   border-radius: 50%;
   transition: opacity .25s;
   position: absolute;
-  inset: -2px;
+  inset: 0;
 }
 
 .site-header .header-play.is-playing:after {
   opacity: 1;
-  animation: 1.6s ease-out infinite hpRing;
-  box-shadow: 0 0 #22c55e8c;
+  animation: 2s ease-out infinite hpRing;
 }
 
 @keyframes hpRing {
   0% {
-    box-shadow: 0 0 #22c55e73;
+    box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), .5);
   }
 
   70% {
-    box-shadow: 0 0 0 12px #22c55e00;
+    box-shadow: 0 0 0 10px rgba(var(--accent-glow-rgb), 0);
   }
 
   100% {
-    box-shadow: 0 0 #22c55e00;
+    box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0);
   }
 }
 
 @media (width <= 640px) {
   .site-header .header-play {
-    width: 42px;
-    height: 42px;
     margin-right: 6px;
-  }
-
-  .site-header .header-play .hp-ico {
-    width: 16px;
-    height: 16px;
-  }
-
-  .site-header .header-play .hp-ico svg {
-    width: 15px;
-    height: 15px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-header .header-play:after {
+  .site-header .header-play {
+    transition: none;
+  }
+
+  .site-header .header-play:hover, .site-header .header-play:active {
+    transform: none;
+  }
+
+  .site-header .header-play.is-playing:after {
+    box-shadow: 0 0 0 4px rgba(var(--accent-glow-rgb), .25);
     animation: none;
   }
 }

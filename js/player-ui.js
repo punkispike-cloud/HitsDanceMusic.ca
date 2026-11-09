@@ -257,8 +257,8 @@ export function injectHeaderPlay() {
   btn.setAttribute("aria-label", "Lancer la radio");
   btn.dataset.state = "paused";
   btn.innerHTML = `
-    <span class="hp-ico hp-ico--play" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-    <span class="hp-ico hp-ico--pause" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></span>
+    <span class="hp-ico hp-ico--play" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" focusable="false"><polygon points="6 3 20 12 6 21"/></svg></span>
+    <span class="hp-ico hp-ico--pause" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" focusable="false"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg></span>
     <span class="hp-pulse" aria-hidden="true"></span>
     <span class="hp-label">Écouter</span>
   `;

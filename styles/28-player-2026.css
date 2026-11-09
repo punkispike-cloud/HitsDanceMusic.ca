@@ -269,23 +269,25 @@
 }
 
 /* ============================================================
-   Header play button v2 — compact, coherent avec icones header
+   Header play button v3 — plat, sobre, aux couleurs de la marque
+   (v2 : disque « gel » brillant + lueur lourde + VERT en lecture, hors charte)
    ============================================================ */
 .site-header .header-play {
-  /* override v1 : on aligne au format des autres icones du header */
   width: 44px;
   height: 44px;
+  min-height: 0; /* la règle tactile générique button{min-height:44px} l'ovalisait (42 × 44) */
   padding: 0;
   margin-left: auto;
   margin-right: 10px;
+  border: 0;
   border-radius: 50%;
-  border: 1px solid rgba(var(--accent-glow-rgb), 0.45);
-  background:
-    radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, var(--red-vivid) 0%, var(--red-deep-b) 100%);
+  /* Aplat de marque (--accent-btn : blanc dessus = 7:1 AAA) avec un simple
+     éclaircissement vertical — pas de reflet ni de tache de lumière. */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-btn) 94%, var(--gray-0)) 0%, var(--accent-btn) 100%);
   box-shadow:
-    0 6px 16px rgba(var(--accent-glow-rgb), 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    inset 0 0 0 1px var(--white-a10),
+    0 1px 2px var(--black-a50),
+    0 8px 20px -10px rgba(var(--accent-glow-rgb), 0.7);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -295,66 +297,75 @@
   font: 0/0 a;
   position: relative;
   overflow: visible;
-  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease, background .25s ease, border-color .25s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: transform, box-shadow, filter;
+  transition-duration: 0.18s;
+  transition-timing-function: var(--ease-out, ease-out);
 }
 .site-header .header-play:hover {
-  transform: translateY(-1px) scale(1.04);
-  filter: brightness(1.08);
-  box-shadow: 0 10px 24px rgba(var(--accent-glow-rgb), 0.55), inset 0 1px 0 rgba(255,255,255,0.28);
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow:
+    inset 0 0 0 1px var(--white-a18),
+    0 1px 2px var(--black-a50),
+    0 12px 24px -10px rgba(var(--accent-glow-rgb), 0.85);
 }
-.site-header .header-play:active { transform: translateY(0) scale(0.98); }
-.site-header .header-play .hp-label { display: none; }
+.site-header .header-play:active { transform: scale(0.96); filter: none; }
+.site-header .header-play:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 1px 2px var(--black-a50);
+}
+.site-header .header-play .hp-label,
 .site-header .header-play .hp-pulse { display: none; }
 .site-header .header-play .hp-ico {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   color: var(--gray-0);
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
 }
-.site-header .header-play .hp-ico svg { width: 16px; height: 16px; }
-.site-header .header-play .hp-ico--play svg { transform: translateX(1px); } /* recadre l'icone play */
+.site-header .header-play .hp-ico svg { width: 20px; height: 20px; display: block; }
+/* Pas de translateX : le triangle arrondi (js/player-ui.js) est dessiné de façon
+   à ce que son centre optique tombe au centre du disque. */
 
-/* Halo anime quand en lecture */
+/* En lecture : même disque de marque + un anneau doux qui respire (plus de vert). */
 .site-header .header-play.is-playing {
-  background:
-    radial-gradient(circle at 30% 30%, var(--white-a18), transparent 60%),
-    linear-gradient(135deg, var(--green-550) 0%, var(--green-850) 100%);
-  border-color: rgba(34, 197, 94, 0.55);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-btn) 94%, var(--gray-0)) 0%, var(--accent-btn) 100%);
   box-shadow:
-    0 6px 18px rgba(22, 163, 74, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    inset 0 0 0 1px var(--white-a18),
+    0 1px 2px var(--black-a50),
+    0 8px 20px -10px rgba(var(--accent-glow-rgb), 0.7);
 }
 .site-header .header-play::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0.55);
   opacity: 0;
-  transition: opacity .25s ease;
+  box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0.5);
+  transition: opacity 0.25s ease;
 }
 .site-header .header-play.is-playing::after {
   opacity: 1;
-  animation: hpRing 1.6s ease-out infinite;
-  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  animation: hpRing 2s ease-out infinite;
 }
 @keyframes hpRing {
-  0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
-  70%  { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(var(--accent-glow-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--accent-glow-rgb), 0); }
 }
 
-/* Mobile : meme taille, juste serre la marge */
+/* Mobile : même taille (44 px, cible tactile AAA), marge resserrée. */
 @media (max-width: 640px) {
-  .site-header .header-play {
-    width: 42px; height: 42px; margin-right: 6px;
-  }
-  .site-header .header-play .hp-ico { width: 16px; height: 16px; }
-  .site-header .header-play .hp-ico svg { width: 15px; height: 15px; }
+  .site-header .header-play { margin-right: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .site-header .header-play::after { animation: none; }
+  .site-header .header-play { transition: none; }
+  .site-header .header-play:hover,
+  .site-header .header-play:active { transform: none; }
+  .site-header .header-play.is-playing::after {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(var(--accent-glow-rgb), 0.25);
+  }
 }
 
 /* Bandeau d'état sous le panneau : reconnexion en cours / flux injoignable.
