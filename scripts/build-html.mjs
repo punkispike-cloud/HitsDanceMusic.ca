@@ -14,6 +14,7 @@
 
 import { readFile, writeFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -70,12 +71,24 @@ function ensureBannerMarker(content, filename) {
   return content.replace(/<body([^>]*)>/, `<body$1>\n${BANNER_MARKER}`);
 }
 
+/** Empreinte du CSS dans son URL (styles.bundle.css?v=<hash>) : un HTML neuf
+ *  réclame TOUJOURS le CSS qui va avec. Sans elle, le service worker (cache
+ *  d'abord pour les assets) et le cache HTTP (max-age=3600) servaient l'ancien
+ *  CSS avec le nouveau HTML après un déploiement (incident 2026-11-09 : icônes
+ *  SVG géantes). Le bundle est construit AVANT ce script (build-all). */
+const cssBundle = await readFile(join(root, "styles.bundle.css")).catch(() => null);
+const cssVersion = cssBundle ? createHash("sha256").update(cssBundle).digest("hex").slice(0, 10) : null;
+function versionCss(content) {
+  if (!cssVersion) return content;
+  return content.replace(/href="styles\.bundle\.css(?:\?v=[a-f0-9]+)?"/g, `href="styles.bundle.css?v=${cssVersion}"`);
+}
+
 let diffs = 0;
 
 for (const f of htmlFiles) {
   const path = join(root, f);
   const before = await readFile(path, "utf-8");
-  const after = processHtml(ensureBannerMarker(before, f), partials, f);
+  const after = versionCss(processHtml(ensureBannerMarker(before, f), partials, f));
   if (before !== after) {
     diffs++;
     if (checkMode) {

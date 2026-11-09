@@ -81,7 +81,8 @@
 .rail-card .rail-meta { font-size: 0.82rem; opacity: 0.75; margin: 2px 0; }
 .rail-card .rail-host { font-size: 0.85rem; opacity: 0.9; font-weight: 500; }
 .rail-card .rail-when { font-size: 0.78rem; font-weight: 600; color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, var(--gray-0)); margin-top: auto; } /* 60 % de blanc : ≥ 7,2:1 pour toutes les couleurs d émission */
-.rail-card .rail-emoji { font-size: 2rem; line-height: 1; }
+.rail-card .rail-emoji { font-size: 2rem; line-height: 1; color: var(--accent-text); }
+.rail-head h2 > .ic { color: var(--accent-text); } /* icône de section (ex-emoji) */
 .rail-card .rail-play { margin-top: 8px; align-self: flex-start; padding: 6px 12px; border-radius: 999px; border: none; background: var(--card-accent, var(--accent)); color: var(--gray-0); font-weight: 600; font-size: 0.8rem; cursor: pointer; }
 .rail-card .rail-play:hover { filter: brightness(1.1); }
 .news-card { flex: 0 0 280px; min-width: 280px; }
@@ -107,3 +108,49 @@
 .button > .ic,
 .push-optin > .ic { margin-inline-end: 0.45em; }
 .stream-chip-icon > .ic { width: 1em; height: 1em; vertical-align: 0; }
+
+/* FAQ « mode d'emploi » : elle était restée en <details> brut du navigateur
+   (triangles noirs, aucun espacement). Même langage que les accordéons de la
+   grille (.day-block), en plus discret. */
+.faq-band details {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  margin: 0 0 10px;
+  transition: border-color 0.2s ease;
+}
+.faq-band details[open] { border-color: rgba(var(--accent-glow-rgb), 0.35); }
+.faq-band summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  padding: 14px 20px;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+.faq-band summary::-webkit-details-marker { display: none; }
+.faq-band summary::after {
+  content: "\203A";
+  flex: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--accent-text);
+  transform: rotate(90deg);
+  transition: transform 0.25s ease;
+}
+.faq-band details[open] summary::after { transform: rotate(270deg); }
+.faq-band summary:hover { background-color: rgba(var(--accent-glow-rgb), 0.05); }
+.faq-band summary:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.faq-band details p { margin: 0; padding: 0 20px 18px; max-width: 72ch; color: var(--muted); line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) {
+  .faq-band details, .faq-band summary, .faq-band summary::after { transition: none; }
+}
+
+/* Pastille de « Prochain : » (cartes équipe) : « .talent-card span { display:block } »
+   la mettait seule sur sa ligne, au-dessus du texte. */
+.talent-card .talent-next-dot { display: inline-block; margin: 0 6px 0 0; vertical-align: middle; }

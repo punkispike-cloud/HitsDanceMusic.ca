@@ -4,6 +4,7 @@ import { $, $$, escapeHtml } from "./util.js";
 import { API_BASE } from "./api-config.js";
 import { SCHEDULE, SLOT_TAGS } from "./schedule.js";
 import { DAY_NAMES, getMontrealParts, toMinutes } from "./time.js";
+import { icon, iconForEmoji } from "./icons.js";
 
 const NEWS_FALLBACK = [
   { tag: "DJ Set", title: "DJ JÜMPOFF — JÜMPOFFproject", text: "Mix club et soirées énergie dance, plusieurs créneaux du mercredi au dimanche.", emoji: "🎚️" },
@@ -11,11 +12,11 @@ const NEWS_FALLBACK = [
   { tag: "Émission", title: "Nouvelle saison de Hit Drive", text: "Du lundi au vendredi 16h–18h, l'antenne accélère pour la sortie des bureaux.", emoji: "🚗" },
 ];
 
-function rail(title, emoji, items, renderItem, opts = {}) {
+function rail(title, iconName, items, renderItem, opts = {}) {
   return `
     <div class="rail">
       <div class="rail-head">
-        <h2><span aria-hidden="true">${emoji}</span> ${escapeHtml(title)}</h2>
+        <h2>${icon(iconName)} ${escapeHtml(title)}</h2>
         ${opts.cta ? `<a class="rail-cta" href="${opts.cta.href}">${escapeHtml(opts.cta.label)} →</a>` : ""}
         <div class="rail-arrows" role="group" aria-label="Faire défiler">
           <button type="button" class="rail-arrow" data-dir="-1" aria-label="Précédent">‹</button>
@@ -70,7 +71,7 @@ export function renderRailUpcoming() {
   }
   if (!items.length) return;
   root.hidden = false;
-  root.innerHTML = rail("Prochaines émissions", "🕓", items, (it) => {
+  root.innerHTML = rail("Prochaines émissions", "clock", items, (it) => {
     const tag = SLOT_TAGS[it.tag] || SLOT_TAGS.hitlist;
     const h = Math.floor(it.when / 60);
     const m = it.when % 60;
@@ -134,7 +135,7 @@ export async function renderRailReplays() {
   }
   if (!items.length) items = scheduleFallbackItems();
   root.hidden = false;
-  root.innerHTML = rail("Replays & podcasts", "🎙", items, (it) => {
+  root.innerHTML = rail("Replays & podcasts", "mic", items, (it) => {
     const tag = SLOT_TAGS[it.tag] || SLOT_TAGS.hitlist;
     return `<a class="rail-card replay-card" href="${escapeHtml(it.href)}" style="--card-accent:${tag.color}">
       <span class="rail-tag">${escapeHtml(it.kind === "mix" ? "Mix" : "Replay")}</span>
@@ -164,9 +165,9 @@ export async function renderRailNews() {
     }
   } catch { /* fallback */ }
   root.hidden = false;
-  root.innerHTML = rail("À la une", "✨", newsItems, (it) => {
+  root.innerHTML = rail("À la une", "sparkles", newsItems, (it) => {
     return `<article class="rail-card news-card">
-      <span class="rail-emoji" aria-hidden="true">${it.emoji}</span>
+      <span class="rail-emoji" aria-hidden="true">${iconForEmoji(it.emoji)}</span>
       <span class="rail-tag">${escapeHtml(it.tag)}</span>
       <h3>${escapeHtml(it.title)}</h3>
       <p class="rail-meta">${escapeHtml(it.text)}</p>
