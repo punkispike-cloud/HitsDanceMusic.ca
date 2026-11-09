@@ -24,7 +24,7 @@ const BASELINE_DARK = {
   bg: "#0a0a0a",
   surface: "#1a1a1a",
   ink: "#f5f5f5",
-  muted: "#9a9a9a",
+  muted: "#a8a8a8",
 };
 
 /* Thème clair : encore dormant (js/theme.js fige data-theme="dark"), défini par

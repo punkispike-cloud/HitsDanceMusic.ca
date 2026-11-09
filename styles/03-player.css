@@ -40,7 +40,7 @@
   border-radius: 999px;
   background: rgba(var(--accent-glow-rgb), 0.18);
   border: 1px solid var(--accent-glow);
-  color: var(--accent-bright);
+  color: var(--accent-text);
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.14em;
@@ -234,7 +234,7 @@
 
 .player-track-live svg {
   flex-shrink: 0;
-  color: var(--accent-bright);
+  color: var(--accent-text);
 }
 
 .player-track-live span {

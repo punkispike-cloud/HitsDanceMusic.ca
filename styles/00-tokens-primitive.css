@@ -72,7 +72,6 @@
   --red-vivid: #ec1f3f;          /* début de dégradé du player 2026            */
   --red-hot: #ff2d55;            /* point « en direct »                        */
   --red-warm: #e0173a;           /* survol du bouton plein écran               */
-  --red-deep-a: #b40e26;         /* fin de dégradé — player 2026               */
   --red-deep-b: #b00020;         /* fin de dégradé — player                    */
   --red-deep-c: #a80020;         /* fin de dégradé — bandeau d'installation    */
   --red-darkest: #5a000d;        /* fin de dégradé — orbe du hero              */
@@ -105,7 +104,7 @@
   --gray-840: #222222;           /*  1x                                        */
   --gray-820: #242424;           /*  1x — = --surface-warm (dark)              */
   --gray-800: #2a2a2a;           /*  2x                                        */
-  --gray-500: #9a9a9a;           /*  1x — = --muted (dark)                     */
+  --gray-450: #a8a8a8;           /*  1x — = --muted (dark) — AAA 7:1 sur carte */
   --gray-930: #141414;           /*  = --ink (light)                           */
   --gray-700: #525252;           /*  = --muted (light) — AA vérifié            */
   --gray-140: #e8e8e8;           /*  = --vinyl (light)                         */

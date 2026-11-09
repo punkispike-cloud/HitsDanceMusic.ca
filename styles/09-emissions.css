@@ -22,7 +22,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   color: var(--gray-0);
-  background: var(--accent);
+  background: var(--accent-btn);
 }
 .show-detail h3 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
 .show-detail .meta { color: var(--muted); font-size: 0.82rem; }
@@ -33,7 +33,7 @@
   border-top: 1px solid var(--line);
   color: var(--muted);
 }
-.show-detail .next strong { color: var(--accent-bright); }
+.show-detail .next strong { color: var(--accent-text); }
 
 /* slot-host visible sur la page horaire complète */
 .slot-host {

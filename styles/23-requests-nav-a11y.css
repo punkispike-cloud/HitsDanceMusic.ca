@@ -61,7 +61,7 @@
   left: 12px;
   z-index: 10000;
   padding: 12px 18px;
-  background: rgb(var(--accent-glow-rgb));
+  background: var(--accent-btn);
   color: var(--gray-0);
   font-weight: 700;
   text-decoration: none;

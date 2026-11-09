@@ -15,11 +15,6 @@ import { announce } from "./a11y.js";
 let audio = null;
 export const playerUIs = new Set();
 
-// Hook optionnel pour le service presence (signal d'écoute).
-// Renseigné par presence.js via setPresenceListenerHook(fn).
-let presenceListenerHook = null;
-export function setPresenceListenerHook(fn) { presenceListenerHook = fn; }
-
 // Hook optionnel pour le mode Watch (syncWatch) — câblé par watch.js.
 let watchSyncHook = null;
 export function setWatchSyncHook(fn) { watchSyncHook = fn; }
@@ -84,7 +79,6 @@ export function toggleMute() {
 export function setPlayingUI(isPlaying, label) {
   for (const ui of playerUIs) ui.setState(isPlaying, label);
   document.body.classList.toggle("is-playing-radio", isPlaying);
-  if (presenceListenerHook) presenceListenerHook(isPlaying);
   // Header play button : sync visuel + libellé
   const hp = document.getElementById("headerPlay");
   if (hp) {

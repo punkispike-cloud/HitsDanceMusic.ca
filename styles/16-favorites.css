@@ -13,9 +13,14 @@
   display: inline-flex; align-items: center; justify-content: center;
   transition: color 0.2s, background 0.2s, transform 0.2s, border-color 0.2s;
   z-index: 2;
+  /* La règle tactile générique « button { min-height: 44px } » (19-) le
+     rendait ovale (32 × 44) : on garde un rond de 32 px… */
+  min-height: 0;
 }
-.fav-btn:hover { transform: scale(1.08); border-color: var(--accent); color: var(--accent-bright); }
-.fav-btn.is-on { color: var(--accent-bright); border-color: var(--accent); background: rgba(var(--accent-glow-rgb), 0.18); }
+/* … et la zone tactile monte à 44 × 44 px sans changer le dessin. */
+.fav-btn::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; }
+.fav-btn:hover { transform: scale(1.08); border-color: var(--accent); color: var(--accent-text); }
+.fav-btn.is-on { color: var(--accent-text); border-color: var(--accent); background: rgba(var(--accent-glow-rgb), 0.18); }
 .fav-btn.is-on svg { fill: currentColor; }
 .fav-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
@@ -40,7 +45,7 @@
   transition: background 0.18s, color 0.18s;
 }
 .fav-filter:hover { color: var(--ink); }
-.fav-filter.is-active { background: var(--accent); color: var(--gray-0); }
+.fav-filter.is-active { background: var(--accent-btn); color: var(--gray-0); }
 .fav-count { font-weight: 600; opacity: 0.8; margin-left: 4px; }
 
-.header-tool.is-on { color: var(--accent-bright); border-color: var(--accent); }
+.header-tool.is-on { color: var(--accent-text); border-color: var(--accent); }

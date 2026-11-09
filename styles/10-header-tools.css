@@ -20,7 +20,7 @@
 .header-tool:hover { background: rgba(255,255,255,0.07); border-color: var(--white-a20); transform: translateY(-1px); }
 .header-tool:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .install-pwa-btn { display: none; }
-.install-pwa-btn.is-available { display: inline-flex; color: var(--accent-bright); border-color: var(--accent); animation: installPulse 2.4s ease-in-out infinite; }
+.install-pwa-btn.is-available { display: inline-flex; color: var(--accent-text); border-color: var(--accent); animation: installPulse 2.4s ease-in-out infinite; }
 @keyframes installPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.45); }
   50% { box-shadow: 0 0 0 8px rgba(var(--accent-rgb), 0); }
@@ -89,7 +89,7 @@
 .more-menu button[role="menuitem"]:hover,
 .more-menu button[role="menuitem"]:focus-visible {
   background: rgba(255,255,255,0.07);
-  color: var(--accent-bright);
+  color: var(--accent-text);
   outline: none;
 }
 [data-theme="light"] .more-menu {

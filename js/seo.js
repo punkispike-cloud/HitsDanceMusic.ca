@@ -43,7 +43,7 @@ export function injectJsonLd() {
           {
             "@type": "Question",
             "name": "Comment écouter Hits Dance Music en direct ?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Clique sur Écouter le direct sur hitsdancemusic.ca, ou ajoute la radio à ton écran d’accueil via Installer l’app. Flux MP3 192 kbps compatible mobile, voiture et enceintes." },
+            "acceptedAnswer": { "@type": "Answer", "text": "Clique sur Écouter le direct sur hitsdancemusic.ca, ou ajoute la radio à ton écran d’accueil via Installer l’app. Flux MP3 128 kbps compatible mobile, voiture et enceintes." },
           },
           {
             "@type": "Question",

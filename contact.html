@@ -74,13 +74,6 @@
         <a href="podcasts.html">Podcasts</a>
         <a href="animateurs.html">Équipe</a>
       </nav>
-      <!--#include name="presence-badge"-->
-<!-- presence-badge : compteur anonymisé (visiteurs/auditeurs, sans IP) -->
-<div id="presenceBadge" class="presence-badge" hidden role="status" aria-live="polite" aria-label="Audience en direct">
-  <span class="presence-pill presence-listeners"><span class="presence-live-dot" aria-hidden="true"></span><strong class="presence-count" data-presence="listeners">0</strong>&nbsp;à l’écoute</span>
-  <span class="presence-pill presence-visitors"><strong class="presence-count" data-presence="visitors">0</strong>&nbsp;en ligne</span>
-</div>
-<!--#endinclude-->
       <!--#include name="header-tools"-->
       <div class="header-tools">
         <button id="installPwaBtn" class="header-tool install-pwa-btn" type="button" aria-label="Installer l'application Hits Dance Music" title="Installer l'app">
@@ -95,11 +88,11 @@
             </svg>
           </button>
           <div id="moreMenu" class="more-menu" role="menu" hidden>
-            <a role="menuitem" href="tel:+14182612886"><span aria-hidden="true">📞</span> Appeler le studio</a>
-            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20"><span aria-hidden="true">✍️</span> SMS — demande</a>
-            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> WhatsApp — dédicace</a>
-            <a role="menuitem" href="contact.html"><span aria-hidden="true">✉️</span> Formulaire contact</a>
-            <button type="button" role="menuitem" id="resetGeoBtn"><span aria-hidden="true">📍</span> Réinitialiser ma localisation</button>
+            <a role="menuitem" href="tel:+14182612886"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Appeler le studio</a>
+            <a role="menuitem" href="sms:+14182612886?body=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> SMS — demande</a>
+            <a role="menuitem" href="https://wa.me/14182612886?text=Salut%20Hits%20Dance%20Music%20!%20Je%20demande%20:%20" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg> WhatsApp — dédicace</a>
+            <a role="menuitem" href="contact.html"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Formulaire contact</a>
+            <button type="button" role="menuitem" id="resetGeoBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Réinitialiser ma localisation</button>
           </div>
         </div>
       </div>
@@ -135,19 +128,19 @@
           <div class="contact-channels">
             <a class="channel-btn" href="tel:+14182612886">
               <small>Appel direct</small>
-              <strong>📞 Téléphoner</strong>
+              <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Téléphoner</strong>
             </a>
             <a class="channel-btn" href="sms:+14182612886?body=Salut%20Hits%20Dance%20Music%20!">
               <small>Message texte</small>
-              <strong>💬 SMS</strong>
+              <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> SMS</strong>
             </a>
             <a class="channel-btn" href="https://cast5.asurahosting.com/start/hitsdanc/" target="_blank" rel="noopener noreferrer">
               <small>Hébergeur</small>
-              <strong>🔗 Page du flux</strong>
+              <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Page du flux</strong>
             </a>
             <a class="channel-btn" href="index.html?play=1#player">
               <small>Lecteur</small>
-              <strong>▶ Écouter live</strong>
+              <strong><svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true" focusable="false"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg> Écouter le direct</strong>
             </a>
           </div>
         </div>
@@ -190,7 +183,7 @@
               Ne remplis pas
               <input id="hp_field" name="hp_field" type="text" tabindex="-1" autocomplete="off" />
             </label>
-            <button class="button primary" type="submit">📧 Ouvrir le courriel</button>
+            <button class="button primary" type="submit"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Ouvrir le courriel</button>
           </form>
         </div>
       </section>
