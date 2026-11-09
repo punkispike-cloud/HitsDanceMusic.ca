@@ -16,6 +16,6 @@
 .countdown-kicker {
   font-weight: 800; text-transform: uppercase;
   letter-spacing: 0.06em; font-size: 0.65rem;
-  color: var(--accent-bright);
+  color: var(--accent-text);
 }
 .countdown-time { color: var(--ink); font-weight: 600; }

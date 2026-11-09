@@ -51,7 +51,6 @@ import { initUiExtras, initPhase2UX } from "./ui-extras.js";
 import { initMultiTabSync } from "./multi-tab.js";
 import { initVisualizer } from "./visualizer.js";
 
-import { initPresence } from "./presence.js";
 import { initAnalytics } from "./analytics.js";
 import { initConsent, hasAnalyticsConsent, onConsentChange, clearConsent, getConsent } from "./consent.js";
 import { registerSW } from "./sw-register.js";
@@ -292,8 +291,9 @@ function initIdle() {
     togglePip:    () => void togglePip(),
   });
 
-  // Service worker (PWA shell) + Consentement audience + Compteur live (WS) + Analytics.
-  // La mesure d'audience (presence + beacons /v1/track) n'est démarrée qu'après
+  // Service worker (PWA shell) + Consentement audience + Analytics.
+  // Le compteur public d'auditeurs (service presence) a été retiré du site.
+  // La mesure d'audience (beacons /v1/track) n'est démarrée qu'après
   // consentement explicite (Loi 25 / RGPD). Avant accord : zéro collecte.
   registerSW();
   initConsent();
@@ -315,13 +315,11 @@ function initIdle() {
   }
 }
 
-// initPresence ajoute des listeners à chaque appel (non idempotente) → on garde
-// un drapeau pour ne démarrer l'audience qu'une seule fois (au consentement).
+// Drapeau : ne démarrer l'audience qu'une seule fois (au consentement).
 let audienceStarted = false;
 function startAudience() {
   if (audienceStarted) return;
   audienceStarted = true;
-  initPresence();
   initAnalytics();
 }
 

@@ -62,7 +62,7 @@
 .mini-show {
   font-size: 0.75rem; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--accent-bright);
+  color: var(--accent-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .mini-track {
@@ -83,7 +83,7 @@
 }
 .mini-icon-btn:hover { background: var(--white-a08); border-color: var(--white-a20); }
 .mini-icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.mini-icon-btn.is-muted { color: var(--accent); border-color: var(--accent); }
+.mini-icon-btn.is-muted { color: var(--accent-text); border-color: var(--accent); }
 .mini-volume {
   -webkit-appearance: none; appearance: none;
   width: 80px; height: 4px;
@@ -128,7 +128,7 @@
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .icon-btn.mute-btn:hover { background: var(--white-a08); }
-.icon-btn.mute-btn.is-muted { color: var(--accent); border-color: var(--accent); }
+.icon-btn.mute-btn.is-muted { color: var(--accent-text); border-color: var(--accent); }
 .icon-btn.mute-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* === Hint quand métadonnées indisponibles === */

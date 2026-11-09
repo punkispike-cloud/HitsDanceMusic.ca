@@ -68,9 +68,9 @@ export function makeFullPanelUI() {
     row.className = "player-actions";
     row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem";
     row.innerHTML = `
-      <button type="button" class="button ghost-light btn-xs" id="sleepBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Minuteur de sommeil">🌙 Sleep</button>
-      <button type="button" class="button ghost-light btn-xs" id="fullHistoryBtn" aria-label="Historique des morceaux">🎵 Derniers morceaux</button>
-      <button type="button" class="button ghost-light btn-xs" id="fullShareBtn" aria-label="Partager le direct">↗ Partager</button>`;
+      <button type="button" class="button ghost-light btn-xs" id="sleepBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Minuteur de sommeil"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> Minuteur</button>
+      <button type="button" class="button ghost-light btn-xs" id="fullHistoryBtn" aria-label="Historique des morceaux"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Historique</button>
+      <button type="button" class="button ghost-light btn-xs" id="fullShareBtn" aria-label="Partager le direct"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg> Partager</button>`;
     panel.appendChild(row);
     const sleepBtn = $("#sleepBtn", row);
     sleepBtn?.addEventListener("click", (e) => {

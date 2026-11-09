@@ -47,9 +47,9 @@
   cursor: pointer; transition: filter 0.2s;
 }
 .od-play:hover { filter: brightness(1.1); }
-.od-play.playing { background: transparent; color: var(--accent-bright); }
+.od-play.playing { background: transparent; color: var(--accent-text); }
 .od-share { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-decoration: none; }
-.od-share:hover { color: var(--accent-bright); }
+.od-share:hover { color: var(--accent-text); }
 .od-soon { font-size: 0.8rem; color: var(--muted); font-style: italic; }
 
 .od-empty { color: var(--muted); font-size: 0.9rem; padding: 20px 0; }
@@ -59,7 +59,7 @@
 .section.legal h2 { font-family: var(--font-display); font-size: 1.2rem; margin: 28px 0 8px; }
 .section.legal p, .section.legal li { color: var(--muted); line-height: 1.65; }
 .section.legal ul { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
-.section.legal strong { color: var(--accent-bright); }
+.section.legal strong { color: var(--accent-text); }
 
 /* Badge « en ondes / à venir » (pages nouvelles uniquement) */
 .live-badge {
@@ -67,7 +67,7 @@
   margin: 14px 0 4px;
   font-size: 0.85rem; color: var(--muted);
 }
-.live-badge strong { color: var(--accent-bright); }
+.live-badge strong { color: var(--accent-text); }
 .live-now { display: inline-flex; align-items: center; gap: 8px; }
 .live-dot {
   width: 9px; height: 9px; border-radius: 50%;
@@ -91,4 +91,4 @@
   cursor: pointer; transition: border-color 0.2s, transform 0.2s;
 }
 .push-optin:hover { border-color: var(--accent); transform: translateY(-1px); }
-.push-optin[data-state="on"] { border-color: var(--accent); color: var(--accent-bright); }
+.push-optin[data-state="on"] { border-color: var(--accent); color: var(--accent-text); }

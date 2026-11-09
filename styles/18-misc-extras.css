@@ -58,7 +58,7 @@
 .rail-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 12px; padding-inline: 4px; }
 .rail-head h2 { font-size: 1.15rem; margin: 0; letter-spacing: 0.02em; font-weight: 700; }
 .rail-head h2 span { margin-right: 6px; font-size: 1.1em; }
-.rail-cta { margin-left: auto; font-size: 0.85rem; color: var(--accent, var(--accent)); text-decoration: none; font-weight: 600; opacity: 0.9; }
+.rail-cta { margin-left: auto; font-size: 0.85rem; color: var(--accent-text); text-decoration: none; font-weight: 600; }
 .rail-cta:hover { opacity: 1; text-decoration: underline; }
 .rail-arrows { display: flex; gap: 6px; margin-left: 8px; }
 .rail-arrow { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--white-a18); background: var(--white-a06); color: inherit; font-size: 1.1rem; line-height: 1; cursor: pointer; transition: background .15s; }
@@ -77,10 +77,10 @@
 [data-theme="light"] .rail-card:hover { background: rgba(0,0,0,0.05); border-color: var(--black-a15); }
 
 .rail-card h3 { margin: 4px 0 2px; font-size: 1rem; font-weight: 700; line-height: 1.25; }
-.rail-card .rail-tag { display: inline-block; align-self: flex-start; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--card-accent, var(--accent)); color: var(--gray-0); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.rail-card .rail-tag { display: inline-block; align-self: flex-start; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; /* pastille teintée + texte éclairci : 7:1 (AAA) quelle que soit la couleur d émission, même la plus sombre (#1a3055) */ background: color-mix(in srgb, var(--card-accent, var(--accent)) 22%, transparent); border: 1px solid color-mix(in srgb, var(--card-accent, var(--accent)) 45%, transparent); color: color-mix(in srgb, var(--card-accent, var(--accent)) 30%, var(--gray-0)); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .rail-card .rail-meta { font-size: 0.82rem; opacity: 0.75; margin: 2px 0; }
 .rail-card .rail-host { font-size: 0.85rem; opacity: 0.9; font-weight: 500; }
-.rail-card .rail-when { font-size: 0.78rem; font-weight: 600; color: var(--card-accent, var(--accent)); margin-top: auto; }
+.rail-card .rail-when { font-size: 0.78rem; font-weight: 600; color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, var(--gray-0)); margin-top: auto; } /* 60 % de blanc : ≥ 7,2:1 pour toutes les couleurs d émission */
 .rail-card .rail-emoji { font-size: 2rem; line-height: 1; }
 .rail-card .rail-play { margin-top: 8px; align-self: flex-start; padding: 6px 12px; border-radius: 999px; border: none; background: var(--card-accent, var(--accent)); color: var(--gray-0); font-weight: 600; font-size: 0.8rem; cursor: pointer; }
 .rail-card .rail-play:hover { filter: brightness(1.1); }
@@ -93,3 +93,17 @@
 .weather-chip .weather-meta { opacity: 0.85; font-size: 0.75rem; }
 [data-theme="light"] .weather-chip { background: rgba(0,0,0,0.06); }
 
+
+/* Icônes SVG au trait (remplacent les emojis-icônes : rendu identique sur
+   tous les appareils, couleur = currentColor donc suit la marque). */
+.ic {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  vertical-align: -0.2em;
+}
+/* Parents en flex sans gap : l'espace texte disparaît, on le remplace. */
+.button > .ic,
+.push-optin > .ic { margin-inline-end: 0.45em; }
+.stream-chip-icon > .ic { width: 1em; height: 1em; vertical-align: 0; }

@@ -160,19 +160,19 @@
 .slot--morning::before { background: var(--amber); box-shadow: 0 0 0 3px rgba(var(--accent-glow-rgb), 0.22); }
 .slot--morning { background: rgba(var(--accent-glow-rgb), 0.03); }
 
-.slot--drive .slot-time { color: var(--orange-500); }
+.slot--drive .slot-time { color: color-mix(in srgb, var(--orange-500) 75%, var(--gray-0)); } /* AAA 7:1 */
 .slot--drive::before { background: var(--orange-500); box-shadow: 0 0 0 3px rgba(224, 128, 64, 0.22); }
 .slot--drive { background: rgba(224, 112, 48, 0.03); }
 
-.slot--limelight .slot-time { color: var(--violet-400); }
+.slot--limelight .slot-time { color: color-mix(in srgb, var(--violet-400) 74%, var(--gray-0)); } /* AAA 7:1 */
 .slot--limelight::before { background: var(--violet-600); box-shadow: 0 0 0 3px rgba(144, 96, 200, 0.22); }
 .slot--limelight { background: rgba(124, 68, 168, 0.04); }
 
-.slot--night .slot-time { color: var(--blue-400); }
+.slot--night .slot-time { color: color-mix(in srgb, var(--blue-400) 68%, var(--gray-0)); } /* AAA 7:1 */
 .slot--night::before { background: var(--blue-700); box-shadow: 0 0 0 3px rgba(58, 110, 160, 0.22); }
 .slot--night { background: rgba(26, 60, 100, 0.06); }
 
-.slot--special .slot-time { color: #60b0a0; }
+.slot--special .slot-time { color: color-mix(in srgb, #60b0a0 85%, var(--gray-0)); } /* AAA 7:1 */
 .slot--special::before { background: #459888; box-shadow: 0 0 0 3px rgba(69, 152, 136, 0.22); }
 .slot--special { background: rgba(42, 122, 106, 0.03); }
 

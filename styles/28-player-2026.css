@@ -35,7 +35,7 @@
 }
 .player-2026 .player-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  background: linear-gradient(90deg, rgb(var(--accent-glow-rgb)), var(--red-deep-a));
+  background: linear-gradient(90deg, var(--accent-btn), var(--red-800)); /* fin = boutons, 8:1 */
   color: var(--gray-0); font-weight: 800; font-size: 0.72rem; letter-spacing: 0.16em;
   padding: 5px 10px; border-radius: 999px; text-transform: uppercase;
   box-shadow: 0 4px 14px -4px rgba(var(--accent-glow-rgb), 0.6);
@@ -129,7 +129,7 @@
   display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .player-2026 .player-onair-tag {
-  display: inline-block; font-size: 0.62rem; font-weight: 800;
+  display: inline-block; font-size: 0.7rem; font-weight: 800; /* 0.62rem = 9,9 px : illisible */
   letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--tag-color, var(--accent));
   background: color-mix(in srgb, var(--tag-color, var(--accent)) 18%, transparent);

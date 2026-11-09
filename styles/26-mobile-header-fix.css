@@ -47,12 +47,6 @@
   }
 
   /* Cluster droit : ordre + INCOMPRESSIBLE pour ne jamais sortir de l'écran */
-  .presence-badge {
-    order: 3;
-    margin-left: 0;
-    flex: 0 0 auto;
-    min-width: 0;
-  }
   .header-tools {
     order: 4;
     margin-left: 0;
@@ -73,18 +67,32 @@
     flex: 0 0 42px;           /* hamburger TOUJOURS visible */
   }
 
-  /* Le menu déroulant s'aligne pile sous le header compact (64 px + safe-area) */
+  /* Le menu se positionne PAR RAPPORT AU HEADER, pas à l'écran : .site-header
+     porte transform (25-) + backdrop-filter, ce qui en fait le bloc conteneur
+     de ses enfants position:fixed. L'ancien « top: 64px; bottom: 0 » donnait
+     donc un menu de 35 px de haut. Ici : top = bas du header, hauteur = écran
+     − bandeau EN DIRECT − header (100 % = hauteur du header). */
   .main-nav {
-    top: calc(64px + env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    top: 100%;
+    bottom: auto;
+    height: calc(100dvh - var(--hr-ticker-h, 0px) - 100%);
+    max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 14px clamp(14px, 4vw, 24px) calc(20px + env(safe-area-inset-bottom, 0px));
     -webkit-overflow-scrolling: touch;
   }
 
+  /* En colonne, le flex-end hérité du bureau poussait les liens en bas du
+     panneau, sous le mini-lecteur et la barre du bas : on aligne en haut. */
+  .main-nav { justify-content: flex-start; }
+  /* Fond plein : l'alpha 0,99 de 23- laissait transparaître la page (mesuré) */
+  .site-header.is-open .main-nav { background: var(--bg); }
+
   /* Bloque le scroll de la page quand le menu burger est ouvert */
   body:has(.site-header.is-open) { overflow: hidden; }
+  /* Menu = panneau modal : le mini-lecteur (z 80 > header 40) ne le recouvre plus */
+  body:has(.site-header.is-open) #miniPlayer { visibility: hidden; }
 
   /* More menu (⋯) : ne déborde plus de l'écran */
   .more-menu {
@@ -98,9 +106,18 @@
     overflow-y: auto;
   }
 
-  /* Hero/page : compenser la nouvelle hauteur de header */
-  .hero { margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
-  .page-main { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+  /* Hero/page : compenser la hauteur du header ET du bandeau EN DIRECT
+     (le header est décalé de --hr-ticker-h, cf. 24-ui-extras). */
+  .hero { margin-top: calc(64px + var(--hr-ticker-h, 0px) + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(64px + var(--hr-ticker-h, 0px) + env(safe-area-inset-top, 0px)); }
+}
+
+@media (max-width: 760px) {
+  /* La barre du bas (19-, z 90, 64 px + safe-area) passe au-dessus du header :
+     le panneau du menu s'arrête juste au-dessus d'elle. */
+  body.has-bottom-nav .main-nav {
+    height: calc(100dvh - var(--hr-ticker-h, 0px) - 100% - 64px - env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 560px) {
@@ -127,25 +144,18 @@
   .nav-toggle  { width: 40px; height: 40px; flex: 0 0 40px; }
   .header-tools { gap: 4px; }
 
-  /* Aligner le dropdown sur la nouvelle hauteur (60 px + safe-area) */
-  .main-nav {
-    top: calc(60px + env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  }
   .more-menu {
     top: calc(60px + env(safe-area-inset-top, 0px));
     right: calc(6px + env(safe-area-inset-right, 0px));
     width: min(260px, calc(100vw - 12px));
     max-height: calc(100dvh - 68px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
-  .hero { margin-top: calc(60px + env(safe-area-inset-top, 0px)); }
-  .page-main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .hero { margin-top: calc(60px + var(--hr-ticker-h, 0px) + env(safe-area-inset-top, 0px)); }
+  .page-main { padding-top: calc(60px + var(--hr-ticker-h, 0px) + env(safe-area-inset-top, 0px)); }
 }
 
 @media (max-width: 380px) {
   /* Si l'espace manque vraiment : le bouton install se cache (reste accessible
      via le menu ⋯ et la bannière "Installer l'app") */
   .install-pwa-btn { display: none; }
-  /* Et la pastille présence (👥/🎧) : reste visible dans le footer/stats */
-  .presence-badge { display: none; }
 }
